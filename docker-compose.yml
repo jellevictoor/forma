@@ -1,0 +1,12 @@
+services:
+  fitness-coach:
+    build: .
+    container_name: fitness-coach
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    command: ["chat"]

@@ -1,0 +1,139 @@
+"""Workout planning routes."""
+
+from datetime import date
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
+
+from fitness_coach.adapters.web.dependencies import (
+    get_athlete_id,
+    get_athlete_profile_service,
+    get_workout_planning_service,
+)
+from fitness_coach.application.athlete_profile_service import AthleteProfileService
+from fitness_coach.application.workout_planning_service import WorkoutPlanningService
+from fitness_coach.domain.athlete import ScheduleTemplateSlot
+from fitness_coach.domain.workout import WorkoutType
+
+router = APIRouter()
+templates = Jinja2Templates(directory="src/fitness_coach/templates")
+
+_DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _day_dict(d) -> dict:
+    return {
+        "date": d.day.isoformat(),
+        "workout_type": d.workout_type,
+        "intensity": d.intensity,
+        "duration_minutes": d.duration_minutes,
+        "description": d.description,
+        "exercises": d.exercises,
+    }
+
+
+@router.get("/plan", response_class=HTMLResponse)
+async def plan_page(
+    request: Request,
+    profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    athlete = await profile_service.get_profile(athlete_id)
+    workout_types = [wt for wt in WorkoutType if wt != WorkoutType.REST]
+    return templates.TemplateResponse(
+        request,
+        "plan.html",
+        {
+            "athlete": athlete,
+            "workout_types": workout_types,
+            "day_names": _DAY_NAMES,
+            "day_names_enumerated": list(enumerate(_DAY_NAMES)),
+        },
+    )
+
+
+@router.post("/plan/template/add")
+async def add_template_slot(
+    profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+    workout_type: Annotated[str, Form()],
+    day_of_week: Annotated[int, Form()],
+):
+    slot = ScheduleTemplateSlot(workout_type=WorkoutType(workout_type), day_of_week=day_of_week)
+    await profile_service.add_schedule_slot(athlete_id, slot)
+    return RedirectResponse(url="/plan", status_code=303)
+
+
+@router.delete("/plan/template/{slot_index}")
+async def remove_template_slot(
+    slot_index: int,
+    profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    await profile_service.remove_schedule_slot(athlete_id, slot_index)
+    return JSONResponse({"status": "ok"})
+
+
+@router.get("/api/plan")
+async def get_plan(
+    planning_service: Annotated[WorkoutPlanningService, Depends(get_workout_planning_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    cached = await planning_service.get_cached(athlete_id)
+    if not cached:
+        return JSONResponse({"cached": False})
+    return JSONResponse({
+        "cached": True,
+        "stale": cached.is_stale,
+        "rationale": cached.rationale,
+        "days": [_day_dict(d) for d in cached.days],
+    })
+
+
+@router.post("/api/plan/refresh")
+async def refresh_plan(
+    planning_service: Annotated[WorkoutPlanningService, Depends(get_workout_planning_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    cached = await planning_service.generate_and_cache(athlete_id)
+    return JSONResponse({
+        "cached": True,
+        "stale": False,
+        "rationale": cached.rationale,
+        "days": [_day_dict(d) for d in cached.days],
+    })
+
+
+class ExercisesRequest(BaseModel):
+    description: str = ""
+
+
+@router.post("/api/plan/day/{day_date}/{workout_type}/exercises")
+async def get_day_exercises(
+    day_date: date,
+    workout_type: str,
+    body: ExercisesRequest,
+    planning_service: Annotated[WorkoutPlanningService, Depends(get_workout_planning_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    exercises = await planning_service.get_exercises_for_day(
+        athlete_id, day_date, workout_type, body.description
+    )
+    return JSONResponse({"exercises": exercises})
+
+
+@router.post("/api/plan/day/{day_date}/{workout_type}/exercises/refresh")
+async def refresh_day_exercises(
+    day_date: date,
+    workout_type: str,
+    body: ExercisesRequest,
+    planning_service: Annotated[WorkoutPlanningService, Depends(get_workout_planning_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    exercises = await planning_service.refresh_exercises_for_day(
+        athlete_id, day_date, workout_type, body.description
+    )
+    return JSONResponse({"exercises": exercises})

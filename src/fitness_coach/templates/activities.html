@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Activities — forma{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Activities</h1>
+</div>
+
+<!-- Sport filter tabs -->
+<div class="flex gap-2 mb-6">
+  {% for s in [('all', 'All'), ('run', 'Running'), ('strength', 'Strength'), ('climbing', 'Climbing')] %}
+  <a href="/activities/{{ s[0] }}/1"
+     class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+            {% if sport == s[0] %}tab-active{% else %}tab-inactive{% endif %}">
+    {{ s[1] }}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden">
+  {% if workouts %}
+  <table class="w-full text-sm">
+    <thead class="bg-surface-alt">
+      <tr class="text-left text-xs text-gray-400 uppercase tracking-wide">
+        <th class="px-5 py-3 font-medium">Date</th>
+        <th class="px-5 py-3 font-medium">Activity</th>
+        <th class="px-5 py-3 font-medium">Type</th>
+        <th class="px-5 py-3 font-medium">Duration</th>
+        <th class="px-5 py-3 font-medium">Distance</th>
+        <th class="px-5 py-3 font-medium">Pace</th>
+        <th class="px-5 py-3 font-medium">Avg HR</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in workouts %}
+      <tr class="border-t border-edge hover:bg-surface-alt transition-colors">
+        <td class="px-5 py-3 text-gray-400 whitespace-nowrap">{{ w.start_time.strftime('%d %b %Y') }}</td>
+        <td class="px-5 py-3">
+          <a href="/activities/detail/{{ w.id }}" class="font-medium text-mint hover:opacity-75 transition-opacity">{{ w.name }}</a>
+        </td>
+        <td class="px-5 py-3">
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium capitalize text-gray-600">
+            {% if w.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>
+            {% elif w.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>
+            {% elif w.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>
+            {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{% endif %}
+            {{ w.workout_type.value }}
+          </span>
+        </td>
+        <td class="px-5 py-3">{{ "%.0f"|format(w.duration_minutes) }} min</td>
+        <td class="px-5 py-3">
+          {% if w.distance_km %}{{ "%.1f"|format(w.distance_km) }} km{% else %}<span class="value-empty">—</span>{% endif %}
+        </td>
+        <td class="px-5 py-3">
+          {% if w.pace_formatted() %}{{ w.pace_formatted() }}{% else %}<span class="value-empty">—</span>{% endif %}
+        </td>
+        <td class="px-5 py-3">
+          {% if w.average_heartrate %}{{ "%.0f"|format(w.average_heartrate) }}{% else %}<span class="value-empty">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages > 1 %}
+  <div class="px-5 py-4 border-t border-edge flex items-center justify-between text-sm text-gray-400">
+    <span>{{ total }} activities</span>
+    <div class="flex items-center gap-2">
+      {% if page > 1 %}
+      <a href="/activities/{{ sport }}/{{ page - 1 }}" class="px-3 py-1.5 rounded-lg border border-edge hover:border-edge text-gray-600 hover:text-gray-800 transition-colors">Previous</a>
+      {% endif %}
+      <span class="px-2">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+      <a href="/activities/{{ sport }}/{{ page + 1 }}" class="px-3 py-1.5 rounded-lg border border-edge hover:border-edge text-gray-600 hover:text-gray-800 transition-colors">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center text-gray-400 py-16 text-sm">
+    No activities found for this filter.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

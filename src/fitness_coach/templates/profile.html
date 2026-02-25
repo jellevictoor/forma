@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% block title %}Profile — forma{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <h1 class="text-2xl font-semibold text-gray-900">Profile</h1>
+  <p class="text-gray-400 text-sm mt-1">Manage your athlete profile, goals, and weight tracking</p>
+</div>
+
+<div class="space-y-6">
+
+  <!-- Profile section -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Athlete profile</h2>
+    <form method="post" action="/profile" id="profile-form" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="name">Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value="{{ athlete.name if athlete else '' }}"
+            required
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+          />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="height_cm">Height (cm)</label>
+          <input
+            type="number"
+            id="height_cm"
+            name="height_cm"
+            value="{{ athlete.height_cm if athlete and athlete.height_cm else '' }}"
+            step="0.1"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+          />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="experience_years">Experience (years)</label>
+          <input
+            type="number"
+            id="experience_years"
+            name="experience_years"
+            value="{{ athlete.experience_years if athlete else 0 }}"
+            step="0.5"
+            min="0"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+          />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="max_hours_per_week">Max hours/week</label>
+          <input
+            type="number"
+            id="max_hours_per_week"
+            name="max_hours_per_week"
+            value="{{ athlete.max_hours_per_week if athlete and athlete.max_hours_per_week else '' }}"
+            step="0.5"
+            min="0"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+          />
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" for="notes">Notes</label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows="3"
+          class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 resize-none bg-surface text-gray-800"
+        >{{ athlete.notes if athlete else '' }}</textarea>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          type="submit"
+          id="save-profile-btn"
+          class="px-4 py-2 tab-active text-sm rounded-lg transition-colors"
+        >
+          Save profile
+        </button>
+        <span id="profile-saved" class="text-xs text-mint hidden">Saved</span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Primary goal section -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Primary goal</h2>
+
+    {% if athlete and athlete.primary_goal %}
+    <div class="mb-5 p-4 bg-surface-alt rounded-xl flex items-start justify-between gap-4">
+      <div>
+        <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">{{ athlete.primary_goal.goal_type.value.replace('_', ' ') }}</span>
+        <p class="text-sm text-gray-800 mt-1">{{ athlete.primary_goal.description }}</p>
+        {% if athlete.primary_goal.target_value %}
+        <p class="text-xs text-gray-400 mt-1">Target: {{ athlete.primary_goal.target_value }}</p>
+        {% endif %}
+      </div>
+      <button
+        onclick="removeGoal()"
+        class="text-xs text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+        title="Remove goal"
+      >Remove</button>
+    </div>
+
+    <!-- Training advice -->
+    <button
+      onclick="getAdvice()"
+      id="advice-btn"
+      class="px-4 py-2 text-sm rounded-lg border border-mint text-mint hover:bg-mint/5 transition-colors mb-4"
+    >
+      Get training advice
+    </button>
+    <div id="advice-loading" class="hidden text-xs text-gray-400 mb-4">Generating advice…</div>
+    <div id="advice-card" class="hidden bg-surface-alt rounded-xl p-5 space-y-4">
+      <p id="advice-summary" class="text-sm text-gray-700 leading-relaxed"></p>
+      <div>
+        <h3 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-2">Training tips</h3>
+        <ul id="advice-tips" class="space-y-2"></ul>
+      </div>
+      <div>
+        <h3 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-2">Weekly focus</h3>
+        <p id="advice-focus" class="text-sm text-gray-700"></p>
+      </div>
+    </div>
+    {% endif %}
+
+    <h3 class="text-xs text-gray-500 mb-3 {% if athlete and athlete.primary_goal %}mt-5{% endif %}">
+      {{ 'Update goal' if athlete and athlete.primary_goal else 'Set a goal' }}
+    </h3>
+    <form method="post" action="/profile/goal" class="space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="goal_type">Goal type</label>
+          <select
+            id="goal_type"
+            name="goal_type"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+          >
+            {% for gt in goal_types %}
+            <option value="{{ gt.value }}" {% if athlete and athlete.primary_goal and athlete.primary_goal.goal_type == gt %}selected{% endif %}>
+              {{ gt.value.replace('_', ' ').capitalize() }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1" for="target_value">Target (optional)</label>
+          <input
+            type="text"
+            id="target_value"
+            name="target_value"
+            value="{{ athlete.primary_goal.target_value if athlete and athlete.primary_goal and athlete.primary_goal.target_value else '' }}"
+            placeholder="e.g. sub 4:00 marathon"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+          />
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" for="description">Description</label>
+        <input
+          type="text"
+          id="description"
+          name="description"
+          value="{{ athlete.primary_goal.description if athlete and athlete.primary_goal else '' }}"
+          required
+          placeholder="Describe your goal…"
+          class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+        />
+      </div>
+      <button
+        type="submit"
+        class="px-4 py-2 tab-active text-sm rounded-lg transition-colors"
+      >
+        {{ 'Update goal' if athlete and athlete.primary_goal else 'Set goal' }}
+      </button>
+    </form>
+  </div>
+
+  <!-- Weight tracking section -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Weight tracking</h2>
+
+    {% if is_stale %}
+    <div class="mb-5 px-4 py-3 bg-amber/10 border border-amber/30 rounded-lg text-sm text-amber flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      </svg>
+      Weight not logged in the past 7 days — log an entry to keep your trend up to date.
+    </div>
+    {% endif %}
+
+    <!-- Add weight form -->
+    <form method="post" action="/profile/weight" class="flex items-end gap-3 mb-6">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1" for="weight_kg">Weight (kg)</label>
+        <input
+          type="number"
+          id="weight_kg"
+          name="weight_kg"
+          step="0.1"
+          min="20"
+          max="300"
+          required
+          class="w-32 px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+        />
+      </div>
+      <div class="flex-1">
+        <label class="block text-xs text-gray-500 mb-1" for="weight_notes">Notes (optional)</label>
+        <input
+          type="text"
+          id="weight_notes"
+          name="notes"
+          placeholder="morning, fasted…"
+          class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-gray-800"
+        />
+      </div>
+      <button
+        type="submit"
+        class="px-4 py-2 tab-active text-sm rounded-lg transition-colors whitespace-nowrap"
+      >
+        Log weight
+      </button>
+    </form>
+
+    <!-- Chart -->
+    {% if chart_data %}
+    <div id="weight-chart" class="mb-6" style="height:200px"></div>
+    {% endif %}
+
+    <!-- Recent entries table -->
+    {% if weight_history %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-400 font-medium border-b border-edge">
+          <th class="text-left py-2 pr-4">Date</th>
+          <th class="text-right py-2 pr-4">Weight</th>
+          <th class="text-left py-2 pr-4">Notes</th>
+          <th class="py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in weight_history %}
+        <tr class="border-b border-edge">
+          <td class="py-2 pr-4 text-gray-700">{{ entry.recorded_at.strftime('%d %b %Y') }}</td>
+          <td class="py-2 pr-4 text-right font-medium tabular-nums text-gray-900">{{ "%.1f"|format(entry.weight_kg) }} kg</td>
+          <td class="py-2 pr-4 text-gray-400 text-xs">{{ entry.notes or '—' }}</td>
+          <td class="py-2 text-right">
+            <button
+              onclick="deleteWeight('{{ entry.id }}')"
+              class="text-xs text-gray-300 hover:text-red-400 transition-colors"
+              title="Delete"
+            >✕</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-gray-400 text-center py-6">No weight entries yet. Log your first entry above.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+// Profile form loading state
+document.getElementById('profile-form')?.addEventListener('submit', function() {
+  const btn = document.getElementById('save-profile-btn');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+});
+
+// Remove goal
+async function removeGoal() {
+  const res = await fetch('/profile/goal', { method: 'DELETE' });
+  if (res.ok) window.location.reload();
+}
+
+// Delete weight entry
+async function deleteWeight(entryId) {
+  const res = await fetch(`/profile/weight/${entryId}`, { method: 'DELETE' });
+  if (res.ok) window.location.reload();
+}
+
+// Training advice
+async function getAdvice() {
+  const btn = document.getElementById('advice-btn');
+  const loading = document.getElementById('advice-loading');
+  const card = document.getElementById('advice-card');
+  btn.classList.add('hidden');
+  loading.classList.remove('hidden');
+
+  try {
+    const res = await fetch('/profile/goal/advice', { method: 'POST' });
+    const data = await res.json();
+    document.getElementById('advice-summary').textContent = data.summary;
+    const tipsList = document.getElementById('advice-tips');
+    tipsList.innerHTML = '';
+    (data.training_tips || []).forEach(tip => {
+      const li = document.createElement('li');
+      li.className = 'flex gap-2.5 text-sm text-gray-700';
+      li.innerHTML = `<span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 sport-run"></span>${tip}`;
+      tipsList.appendChild(li);
+    });
+    document.getElementById('advice-focus').textContent = data.weekly_focus;
+    card.classList.remove('hidden');
+  } catch {
+    loading.textContent = 'Could not load advice. Try again.';
+  }
+}
+
+// Weight chart
+{% if chart_data %}
+(function() {
+  const data = {{ chart_data | tojson }};
+  if (!data.length) return;
+
+  const container = document.getElementById('weight-chart');
+  const margin = { top: 10, right: 10, bottom: 30, left: 40 };
+  const width = container.offsetWidth - margin.left - margin.right;
+  const height = 200 - margin.top - margin.bottom;
+
+  const svg = d3.select('#weight-chart')
+    .append('svg')
+    .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('width', '100%')
+    .style('height', '100%');
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const parseDate = d3.timeParse('%Y-%m-%d');
+  const parsed = data.map(d => ({ date: parseDate(d.date), weight: d.weight_kg }));
+
+  const x = d3.scaleTime()
+    .domain(d3.extent(parsed, d => d.date))
+    .range([0, width]);
+
+  const y = d3.scaleLinear()
+    .domain([d3.min(parsed, d => d.weight) - 2, d3.max(parsed, d => d.weight) + 2])
+    .range([height, 0]);
+
+  // Grid lines
+  g.append('g')
+    .attr('class', 'grid')
+    .call(d3.axisLeft(y).ticks(4).tickSize(-width).tickFormat(''))
+    .selectAll('line')
+    .style('stroke', 'var(--color-chart-grid)');
+  g.select('.grid .domain').remove();
+
+  // Axes
+  g.append('g')
+    .attr('transform', `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat('%d %b')))
+    .selectAll('text')
+    .attr('font-size', '10px')
+    .style('fill', 'var(--color-chart-axis)');
+  g.select('.domain').style('stroke', 'var(--color-chart-grid)');
+
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(4))
+    .selectAll('text')
+    .attr('font-size', '10px')
+    .style('fill', 'var(--color-chart-axis)');
+
+  // Data line
+  const line = d3.line()
+    .x(d => x(d.date))
+    .y(d => y(d.weight))
+    .curve(d3.curveMonotoneX);
+
+  g.append('path')
+    .datum(parsed)
+    .attr('fill', 'none')
+    .style('stroke', 'var(--color-mint)')
+    .attr('stroke-width', 2)
+    .attr('d', line);
+
+  // Trend line (linear regression)
+  if (parsed.length > 1) {
+    const xVals = parsed.map((_, i) => i);
+    const yVals = parsed.map(d => d.weight);
+    const n = xVals.length;
+    const sumX = xVals.reduce((a, b) => a + b, 0);
+    const sumY = yVals.reduce((a, b) => a + b, 0);
+    const sumXY = xVals.reduce((a, v, i) => a + v * yVals[i], 0);
+    const sumXX = xVals.reduce((a, v) => a + v * v, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    const trendData = [parsed[0], parsed[parsed.length - 1]].map((d, i) => ({
+      date: d.date,
+      weight: intercept + slope * (i === 0 ? 0 : n - 1),
+    }));
+
+    g.append('path')
+      .datum(trendData)
+      .attr('fill', 'none')
+      .style('stroke', 'var(--color-edge)')
+      .attr('stroke-width', 2)
+      .attr('stroke-dasharray', '4 3')
+      .attr('d', d3.line().x(d => x(d.date)).y(d => y(d.weight)));
+  }
+
+  // Dots
+  g.selectAll('.dot')
+    .data(parsed)
+    .enter()
+    .append('circle')
+    .attr('cx', d => x(d.date))
+    .attr('cy', d => y(d.weight))
+    .attr('r', 3)
+    .style('fill', 'var(--color-mint)');
+})();
+{% endif %}
+</script>
+{% endblock %}

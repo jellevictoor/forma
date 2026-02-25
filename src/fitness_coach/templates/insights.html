@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Insights — forma{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <h1 class="text-2xl font-semibold text-gray-900">Insights</h1>
+  <p class="text-gray-400 text-sm mt-1">What your private notes reveal about your training — {{ year }}</p>
+</div>
+
+{% if insights.note_count == 0 %}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-10 text-center text-gray-400 text-sm">
+  No private notes found for {{ year }}. Add notes to your Strava activities to unlock insights.
+</div>
+
+{% else %}
+
+<p class="text-xs text-gray-400 mb-6">Based on {{ insights.note_count }} workout note{{ 's' if insights.note_count != 1 else '' }}</p>
+
+<!-- Summary -->
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-5">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-3">Summary</h2>
+  <p class="text-gray-700 leading-relaxed">{{ insights.summary }}</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+
+  <!-- Patterns -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-4">Patterns</h2>
+    {% if insights.patterns %}
+    <ul class="space-y-3">
+      {% for p in insights.patterns %}
+      <li class="flex gap-2.5 text-sm text-gray-700">
+        <span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 sport-run"></span>
+        {{ p }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400">Not enough data.</p>
+    {% endif %}
+  </div>
+
+  <!-- Impact -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-4">Training impact</h2>
+    {% if insights.impact %}
+    <ul class="space-y-3">
+      {% for i in insights.impact %}
+      <li class="flex gap-2.5 text-sm text-gray-700">
+        <span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 sport-strength"></span>
+        {{ i }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400">Not enough data.</p>
+    {% endif %}
+  </div>
+
+  <!-- Recommendations -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-4">Recommendations</h2>
+    {% if insights.recommendations %}
+    <ul class="space-y-3">
+      {% for r in insights.recommendations %}
+      <li class="flex gap-2.5 text-sm text-gray-700">
+        <span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 sport-climbing"></span>
+        {{ r }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400">Not enough data.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endif %}
+{% endblock %}

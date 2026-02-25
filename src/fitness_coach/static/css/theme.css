@@ -1,0 +1,131 @@
+/* ── Color tokens ──────────────────────────────────────────── */
+:root {
+  /* Sport / brand — identical in both modes */
+  --color-mint:  #2DD4AA;
+  --color-sky:   #5BA8D4;
+  --color-amber: #E8A84A;
+
+  /* Nav */
+  --color-nav: #111D2C;
+
+  /* Page & surfaces */
+  --color-bg:          #F0F5FA;
+  --color-surface:     #FFFFFF;
+  --color-surface-alt: #EAF0F7;
+  --color-edge:        #D8E4EF;
+
+  /* Text */
+  --color-text:           #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94A3B8;
+
+  /* Semantic */
+  --color-negative: #DC2626;
+  --color-empty:    #94A3B8;
+
+  /* Chart helpers */
+  --color-chart-axis:   #94A3B8;
+  --color-chart-grid:   #E2E8F0;
+  --color-effort-bar:   rgba(17, 29, 44, 0.07);
+
+  /* Tooltip */
+  --color-tooltip-bg:     #FFFFFF;
+  --color-tooltip-border: #D8E4EF;
+  --color-tooltip-text:   #475569;
+  --color-tooltip-date:   #94A3B8;
+}
+
+.dark {
+  --color-nav: #07101C;
+
+  --color-bg:          #0B1622;
+  --color-surface:     #122030;
+  --color-surface-alt: #1A2C3E;
+  --color-edge:        #213349;
+
+  --color-text:           #EDF2F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #4E6A86;
+
+  --color-negative: #F87171;
+  --color-empty:    #3A5272;
+
+  --color-chart-axis:   #4E6A86;
+  --color-chart-grid:   #213349;
+  --color-effort-bar:   rgba(255, 255, 255, 0.05);
+
+  --color-tooltip-bg:     #1A2C3E;
+  --color-tooltip-border: #213349;
+  --color-tooltip-text:   #94A3B8;
+  --color-tooltip-date:   #4E6A86;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* ── Text — dark mode overrides for Tailwind gray classes ───── */
+.dark .text-gray-900 { color: var(--color-text); }
+.dark .text-gray-800 { color: var(--color-text); }
+.dark .text-gray-700 { color: var(--color-text-secondary); }
+.dark .text-gray-600 { color: var(--color-text-secondary); }
+.dark .text-gray-500 { color: var(--color-text-secondary); }
+.dark .text-gray-400 { color: var(--color-text-muted); }
+.dark .text-gray-300 { color: var(--color-text-muted); }
+
+.dark .hover\:text-gray-600:hover { color: var(--color-text-secondary); }
+.dark .hover\:text-gray-700:hover { color: var(--color-text); }
+.dark .hover\:text-gray-800:hover { color: var(--color-text); }
+
+/* ── Sport dot helpers ──────────────────────────────────────── */
+.sport-run      { background-color: var(--color-mint); }
+.sport-strength { background-color: var(--color-sky); }
+.sport-climbing { background-color: var(--color-amber); }
+
+/* ── Active tab ─────────────────────────────────────────────── */
+.tab-active {
+  background-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.tab-inactive {
+  background-color: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-edge);
+}
+
+.tab-inactive:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+/* ── Numeric tables ─────────────────────────────────────────── */
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--color-surface-alt);
+}
+
+/* ── Value helpers ──────────────────────────────────────────── */
+.value-negative {
+  color: var(--color-negative);
+}
+
+.value-empty {
+  color: var(--color-empty);
+}
+
+/* ── Chart containers ───────────────────────────────────────── */
+.chart-container {
+  width: 100%;
+  overflow: hidden;
+}
+
+.chart-container svg {
+  width: 100%;
+  height: auto;
+}

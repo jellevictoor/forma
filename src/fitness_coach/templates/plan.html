@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+{% block title %}Plan — forma{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <h1 class="text-2xl font-semibold" style="color:var(--color-text)">Training plan</h1>
+  <p class="text-sm mt-1" style="color:var(--color-text-muted)">7-day rolling plan, generated from your schedule and recent training</p>
+</div>
+
+<div class="space-y-6">
+
+  <!-- Schedule template -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest mb-1" style="color:var(--color-text-muted)">Schedule template</h2>
+    <p class="text-sm mb-5" style="color:var(--color-text-muted)">Define your recurring workout slots. These are used as hard constraints when generating the plan.</p>
+
+    {% if athlete and athlete.schedule_template %}
+    <ul class="space-y-2 mb-6">
+      {% for slot in athlete.schedule_template %}
+      <li class="flex items-center justify-between py-2 px-3 rounded-lg border border-edge text-sm" style="background:var(--color-surface-alt)">
+        <span class="flex items-center gap-2">
+          {% if slot.workout_type.value == 'run' %}
+            <span class="w-2 h-2 rounded-full sport-run inline-block"></span>
+          {% elif slot.workout_type.value == 'strength' %}
+            <span class="w-2 h-2 rounded-full sport-strength inline-block"></span>
+          {% elif slot.workout_type.value == 'climbing' %}
+            <span class="w-2 h-2 rounded-full sport-climbing inline-block"></span>
+          {% else %}
+            <span class="w-2 h-2 rounded-full inline-block" style="background:var(--color-text-muted)"></span>
+          {% endif %}
+          <span style="color:var(--color-text)">{{ day_names[slot.day_of_week] }}</span>
+          <span class="capitalize" style="color:var(--color-text-muted)">{{ slot.workout_type.value }}</span>
+        </span>
+        <button
+          onclick="deleteSlot({{ loop.index0 }})"
+          type="button"
+          class="text-xs hover:opacity-75 transition-opacity"
+          style="color:var(--color-text-muted)">Remove</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm mb-6" style="color:var(--color-text-muted)">No slots defined yet. Add your fixed training days below.</p>
+    {% endif %}
+
+    <form method="POST" action="/plan/template/add" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label class="block text-xs mb-1" style="color:var(--color-text-muted)">Day</label>
+        <select name="day_of_week" class="text-sm rounded-lg border border-edge px-3 py-2 focus:outline-none focus:ring-2 focus:ring-mint/40" style="background:var(--color-surface);color:var(--color-text)">
+          {% for i, name in day_names_enumerated %}
+          <option value="{{ i }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs mb-1" style="color:var(--color-text-muted)">Sport</label>
+        <select name="workout_type" class="text-sm rounded-lg border border-edge px-3 py-2 focus:outline-none focus:ring-2 focus:ring-mint/40" style="background:var(--color-surface);color:var(--color-text)">
+          {% for wt in workout_types %}
+          <option value="{{ wt.value }}">{{ wt.value | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90" style="background:var(--color-mint)">Add slot</button>
+    </form>
+  </div>
+
+  <!-- 7-day plan -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-xs font-medium uppercase tracking-widest" style="color:var(--color-text-muted)">7-day plan</h2>
+      <div class="flex items-center gap-3">
+        <span id="plan-stale-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full" style="background:var(--color-amber-subtle,#FEF3C7);color:#92400E">New activity — refresh to update</span>
+        <button id="plan-generate-btn" class="hidden text-xs flex items-center gap-1 hover:opacity-75 transition-opacity" style="color:var(--color-mint)" type="button">
+          Generate plan
+        </button>
+        <button id="plan-refresh-btn" class="hidden text-xs flex items-center gap-1 hover:opacity-75 transition-opacity" style="color:var(--color-text-muted)" type="button">
+          <svg id="plan-refresh-icon" xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div id="plan-skeleton" class="space-y-3">
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+      <div class="animate-pulse h-16 rounded-xl" style="background:var(--color-surface-alt)"></div>
+    </div>
+
+    <!-- Plan content -->
+    <div id="plan-content" class="hidden space-y-3"></div>
+
+    <!-- Rationale -->
+    <div id="plan-rationale" class="hidden mt-4 p-4 rounded-xl border border-edge" style="background:var(--color-surface-alt)">
+      <p class="text-xs font-medium uppercase tracking-widest mb-1" style="color:var(--color-text-muted)">Coach rationale</p>
+      <p id="plan-rationale-text" class="text-sm" style="color:var(--color-text)"></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const INTENSITY_COLORS = {
+  recovery:  'var(--color-text-muted)',
+  easy:      'var(--color-mint)',
+  moderate:  'var(--color-sky)',
+  tempo:     'var(--color-amber)',
+  threshold: 'var(--color-negative)',
+};
+
+const SPORT_COLOR = {
+  run:      'var(--color-mint)',
+  strength: 'var(--color-sky)',
+  climbing: 'var(--color-amber)',
+};
+
+const SPORT_CLASS = {
+  run:      'sport-run',
+  strength: 'sport-strength',
+  climbing: 'sport-climbing',
+};
+
+function sportDot(type) {
+  const cls = SPORT_CLASS[type] || '';
+  const style = cls ? '' : 'background:var(--color-text-muted)';
+  return `<span class="w-2 h-2 rounded-full inline-block ${cls}" style="${style}"></span>`;
+}
+
+const SECTION_LABELS = { warmup: 'Warm-up', main: 'Main', cooldown: 'Cool-down' };
+
+function youtubeSearchUrl(exercise) {
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(exercise + ' exercise tutorial');
+}
+
+function exerciseItems(list, accentColor) {
+  return list.map(e => `
+    <li class="flex gap-3 items-start group">
+      <span class="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style="background:${accentColor}"></span>
+      <span class="flex-1 text-sm leading-relaxed" style="color:var(--color-text)">${e}</span>
+      <a href="${youtubeSearchUrl(e)}" target="_blank" rel="noopener"
+         title="Search on YouTube"
+         class="shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+         style="color:var(--color-text-muted)">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+      </a>
+    </li>`).join('');
+}
+
+function exercisesHTML(exercises, workoutType) {
+  const accentColor = SPORT_COLOR[workoutType] || 'var(--color-text-muted)';
+  const sections = ['warmup', 'main', 'cooldown']
+    .filter(key => exercises[key] && exercises[key].length > 0)
+    .map(key => `
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:${accentColor}">${SECTION_LABELS[key]}</p>
+        <ul class="space-y-2 ml-1">${exerciseItems(exercises[key], accentColor)}</ul>
+      </div>`).join('');
+  return `
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-xs font-medium uppercase tracking-widest" style="color:var(--color-text-muted)">Exercise plan</p>
+      <button type="button" onclick="refreshExercises(this)"
+              class="flex items-center gap-1 text-xs transition-opacity hover:opacity-75"
+              style="color:var(--color-text-muted)">
+        <svg class="refresh-icon w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+    <div class="space-y-4">${sections}</div>`;
+}
+
+function dayCard(day) {
+  const d = new Date(day.date + 'T00:00:00');
+  const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
+  const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const intensityColor = INTENSITY_COLORS[day.intensity] || 'var(--color-text-muted)';
+  const isRest = day.workout_type === 'rest';
+  const hasExercises = !isRest && day.exercises && Object.values(day.exercises).some(s => s.length > 0);
+
+  const panelContent = hasExercises ? exercisesHTML(day.exercises, day.workout_type) : '';
+  const panelHidden = hasExercises ? '' : 'hidden ';
+
+  return `
+    <div class="rounded-xl border border-edge p-4" style="background:var(--color-surface-alt)"
+         data-date="${day.date}"
+         data-type="${day.workout_type}"
+         data-description="${(day.description || '').replace(/"/g, '&quot;')}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          ${sportDot(day.workout_type)}
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-semibold text-sm" style="color:var(--color-text)">${dayName}</span>
+              <span class="text-xs" style="color:var(--color-text-muted)">${dateStr}</span>
+            </div>
+            <p class="text-sm mt-0.5 leading-snug" style="color:var(--color-text-muted)">${day.description}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+          ${!isRest ? `
+            <span class="text-xs font-medium capitalize" style="color:${intensityColor}">${day.intensity}</span>
+            <span class="text-xs tabular-nums" style="color:var(--color-text-muted)">${day.duration_minutes}\u00a0min</span>
+            <button type="button" onclick="toggleExercises(this)"
+                    class="text-xs px-2.5 py-1 rounded-lg border border-edge transition-colors hover:opacity-75"
+                    style="color:var(--color-text-muted)">${hasExercises ? 'Hide' : 'Details'}</button>
+          ` : `<span class="text-xs italic" style="color:var(--color-text-muted)">Rest day</span>`}
+        </div>
+      </div>
+      <div class="exercises-panel ${panelHidden}mt-3 pt-3 border-t border-edge">${panelContent}</div>
+    </div>`;
+}
+
+async function toggleExercises(btn) {
+  const card = btn.closest('[data-type]');
+  const panel = card.querySelector('.exercises-panel');
+
+  // Toggle if exercises are already loaded
+  if (panel.children.length > 0) {
+    const nowHidden = panel.classList.toggle('hidden');
+    btn.textContent = nowHidden ? 'Details' : 'Hide';
+    return;
+  }
+
+  const dayDate = card.dataset.date;
+  const workoutType = card.dataset.type;
+  const description = card.dataset.description || '';
+
+  btn.textContent = 'Loading\u2026';
+  btn.disabled = true;
+  panel.classList.remove('hidden');
+  panel.innerHTML = `<div class="animate-pulse h-3 rounded w-2/3" style="background:var(--color-edge)"></div>`;
+
+  try {
+    const res = await fetch(`/api/plan/day/${dayDate}/${workoutType}/exercises`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description }),
+    });
+    const data = await res.json();
+    panel.innerHTML = exercisesHTML(data.exercises || [], workoutType);
+    btn.textContent = 'Hide';
+  } catch {
+    panel.innerHTML = `<p class="text-sm" style="color:var(--color-text-muted)">Could not load exercises. Try again.</p>`;
+    btn.textContent = 'Details';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function refreshExercises(btn) {
+  const card = btn.closest('[data-type]');
+  const panel = card.querySelector('.exercises-panel');
+  const dayDate = card.dataset.date;
+  const workoutType = card.dataset.type;
+  const description = card.dataset.description || '';
+  const icon = btn.querySelector('.refresh-icon');
+
+  btn.disabled = true;
+  if (icon) icon.classList.add('animate-spin');
+
+  try {
+    const res = await fetch(`/api/plan/day/${dayDate}/${workoutType}/exercises/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description }),
+    });
+    const data = await res.json();
+    panel.innerHTML = exercisesHTML(data.exercises || [], workoutType);
+  } catch {
+    // keep existing content on failure
+  } finally {
+    btn.disabled = false;
+    if (icon) icon.classList.remove('animate-spin');
+  }
+}
+
+function renderPlan(plan) {
+  const content = document.getElementById('plan-content');
+  content.innerHTML = plan.days.map(dayCard).join('');
+  content.classList.remove('hidden');
+
+  document.getElementById('plan-rationale-text').textContent = plan.rationale;
+  document.getElementById('plan-rationale').classList.remove('hidden');
+}
+
+function showSkeleton() {
+  document.getElementById('plan-skeleton').classList.remove('hidden');
+  document.getElementById('plan-content').classList.add('hidden');
+  document.getElementById('plan-rationale').classList.add('hidden');
+}
+
+async function refreshPlan() {
+  const refreshBtn = document.getElementById('plan-refresh-btn');
+  const generateBtn = document.getElementById('plan-generate-btn');
+  const icon = document.getElementById('plan-refresh-icon');
+
+  refreshBtn.disabled = true;
+  generateBtn.disabled = true;
+  if (icon) icon.classList.add('animate-spin');
+  document.getElementById('plan-stale-badge').classList.add('hidden');
+  showSkeleton();
+
+  try {
+    const plan = await fetch('/api/plan/refresh', { method: 'POST' }).then(r => r.json());
+    document.getElementById('plan-skeleton').classList.add('hidden');
+    renderPlan(plan);
+    refreshBtn.classList.remove('hidden');
+    generateBtn.classList.add('hidden');
+  } catch {
+    document.getElementById('plan-skeleton').classList.add('hidden');
+    document.getElementById('plan-content').innerHTML = `<p class="text-sm" style="color:var(--color-text-muted)">Could not generate plan. Try again.</p>`;
+    document.getElementById('plan-content').classList.remove('hidden');
+  } finally {
+    refreshBtn.disabled = false;
+    generateBtn.disabled = false;
+    if (icon) icon.classList.remove('animate-spin');
+  }
+}
+
+document.getElementById('plan-refresh-btn').addEventListener('click', refreshPlan);
+document.getElementById('plan-generate-btn').addEventListener('click', refreshPlan);
+
+(async function loadPlan() {
+  try {
+    const plan = await fetch('/api/plan').then(r => r.json());
+    document.getElementById('plan-skeleton').classList.add('hidden');
+
+    if (!plan.cached) {
+      document.getElementById('plan-content').innerHTML = `<p class="text-sm" style="color:var(--color-text-muted)">No plan generated yet.</p>`;
+      document.getElementById('plan-content').classList.remove('hidden');
+      document.getElementById('plan-generate-btn').classList.remove('hidden');
+      return;
+    }
+
+    renderPlan(plan);
+    document.getElementById('plan-refresh-btn').classList.remove('hidden');
+    if (plan.stale) {
+      document.getElementById('plan-stale-badge').classList.remove('hidden');
+    }
+  } catch {
+    document.getElementById('plan-skeleton').classList.add('hidden');
+    document.getElementById('plan-content').innerHTML = `<p class="text-sm" style="color:var(--color-text-muted)">Could not load plan.</p>`;
+    document.getElementById('plan-content').classList.remove('hidden');
+  }
+})();
+
+async function deleteSlot(index) {
+  try {
+    const res = await fetch(`/plan/template/${index}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Request failed');
+    window.location.reload();
+  } catch {
+    alert('Could not remove slot. Please try again.');
+  }
+}
+</script>
+{% endblock %}

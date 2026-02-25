@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}forma{% endblock %}</title>
+  <!-- Apply theme before render to prevent flash -->
+  <script>
+    (function() {
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" href="/static/css/theme.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            /* Brand — same in both modes */
+            mint:  '#2DD4AA',
+            sky:   '#5BA8D4',
+            amber: '#E8A84A',
+            /* Semantic — CSS-variable-backed, auto-adapt to theme */
+            'nav-bg':      'var(--color-nav)',
+            'surface':     'var(--color-surface)',
+            'surface-alt': 'var(--color-surface-alt)',
+            'edge':        'var(--color-edge)',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen">
+
+  <nav class="bg-nav-bg text-white shadow-md">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center gap-10">
+      <a href="/" class="font-semibold text-xl tracking-tight text-mint">forma</a>
+      <div class="flex gap-7 text-sm" style="color:var(--color-text-muted)">
+        <a href="/" class="hover:text-white transition-colors">Overview</a>
+        <a href="/activities/all/1" class="hover:text-white transition-colors">Activities</a>
+        <a href="/analytics/run" class="hover:text-white transition-colors">Analytics</a>
+        <a href="/progress" class="hover:text-white transition-colors">Progress</a>
+        <a href="/insights" class="hover:text-white transition-colors">Insights</a>
+        <a href="/plan" class="hover:text-white transition-colors">Plan</a>
+        <a href="/profile" class="hover:text-white transition-colors">Profile</a>
+      </div>
+      <div class="ml-auto flex items-center gap-4">
+        <span class="text-xs font-medium tracking-widest" style="color:var(--color-text-muted)">2026</span>
+        <!-- Strava sync button -->
+        <div class="flex items-center gap-2">
+          <span id="sync-result" class="hidden text-xs font-medium" style="color:var(--color-text-muted)"></span>
+          <button id="sync-btn" onclick="triggerSync()"
+                  class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                  style="color:var(--color-text-muted)" title="Sync from Strava" aria-label="Sync from Strava">
+            <svg id="sync-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M8 16H3v5"/>
+            </svg>
+          </button>
+        </div>
+        <button id="theme-toggle" onclick="toggleTheme()"
+                class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                style="color:var(--color-text-muted)" title="Toggle theme" aria-label="Toggle theme">
+          <!-- Sun icon (shown in dark mode) -->
+          <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" class="hidden w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-6 py-10">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    async function triggerSync() {
+      const btn = document.getElementById('sync-btn');
+      const icon = document.getElementById('sync-icon');
+      const result = document.getElementById('sync-result');
+
+      btn.disabled = true;
+      icon.classList.add('animate-spin');
+      result.textContent = '';
+      result.classList.add('hidden');
+
+      try {
+        const data = await fetch('/api/sync', { method: 'POST' }).then(r => r.json());
+        const count = data.synced;
+        result.textContent = count === 0 ? 'Up to date' : `+${count}`;
+        result.classList.remove('hidden');
+        setTimeout(() => result.classList.add('hidden'), 4000);
+      } catch {
+        result.textContent = 'Sync failed';
+        result.classList.remove('hidden');
+        setTimeout(() => result.classList.add('hidden'), 4000);
+      } finally {
+        btn.disabled = false;
+        icon.classList.remove('animate-spin');
+      }
+    }
+  </script>
+
+  <script>
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateThemeIcon(isDark);
+    }
+
+    function updateThemeIcon(isDark) {
+      document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
+      document.getElementById('icon-moon').classList.toggle('hidden', isDark);
+    }
+
+    // Initialise icon on load
+    updateThemeIcon(document.documentElement.classList.contains('dark'));
+
+    // Follow system preference when no stored preference
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (!localStorage.getItem('theme')) {
+        document.documentElement.classList.toggle('dark', e.matches);
+        updateThemeIcon(e.matches);
+      }
+    });
+  </script>
+
+</body>
+</html>
