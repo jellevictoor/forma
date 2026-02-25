@@ -16,6 +16,11 @@ from fitness_coach.adapters.web.routes.progress import router as progress_router
 STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 
 
+def serve() -> None:
+    import uvicorn
+    uvicorn.run("fitness_coach.adapters.web.app:create_app", host="0.0.0.0", port=8080, factory=True)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Fitness Coach Dashboard")
 
