@@ -72,17 +72,6 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, We
 
                 CREATE INDEX IF NOT EXISTS idx_schedules_athlete_id ON schedules(athlete_id);
 
-                CREATE TABLE IF NOT EXISTS conversation_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    athlete_id TEXT NOT NULL,
-                    role TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (athlete_id) REFERENCES athletes(id)
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_conversation_athlete_id ON conversation_history(athlete_id);
-
                 CREATE TABLE IF NOT EXISTS weight_entries (
                     id TEXT PRIMARY KEY,
                     athlete_id TEXT NOT NULL,
@@ -193,7 +182,7 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, We
                 return self._deserialize_workout(row["data"])
             return None
 
-    async def get_by_strava_id(self, strava_id: int) -> Workout | None:  # noqa: F811
+    async def get_workout_by_strava_id(self, strava_id: int) -> Workout | None:
         with self._get_connection() as conn:
             row = conn.execute(
                 "SELECT data FROM workouts WHERE strava_id = ?", (strava_id,)
@@ -308,40 +297,6 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, We
                 (athlete_id,),
             ).fetchall()
             return [self._deserialize_schedule(row["data"]) for row in rows]
-
-    # Conversation history
-
-    async def save_message(self, athlete_id: str, role: str, content: str) -> None:
-        with self._get_connection() as conn:
-            conn.execute(
-                "INSERT INTO conversation_history (athlete_id, role, content) VALUES (?, ?, ?)",
-                (athlete_id, role, content),
-            )
-
-    async def get_conversation_history(
-        self, athlete_id: str, limit: int = 50
-    ) -> list[dict]:
-        with self._get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT role, content, created_at
-                FROM conversation_history
-                WHERE athlete_id = ?
-                ORDER BY created_at DESC
-                LIMIT ?
-                """,
-                (athlete_id, limit),
-            ).fetchall()
-            return [
-                {"role": row["role"], "content": row["content"]}
-                for row in reversed(rows)
-            ]
-
-    async def clear_conversation_history(self, athlete_id: str) -> None:
-        with self._get_connection() as conn:
-            conn.execute(
-                "DELETE FROM conversation_history WHERE athlete_id = ?", (athlete_id,)
-            )
 
     # WeightRepository implementation
 

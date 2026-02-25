@@ -47,12 +47,11 @@ class FullStravaSync:
         return recent[0].start_time
 
     async def _sync_activity(self, activity: dict, athlete_id: str) -> int:
-        existing = await self._workouts.get_by_strava_id(activity["id"])
+        existing = await self._workouts.get_workout_by_strava_id(activity["id"])
         if existing:
             return 0
 
         full_activity = await self._strava.get_activity(activity["id"])
         workout = self._strava.activity_to_workout(full_activity, athlete_id)
         await self._workouts.save_workout(workout)
-        print(f"  ✓ {workout.start_time.strftime('%Y-%m-%d')} {workout.name}")
         return 1

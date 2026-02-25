@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from fitness_coach.domain.workout import Workout
 from fitness_coach.ports.workout_analytics_repository import (
     PersonalRecord,
     SportSummary,
@@ -28,8 +29,8 @@ def current_year() -> int:
 @dataclass
 class OverviewStats:
     sport_summaries: list[SportSummary]
-    recent_workouts: list
-    weekly_volumes: list
+    recent_workouts: list[Workout]
+    weekly_volumes: list[dict]
     year: int
 
 

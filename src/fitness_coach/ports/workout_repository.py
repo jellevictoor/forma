@@ -10,22 +10,22 @@ class WorkoutRepository(ABC):
     """Abstract repository for workout data."""
 
     @abstractmethod
-    async def get(self, workout_id: str) -> Workout | None:
+    async def get_workout(self, workout_id: str) -> Workout | None:
         """Get a workout by ID."""
         ...
 
     @abstractmethod
-    async def get_by_strava_id(self, strava_id: int) -> Workout | None:
+    async def get_workout_by_strava_id(self, strava_id: int) -> Workout | None:
         """Get a workout by its Strava ID."""
         ...
 
     @abstractmethod
-    async def save(self, workout: Workout) -> None:
+    async def save_workout(self, workout: Workout) -> None:
         """Save a workout."""
         ...
 
     @abstractmethod
-    async def delete(self, workout_id: str) -> None:
+    async def delete_workout(self, workout_id: str) -> None:
         """Delete a workout."""
         ...
 

@@ -37,7 +37,7 @@ def strava_client():
 @pytest.fixture
 def workout_repo():
     repo = AsyncMock()
-    repo.get_by_strava_id = AsyncMock(return_value=None)
+    repo.get_workout_by_strava_id = AsyncMock(return_value=None)
     repo.save_workout = AsyncMock()
     return repo
 
@@ -77,7 +77,7 @@ async def test_execute_skips_existing_activity(strava_client, workout_repo):
             [],
         ]
     )
-    workout_repo.get_by_strava_id = AsyncMock(return_value=make_workout("w1", 1))
+    workout_repo.get_workout_by_strava_id = AsyncMock(return_value=make_workout("w1", 1))
     sync = FullStravaSync(strava_client, workout_repo)
 
     count = await sync.execute("athlete1")

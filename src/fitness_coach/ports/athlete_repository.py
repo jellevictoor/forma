@@ -32,3 +32,8 @@ class AthleteRepository(ABC):
     async def get_default(self) -> Athlete | None:
         """Get the default/primary athlete (for single-user mode)."""
         ...
+
+    @abstractmethod
+    async def set_default(self, athlete_id: str) -> None:
+        """Mark an athlete as the default (for single-user mode)."""
+        ...
