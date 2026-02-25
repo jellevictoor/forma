@@ -7,16 +7,14 @@ from pathlib import Path
 from typing import Iterator
 
 from fitness_coach.domain.athlete import Athlete
-from fitness_coach.domain.schedule import Schedule
 from fitness_coach.domain.weight_entry import WeightEntry
 from fitness_coach.domain.workout import Workout
 from fitness_coach.ports.athlete_repository import AthleteRepository
-from fitness_coach.ports.schedule_repository import ScheduleRepository
 from fitness_coach.ports.weight_repository import WeightRepository
 from fitness_coach.ports.workout_repository import WorkoutRepository
 
 
-class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, WeightRepository):
+class SQLiteStorage(AthleteRepository, WorkoutRepository, WeightRepository):
     """SQLite-based storage for all domain entities."""
 
     def __init__(self, db_path: str | Path = "data/fitness_coach.db"):
@@ -60,18 +58,6 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, We
                 CREATE INDEX IF NOT EXISTS idx_workouts_strava_id ON workouts(strava_id);
                 CREATE INDEX IF NOT EXISTS idx_workouts_start_time ON workouts(start_time);
 
-                CREATE TABLE IF NOT EXISTS schedules (
-                    id TEXT PRIMARY KEY,
-                    athlete_id TEXT NOT NULL,
-                    is_active INTEGER DEFAULT 0,
-                    data TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (athlete_id) REFERENCES athletes(id)
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_schedules_athlete_id ON schedules(athlete_id);
-
                 CREATE TABLE IF NOT EXISTS weight_entries (
                     id TEXT PRIMARY KEY,
                     athlete_id TEXT NOT NULL,
@@ -106,12 +92,6 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, We
 
     def _deserialize_workout(self, data: str) -> Workout:
         return Workout.model_validate_json(data)
-
-    def _serialize_schedule(self, schedule: Schedule) -> str:
-        return schedule.model_dump_json()
-
-    def _deserialize_schedule(self, data: str) -> Schedule:
-        return Schedule.model_validate_json(data)
 
     # AthleteRepository implementation
 
@@ -241,62 +221,6 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, ScheduleRepository, We
 
     async def get_recent(self, athlete_id: str, count: int = 10) -> list[Workout]:
         return await self.list_workouts_for_athlete(athlete_id, limit=count)
-
-    # ScheduleRepository implementation
-
-    async def get_schedule(self, schedule_id: str) -> Schedule | None:
-        with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT data FROM schedules WHERE id = ?", (schedule_id,)
-            ).fetchone()
-            if row:
-                return self._deserialize_schedule(row["data"])
-            return None
-
-    async def get_active_for_athlete(self, athlete_id: str) -> Schedule | None:
-        with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT data FROM schedules WHERE athlete_id = ? AND is_active = 1",
-                (athlete_id,),
-            ).fetchone()
-            if row:
-                return self._deserialize_schedule(row["data"])
-            return None
-
-    async def save_schedule(self, schedule: Schedule) -> None:
-        with self._get_connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO schedules (id, athlete_id, data, updated_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(id) DO UPDATE SET
-                    data = excluded.data,
-                    updated_at = CURRENT_TIMESTAMP
-                """,
-                (schedule.id, schedule.athlete_id, self._serialize_schedule(schedule)),
-            )
-
-    async def set_active_schedule(self, athlete_id: str, schedule_id: str) -> None:
-        with self._get_connection() as conn:
-            conn.execute(
-                "UPDATE schedules SET is_active = 0 WHERE athlete_id = ?",
-                (athlete_id,),
-            )
-            conn.execute(
-                "UPDATE schedules SET is_active = 1 WHERE id = ?", (schedule_id,)
-            )
-
-    async def delete_schedule(self, schedule_id: str) -> None:
-        with self._get_connection() as conn:
-            conn.execute("DELETE FROM schedules WHERE id = ?", (schedule_id,))
-
-    async def list_schedules_for_athlete(self, athlete_id: str) -> list[Schedule]:
-        with self._get_connection() as conn:
-            rows = conn.execute(
-                "SELECT data FROM schedules WHERE athlete_id = ? ORDER BY created_at DESC",
-                (athlete_id,),
-            ).fetchall()
-            return [self._deserialize_schedule(row["data"]) for row in rows]
 
     # WeightRepository implementation
 
