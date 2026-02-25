@@ -83,6 +83,22 @@ class Athlete(BaseModel):
             - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
         )
 
+    def with_primary_goal(self, goal: "Goal") -> "Athlete":
+        return self.model_copy(update={"goals": [goal]})
+
+    def without_primary_goal(self) -> "Athlete":
+        return self.model_copy(update={"goals": []})
+
+    def with_schedule_slot(self, slot: "ScheduleTemplateSlot") -> "Athlete":
+        return self.model_copy(update={"schedule_template": [*self.schedule_template, slot]})
+
+    def without_schedule_slot(self, slot_index: int) -> "Athlete":
+        if slot_index < 0 or slot_index >= len(self.schedule_template):
+            raise IndexError(f"Slot index {slot_index} out of range")
+        slots = list(self.schedule_template)
+        slots.pop(slot_index)
+        return self.model_copy(update={"schedule_template": slots})
+
     @property
     def active_injuries(self) -> list[Injury]:
         """Get currently active injuries."""

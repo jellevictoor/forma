@@ -50,7 +50,7 @@ class AthleteProfileService:
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
-        updated = athlete.model_copy(update={"goals": [goal]})
+        updated = athlete.with_primary_goal(goal)
         await self._athletes.save(updated)
         return updated
 
@@ -58,7 +58,7 @@ class AthleteProfileService:
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
-        updated = athlete.model_copy(update={"goals": []})
+        updated = athlete.without_primary_goal()
         await self._athletes.save(updated)
         return updated
 
@@ -66,8 +66,7 @@ class AthleteProfileService:
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
-        updated_slots = [*athlete.schedule_template, slot]
-        updated = athlete.model_copy(update={"schedule_template": updated_slots})
+        updated = athlete.with_schedule_slot(slot)
         await self._athletes.save(updated)
         return updated
 
@@ -75,11 +74,7 @@ class AthleteProfileService:
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
-        slots = list(athlete.schedule_template)
-        if slot_index < 0 or slot_index >= len(slots):
-            raise IndexError(f"Slot index {slot_index} out of range")
-        slots.pop(slot_index)
-        updated = athlete.model_copy(update={"schedule_template": slots})
+        updated = athlete.without_schedule_slot(slot_index)
         await self._athletes.save(updated)
         return updated
 

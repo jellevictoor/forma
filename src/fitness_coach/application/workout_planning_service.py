@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from google import genai
 
-from fitness_coach.application.analytics_service import CTL_SEED_DAYS, compute_fitness_freshness
+from fitness_coach.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from fitness_coach.ports.athlete_repository import AthleteRepository
 from fitness_coach.ports.plan_cache_repository import (
     CachedWeeklyPlan,

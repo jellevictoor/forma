@@ -1,15 +1,15 @@
 """Weight entry domain entity."""
 
-from dataclasses import dataclass, field
 from datetime import date
 
+from pydantic import BaseModel
 
-@dataclass
-class WeightEntry:
+
+class WeightEntry(BaseModel):
     """A single weight measurement for an athlete."""
 
     id: str
     athlete_id: str
     weight_kg: float
     recorded_at: date
-    notes: str = field(default="")
+    notes: str = ""
