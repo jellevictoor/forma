@@ -30,7 +30,6 @@ def make_workout_repo():
     return repo
 
 
-@pytest.mark.asyncio
 async def test_overview_stats_returns_overview_stats_dataclass():
     analytics_repo = make_analytics_repo()
     workout_repo = make_workout_repo()
@@ -41,7 +40,6 @@ async def test_overview_stats_returns_overview_stats_dataclass():
     assert isinstance(result, OverviewStats)
 
 
-@pytest.mark.asyncio
 async def test_overview_stats_includes_sport_summaries():
     analytics_repo = make_analytics_repo()
     analytics_repo.sport_summaries = AsyncMock(
@@ -57,7 +55,6 @@ async def test_overview_stats_includes_sport_summaries():
     assert len(result.sport_summaries) == 1
 
 
-@pytest.mark.asyncio
 async def test_weekly_volume_chart_data_delegates_to_repo():
     analytics_repo = make_analytics_repo()
     analytics_repo.weekly_volume = AsyncMock(
@@ -74,7 +71,6 @@ async def test_weekly_volume_chart_data_delegates_to_repo():
     assert result[0]["week_start"] == "2026-02-16"
 
 
-@pytest.mark.asyncio
 async def test_weekly_volume_chart_data_includes_distance_km():
     analytics_repo = make_analytics_repo()
     analytics_repo.weekly_volume = AsyncMock(
@@ -90,7 +86,6 @@ async def test_weekly_volume_chart_data_includes_distance_km():
     assert result[0]["distance_km"] == pytest.approx(10.0)
 
 
-@pytest.mark.asyncio
 async def test_pace_trend_chart_data_returns_list():
     analytics_repo = make_analytics_repo()
     analytics_repo.pace_trend = AsyncMock(
@@ -104,7 +99,6 @@ async def test_pace_trend_chart_data_returns_list():
     assert len(result) == 1
 
 
-@pytest.mark.asyncio
 async def test_personal_records_calls_repo_with_standard_distances():
     analytics_repo = make_analytics_repo()
     workout_repo = make_workout_repo()
@@ -120,7 +114,6 @@ async def test_personal_records_calls_repo_with_standard_distances():
     assert 42195.0 in distances
 
 
-@pytest.mark.asyncio
 async def test_activities_page_returns_tuple_of_workouts_and_total():
     analytics_repo = make_analytics_repo()
     analytics_repo.list_workouts_paginated = AsyncMock(return_value=([], 0))
@@ -133,7 +126,6 @@ async def test_activities_page_returns_tuple_of_workouts_and_total():
     assert workouts == []
 
 
-@pytest.mark.asyncio
 async def test_strength_frequency_chart_data_returns_list():
     analytics_repo = make_analytics_repo()
     analytics_repo.strength_frequency = AsyncMock(
@@ -147,7 +139,6 @@ async def test_strength_frequency_chart_data_returns_list():
     assert len(result) == 1
 
 
-@pytest.mark.asyncio
 async def test_climbing_history_returns_list():
     analytics_repo = make_analytics_repo()
     analytics_repo.climbing_sessions = AsyncMock(
@@ -161,7 +152,6 @@ async def test_climbing_history_returns_list():
     assert len(result) == 1
 
 
-@pytest.mark.asyncio
 async def test_progress_comparison_returns_current_and_previous_month():
     analytics_repo = make_analytics_repo()
     analytics_repo.sport_stats_for_month = AsyncMock(return_value=[
@@ -177,7 +167,6 @@ async def test_progress_comparison_returns_current_and_previous_month():
     assert "sports" in result
 
 
-@pytest.mark.asyncio
 async def test_progress_comparison_sport_has_current_and_previous():
     analytics_repo = make_analytics_repo()
     analytics_repo.sport_stats_for_month = AsyncMock(return_value=[
@@ -193,7 +182,6 @@ async def test_progress_comparison_sport_has_current_and_previous():
     assert "previous" in run_entry
 
 
-@pytest.mark.asyncio
 async def test_training_log_data_returns_list():
     analytics_repo = make_analytics_repo()
     analytics_repo.training_log = AsyncMock(return_value=[
@@ -207,7 +195,6 @@ async def test_training_log_data_returns_list():
     assert isinstance(result, list)
 
 
-@pytest.mark.asyncio
 async def test_training_log_data_delegates_to_repo():
     analytics_repo = make_analytics_repo()
     workout_repo = make_workout_repo()
@@ -218,7 +205,6 @@ async def test_training_log_data_delegates_to_repo():
     analytics_repo.training_log.assert_called_once_with("athlete1", 2026)
 
 
-@pytest.mark.asyncio
 async def test_fitness_freshness_returns_list_of_dicts():
     analytics_repo = make_analytics_repo()
     analytics_repo.daily_effort = AsyncMock(return_value=[])
@@ -230,7 +216,6 @@ async def test_fitness_freshness_returns_list_of_dicts():
     assert isinstance(result, list)
 
 
-@pytest.mark.asyncio
 async def test_fitness_freshness_contains_expected_keys():
     analytics_repo = make_analytics_repo()
     analytics_repo.daily_effort = AsyncMock(
@@ -247,7 +232,6 @@ async def test_fitness_freshness_contains_expected_keys():
     assert "form" in day
 
 
-@pytest.mark.asyncio
 async def test_fitness_freshness_form_equals_fitness_minus_fatigue():
     analytics_repo = make_analytics_repo()
     analytics_repo.daily_effort = AsyncMock(

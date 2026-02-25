@@ -3,7 +3,6 @@
 from datetime import date, timedelta
 from unittest.mock import AsyncMock
 
-import pytest
 
 from fitness_coach.application.weight_tracking_service import WeightTrackingService
 from fitness_coach.domain.weight_entry import WeightEntry
@@ -32,7 +31,6 @@ def make_service(latest: WeightEntry | None = None, entries: list | None = None)
     return WeightTrackingService(weight_repo)
 
 
-@pytest.mark.asyncio
 async def test_record_weight_saved():
     service = make_service()
 
@@ -41,7 +39,6 @@ async def test_record_weight_saved():
     assert entry.weight_kg == 75.5
 
 
-@pytest.mark.asyncio
 async def test_is_stale_no_entries():
     service = make_service(latest=None)
 
@@ -50,7 +47,6 @@ async def test_is_stale_no_entries():
     assert result is True
 
 
-@pytest.mark.asyncio
 async def test_is_stale_recent_entry():
     entry = make_entry(recorded_at=date.today())
     service = make_service(latest=entry)
@@ -60,7 +56,6 @@ async def test_is_stale_recent_entry():
     assert result is False
 
 
-@pytest.mark.asyncio
 async def test_is_stale_old_entry():
     old_date = date.today() - timedelta(days=8)
     entry = make_entry(recorded_at=old_date)
@@ -71,7 +66,6 @@ async def test_is_stale_old_entry():
     assert result is True
 
 
-@pytest.mark.asyncio
 async def test_chart_data_format():
     entries = [
         make_entry("e2", recorded_at=date(2026, 2, 10), weight_kg=76.0),

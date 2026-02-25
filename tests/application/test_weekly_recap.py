@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
-import pytest
 
 from fitness_coach.application.weekly_recap import WeeklyRecapService
 from fitness_coach.domain.workout import Workout, WorkoutType
@@ -34,7 +33,6 @@ def make_deps():
     return analytics_repo, workout_repo, cache_repo
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_returns_cached_recap():
     analytics_repo, workout_repo, cache_repo = make_deps()
     service = WeeklyRecapService(analytics_repo, workout_repo, "fake-key", cache_repo)
@@ -47,7 +45,6 @@ async def test_generate_and_cache_returns_cached_recap():
     assert isinstance(result, CachedRecap)
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_no_workouts_returns_cached_recap():
     analytics_repo, workout_repo, cache_repo = make_deps()
     service = WeeklyRecapService(analytics_repo, workout_repo, "fake-key", cache_repo)
@@ -58,7 +55,6 @@ async def test_generate_and_cache_no_workouts_returns_cached_recap():
     assert result.focus == []
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_does_not_call_gemini_when_no_workouts():
     analytics_repo, workout_repo, cache_repo = make_deps()
     service = WeeklyRecapService(analytics_repo, workout_repo, "fake-key", cache_repo)
@@ -69,7 +65,6 @@ async def test_generate_and_cache_does_not_call_gemini_when_no_workouts():
     mock_gemini.assert_not_called()
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_calls_gemini_when_workouts_exist():
     analytics_repo, workout_repo, cache_repo = make_deps()
     workout_repo.get_recent = AsyncMock(return_value=[
@@ -85,7 +80,6 @@ async def test_generate_and_cache_calls_gemini_when_workouts_exist():
     mock_gemini.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_saves_to_cache():
     analytics_repo, workout_repo, cache_repo = make_deps()
     service = WeeklyRecapService(analytics_repo, workout_repo, "fake-key", cache_repo)
@@ -98,7 +92,6 @@ async def test_generate_and_cache_saves_to_cache():
     cache_repo.save.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_get_cached_returns_none_when_no_cache():
     analytics_repo, workout_repo, cache_repo = make_deps()
     service = WeeklyRecapService(analytics_repo, workout_repo, "fake-key", cache_repo)
@@ -108,7 +101,6 @@ async def test_get_cached_returns_none_when_no_cache():
     assert result is None
 
 
-@pytest.mark.asyncio
 async def test_get_cached_returns_cached_recap():
     analytics_repo, workout_repo, cache_repo = make_deps()
     cached = CachedRecap(
@@ -123,7 +115,6 @@ async def test_get_cached_returns_cached_recap():
     assert result is cached
 
 
-@pytest.mark.asyncio
 async def test_get_cached_does_not_call_gemini():
     analytics_repo, workout_repo, cache_repo = make_deps()
     service = WeeklyRecapService(analytics_repo, workout_repo, "fake-key", cache_repo)

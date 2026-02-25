@@ -39,7 +39,6 @@ def storage(db_path):
     return SQLiteStorage(db_path)
 
 
-@pytest.mark.asyncio
 async def test_save_and_get_latest(storage):
     await storage.save(make_athlete())
     entry = make_entry()
@@ -50,7 +49,6 @@ async def test_save_and_get_latest(storage):
     assert result.id == "e1"
 
 
-@pytest.mark.asyncio
 async def test_list_for_athlete_ordered_desc(storage):
     await storage.save(make_athlete())
     await storage.save_weight_entry(make_entry("e1", recorded_at=date(2026, 1, 1), weight_kg=74.0))
@@ -61,7 +59,6 @@ async def test_list_for_athlete_ordered_desc(storage):
     assert result[0].id == "e2"
 
 
-@pytest.mark.asyncio
 async def test_delete_entry(storage):
     await storage.save(make_athlete())
     await storage.save_weight_entry(make_entry("e1"))
@@ -72,7 +69,6 @@ async def test_delete_entry(storage):
     assert result == []
 
 
-@pytest.mark.asyncio
 async def test_list_limit(storage):
     await storage.save(make_athlete())
     for i in range(5):

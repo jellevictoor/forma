@@ -14,11 +14,6 @@ class AthleteRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_strava_id(self, strava_id: int) -> Athlete | None:
-        """Get an athlete by their Strava ID."""
-        ...
-
-    @abstractmethod
     async def save(self, athlete: Athlete) -> None:
         """Save an athlete."""
         ...

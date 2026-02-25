@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from google import genai
 
-from fitness_coach.application.analytics_service import _CTL_SEED_DAYS, _compute_fitness_freshness
+from fitness_coach.application.analytics_service import CTL_SEED_DAYS, compute_fitness_freshness
 from fitness_coach.ports.athlete_repository import AthleteRepository
 from fitness_coach.ports.plan_cache_repository import (
     CachedWeeklyPlan,
@@ -118,9 +118,9 @@ class WorkoutPlanningService:
         return {w.start_time.date() for w in window_workouts}
 
     async def _current_fitness_freshness(self, athlete_id: str) -> dict:
-        since = date.today() - timedelta(days=_CTL_SEED_DAYS + 7)
+        since = date.today() - timedelta(days=CTL_SEED_DAYS + 7)
         daily_efforts = await self._analytics.daily_effort(athlete_id, since)
-        ff = _compute_fitness_freshness(daily_efforts, display_days=1)
+        ff = compute_fitness_freshness(daily_efforts, display_days=1)
         return ff[-1] if ff else {"fitness": 0.0, "fatigue": 0.0, "form": 0.0}
 
     def _build_plan_prompt(self, athlete, recent_workouts: list, ff: dict, completed_dates: set) -> str:

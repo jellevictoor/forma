@@ -42,7 +42,6 @@ def workout_repo():
     return repo
 
 
-@pytest.mark.asyncio
 async def test_execute_returns_zero_when_no_activities(strava_client, workout_repo):
     strava_client.get_activities = AsyncMock(return_value=[])
     sync = FullStravaSync(strava_client, workout_repo)
@@ -52,7 +51,6 @@ async def test_execute_returns_zero_when_no_activities(strava_client, workout_re
     assert count == 0
 
 
-@pytest.mark.asyncio
 async def test_execute_saves_new_activity(strava_client, workout_repo):
     strava_client.get_activities = AsyncMock(
         side_effect=[
@@ -69,7 +67,6 @@ async def test_execute_saves_new_activity(strava_client, workout_repo):
     workout_repo.save_workout.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_execute_skips_existing_activity(strava_client, workout_repo):
     strava_client.get_activities = AsyncMock(
         side_effect=[
@@ -86,7 +83,6 @@ async def test_execute_skips_existing_activity(strava_client, workout_repo):
     workout_repo.save_workout.assert_not_called()
 
 
-@pytest.mark.asyncio
 async def test_execute_paginates_until_empty_page(strava_client, workout_repo):
     strava_client.get_activities = AsyncMock(
         side_effect=[

@@ -104,15 +104,6 @@ class SQLiteStorage(AthleteRepository, WorkoutRepository, WeightRepository):
                 return self._deserialize_athlete(row["data"])
             return None
 
-    async def get_by_strava_id(self, strava_id: int) -> Athlete | None:
-        with self._get_connection() as conn:
-            rows = conn.execute("SELECT data FROM athletes").fetchall()
-            for row in rows:
-                athlete = self._deserialize_athlete(row["data"])
-                if athlete.strava_athlete_id == strava_id:
-                    return athlete
-            return None
-
     async def save(self, athlete: Athlete) -> None:
         with self._get_connection() as conn:
             conn.execute(

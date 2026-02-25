@@ -3,7 +3,6 @@
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
-import pytest
 
 from fitness_coach.application.workout_planning_service import WorkoutPlanningService
 from fitness_coach.domain.athlete import Athlete
@@ -69,7 +68,6 @@ def make_service(athlete_repo=None, workout_repo=None, analytics_repo=None, plan
     )
 
 
-@pytest.mark.asyncio
 async def test_get_cached_returns_none_when_no_cache():
     service = make_service()
 
@@ -78,7 +76,6 @@ async def test_get_cached_returns_none_when_no_cache():
     assert result is None
 
 
-@pytest.mark.asyncio
 async def test_get_cached_sets_stale_false_when_no_new_activity():
     cached_at = datetime.now(tz=timezone.utc) - timedelta(hours=1)
     activity_time = cached_at - timedelta(hours=1)
@@ -98,7 +95,6 @@ async def test_get_cached_sets_stale_false_when_no_new_activity():
     assert result.is_stale is False
 
 
-@pytest.mark.asyncio
 async def test_get_cached_sets_stale_true_when_new_activity_exists():
     cached_at = datetime.now(tz=timezone.utc) - timedelta(hours=2)
     activity_time = cached_at - timedelta(hours=1)
@@ -119,7 +115,6 @@ async def test_get_cached_sets_stale_true_when_new_activity_exists():
     assert result.is_stale is True
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_returns_cached_weekly_plan():
     service = make_service()
 
@@ -129,7 +124,6 @@ async def test_generate_and_cache_returns_cached_weekly_plan():
     assert isinstance(result, CachedWeeklyPlan)
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_saves_to_cache():
     _, workout_repo, analytics_repo, plan_cache = make_deps()
     service = make_service(workout_repo=workout_repo, analytics_repo=analytics_repo, plan_cache=plan_cache)
@@ -140,7 +134,6 @@ async def test_generate_and_cache_saves_to_cache():
     plan_cache.save.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_calls_gemini():
     service = make_service()
 
@@ -150,7 +143,6 @@ async def test_generate_and_cache_calls_gemini():
     mock_gemini.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_generate_and_cache_returns_plan_with_days():
     service = make_service()
 
@@ -160,7 +152,6 @@ async def test_generate_and_cache_returns_plan_with_days():
     assert len(result.days) == 1
 
 
-@pytest.mark.asyncio
 async def test_get_exercises_returns_dict():
     service = make_service()
     sections = {"warmup": ["5 min jog"], "main": ["3x10 squats"], "cooldown": ["stretch"]}
@@ -171,7 +162,6 @@ async def test_get_exercises_returns_dict():
     assert isinstance(result, dict)
 
 
-@pytest.mark.asyncio
 async def test_get_exercises_calls_gemini_when_not_cached():
     service = make_service()
 
@@ -181,7 +171,6 @@ async def test_get_exercises_calls_gemini_when_not_cached():
     mock_gemini.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_get_exercises_returns_cached_exercises_without_calling_gemini():
     _, _, _, plan_cache = make_deps()
     cached_exercises = {"warmup": ["5 min jog"], "main": ["3x10 squats"], "cooldown": ["stretch"]}
@@ -201,7 +190,6 @@ async def test_get_exercises_returns_cached_exercises_without_calling_gemini():
     mock_gemini.assert_not_called()
 
 
-@pytest.mark.asyncio
 async def test_refresh_exercises_always_calls_gemini_even_when_cached():
     _, _, _, plan_cache = make_deps()
     cached_day = PlannedDay(
@@ -223,7 +211,6 @@ async def test_refresh_exercises_always_calls_gemini_even_when_cached():
     mock_gemini.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_get_exercises_caches_result_after_generating():
     _, _, _, plan_cache = make_deps()
     plan_cache.update_day_exercises = AsyncMock()
@@ -235,7 +222,6 @@ async def test_get_exercises_caches_result_after_generating():
     plan_cache.update_day_exercises.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_plan_excludes_days_with_completed_workouts():
     _, workout_repo, analytics_repo, plan_cache = make_deps()
     today_workout = make_workout("w1", WorkoutType.RUN, days_ago=0)
@@ -254,7 +240,6 @@ async def test_plan_excludes_days_with_completed_workouts():
     assert date.today().isoformat() not in captured_prompt[0]
 
 
-@pytest.mark.asyncio
 async def test_plan_includes_days_without_completed_workouts():
     _, workout_repo, analytics_repo, plan_cache = make_deps()
     today_workout = make_workout("w1", WorkoutType.RUN, days_ago=0)

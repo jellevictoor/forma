@@ -35,14 +35,12 @@ def make_plan() -> WeeklyPlan:
     )
 
 
-@pytest.mark.asyncio
 async def test_get_returns_none_when_no_cache(cache):
     result = await cache.get("athlete1")
 
     assert result is None
 
 
-@pytest.mark.asyncio
 async def test_get_returns_plan_after_save(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -52,7 +50,6 @@ async def test_get_returns_plan_after_save(cache):
     assert result is not None
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_has_correct_rationale(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -62,7 +59,6 @@ async def test_cached_plan_has_correct_rationale(cache):
     assert result.rationale == "Focus on recovery after a hard week."
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_has_correct_number_of_days(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -72,7 +68,6 @@ async def test_cached_plan_has_correct_number_of_days(cache):
     assert len(result.days) == 1
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_day_has_correct_workout_type(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -82,7 +77,6 @@ async def test_cached_plan_day_has_correct_workout_type(cache):
     assert result.days[0].workout_type == "run"
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_day_has_correct_intensity(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -92,7 +86,6 @@ async def test_cached_plan_day_has_correct_intensity(cache):
     assert result.days[0].intensity == "easy"
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_day_has_correct_date(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -102,7 +95,6 @@ async def test_cached_plan_day_has_correct_date(cache):
     assert result.days[0].day == date(2026, 2, 25)
 
 
-@pytest.mark.asyncio
 async def test_save_overwrites_existing_plan(cache):
     first = make_plan()
     second = WeeklyPlan(
@@ -118,7 +110,6 @@ async def test_save_overwrites_existing_plan(cache):
     assert result.rationale == "Build strength this week."
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_stores_latest_activity_at(cache):
     activity_time = datetime(2026, 2, 24, 10, 0, tzinfo=timezone.utc)
     plan = make_plan()
@@ -129,7 +120,6 @@ async def test_cached_plan_stores_latest_activity_at(cache):
     assert result.latest_activity_at == activity_time
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_latest_activity_at_is_none_when_not_provided(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -139,7 +129,6 @@ async def test_cached_plan_latest_activity_at_is_none_when_not_provided(cache):
     assert result.latest_activity_at is None
 
 
-@pytest.mark.asyncio
 async def test_invalidate_removes_cached_plan(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -150,7 +139,6 @@ async def test_invalidate_removes_cached_plan(cache):
     assert result is None
 
 
-@pytest.mark.asyncio
 async def test_update_day_exercises_stores_exercises(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -162,7 +150,6 @@ async def test_update_day_exercises_stores_exercises(cache):
     assert result.days[0].exercises == exercises
 
 
-@pytest.mark.asyncio
 async def test_update_day_exercises_does_nothing_when_no_plan(cache):
     await cache.update_day_exercises("athlete1", date(2026, 2, 25), ["Warm-up: 5 min"])
 
@@ -171,7 +158,6 @@ async def test_update_day_exercises_does_nothing_when_no_plan(cache):
     assert result is None
 
 
-@pytest.mark.asyncio
 async def test_cached_plan_day_exercises_default_to_empty_dict(cache):
     plan = make_plan()
     await cache.save("athlete1", plan, latest_activity_at=None)
@@ -181,7 +167,6 @@ async def test_cached_plan_day_exercises_default_to_empty_dict(cache):
     assert result.days[0].exercises == {}
 
 
-@pytest.mark.asyncio
 async def test_different_athletes_have_separate_caches(cache):
     plan_a = make_plan()
     plan_b = WeeklyPlan(

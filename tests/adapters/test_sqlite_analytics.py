@@ -48,14 +48,12 @@ def analytics(db_path, storage):
     return SQLiteAnalyticsRepository(db_path)
 
 
-@pytest.mark.asyncio
 async def test_weekly_volume_returns_empty_for_no_workouts(analytics):
     result = await analytics.weekly_volume("athlete1", None, 4)
 
     assert result == []
 
 
-@pytest.mark.asyncio
 async def test_weekly_volume_aggregates_runs(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -86,7 +84,6 @@ async def test_weekly_volume_aggregates_runs(storage, analytics):
     assert result[0].workout_count == 2
 
 
-@pytest.mark.asyncio
 async def test_weekly_volume_filters_by_workout_type(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -113,7 +110,6 @@ async def test_weekly_volume_filters_by_workout_type(storage, analytics):
     assert result[0].workout_count == 1
 
 
-@pytest.mark.asyncio
 async def test_sport_summaries_returns_one_row_per_type(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -139,7 +135,6 @@ async def test_sport_summaries_returns_one_row_per_type(storage, analytics):
     assert len(result) == 2
 
 
-@pytest.mark.asyncio
 async def test_sport_summaries_totals_are_correct(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -171,7 +166,6 @@ async def test_sport_summaries_totals_are_correct(storage, analytics):
     assert run_summary.total_duration_seconds == 5400
 
 
-@pytest.mark.asyncio
 async def test_personal_records_for_run_finds_best_effort(storage, analytics):
     athlete_id = "athlete1"
     # Slow 10k
@@ -205,7 +199,6 @@ async def test_personal_records_for_run_finds_best_effort(storage, analytics):
     assert result[0].duration_seconds == 3000
 
 
-@pytest.mark.asyncio
 async def test_list_workouts_paginated_returns_correct_page(storage, analytics):
     athlete_id = "athlete1"
     for i in range(5):
@@ -224,7 +217,6 @@ async def test_list_workouts_paginated_returns_correct_page(storage, analytics):
     assert len(workouts) == 3
 
 
-@pytest.mark.asyncio
 async def test_list_workouts_paginated_second_page(storage, analytics):
     athlete_id = "athlete1"
     for i in range(5):
@@ -242,7 +234,6 @@ async def test_list_workouts_paginated_second_page(storage, analytics):
     assert len(workouts) == 2
 
 
-@pytest.mark.asyncio
 async def test_strength_frequency_returns_weekly_counts(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -268,7 +259,6 @@ async def test_strength_frequency_returns_weekly_counts(storage, analytics):
     assert result[0]["count"] == 2
 
 
-@pytest.mark.asyncio
 async def test_climbing_sessions_returns_all_climbing_workouts(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -295,7 +285,6 @@ async def test_climbing_sessions_returns_all_climbing_workouts(storage, analytic
     assert result[0]["id"] == "w1"
 
 
-@pytest.mark.asyncio
 async def test_pace_trend_returns_weekly_averages(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -315,14 +304,12 @@ async def test_pace_trend_returns_weekly_averages(storage, analytics):
     assert result[0]["pace_min_per_km"] == pytest.approx(5.0, 0.01)
 
 
-@pytest.mark.asyncio
 async def test_sport_stats_for_month_returns_empty_for_no_workouts(analytics):
     result = await analytics.sport_stats_for_month("athlete1", 2026, 2)
 
     assert result == []
 
 
-@pytest.mark.asyncio
 async def test_sport_stats_for_month_counts_sessions(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -338,7 +325,6 @@ async def test_sport_stats_for_month_counts_sessions(storage, analytics):
     assert run_stats["sessions"] == 2
 
 
-@pytest.mark.asyncio
 async def test_sport_stats_for_month_excludes_other_months(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -354,7 +340,6 @@ async def test_sport_stats_for_month_excludes_other_months(storage, analytics):
     assert run_stats["sessions"] == 1
 
 
-@pytest.mark.asyncio
 async def test_sport_stats_for_month_sums_distance(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -370,14 +355,12 @@ async def test_sport_stats_for_month_sums_distance(storage, analytics):
     assert run_stats["distance_meters"] == 15000
 
 
-@pytest.mark.asyncio
 async def test_training_log_returns_empty_for_no_workouts(analytics):
     result = await analytics.training_log("athlete1", 2026)
 
     assert result == []
 
 
-@pytest.mark.asyncio
 async def test_training_log_returns_workout_fields(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -398,7 +381,6 @@ async def test_training_log_returns_workout_fields(storage, analytics):
     assert result[0]["duration_seconds"] == 3600
 
 
-@pytest.mark.asyncio
 async def test_training_log_filters_by_year(storage, analytics):
     athlete_id = "athlete1"
     await storage.save_workout(
@@ -414,7 +396,6 @@ async def test_training_log_filters_by_year(storage, analytics):
     assert result[0]["id"] == "w2"
 
 
-@pytest.mark.asyncio
 async def test_daily_effort_returns_empty_for_no_workouts(analytics):
     from datetime import date
 
@@ -423,7 +404,6 @@ async def test_daily_effort_returns_empty_for_no_workouts(analytics):
     assert result == []
 
 
-@pytest.mark.asyncio
 async def test_daily_effort_aggregates_two_workouts_on_same_day(storage, analytics):
     from datetime import date
 
@@ -441,7 +421,6 @@ async def test_daily_effort_aggregates_two_workouts_on_same_day(storage, analyti
     assert result[0]["date"] == "2026-02-16"
 
 
-@pytest.mark.asyncio
 async def test_daily_effort_uses_heart_rate_formula(storage, analytics):
     from datetime import date
 
@@ -461,7 +440,6 @@ async def test_daily_effort_uses_heart_rate_formula(storage, analytics):
     assert result[0]["effort"] == pytest.approx(100.0, rel=0.01)
 
 
-@pytest.mark.asyncio
 async def test_daily_effort_falls_back_to_duration_minutes(storage, analytics):
     from datetime import date
 

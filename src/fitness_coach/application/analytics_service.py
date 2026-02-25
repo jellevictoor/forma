@@ -19,7 +19,7 @@ _CTL_K = 42  # chronic training load time constant (days)
 _ATL_K = 7   # acute training load time constant (days)
 _CTL_DECAY = math.exp(-1 / _CTL_K)
 _ATL_DECAY = math.exp(-1 / _ATL_K)
-_CTL_SEED_DAYS = _CTL_K * 2  # days before display window to seed CTL properly
+CTL_SEED_DAYS = _CTL_K * 2  # days before display window to seed CTL properly
 
 
 def current_year() -> int:
@@ -156,15 +156,15 @@ class AnalyticsService:
         days: int = 90,
     ) -> list[dict]:
         today = date.today()
-        since = today - timedelta(days=days + _CTL_SEED_DAYS)
+        since = today - timedelta(days=days + CTL_SEED_DAYS)
         daily_efforts = await self._analytics.daily_effort(athlete_id, since)
-        return _compute_fitness_freshness(daily_efforts, days)
+        return compute_fitness_freshness(daily_efforts, days)
 
 
-def _compute_fitness_freshness(daily_efforts: list[dict], display_days: int) -> list[dict]:
+def compute_fitness_freshness(daily_efforts: list[dict], display_days: int) -> list[dict]:
     today = date.today()
     display_start = today - timedelta(days=display_days - 1)
-    seed_start = display_start - timedelta(days=_CTL_SEED_DAYS)
+    seed_start = display_start - timedelta(days=CTL_SEED_DAYS)
 
     effort_by_date: dict[date, float] = {
         date.fromisoformat(d["date"]): d["effort"] for d in daily_efforts

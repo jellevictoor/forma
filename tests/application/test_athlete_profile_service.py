@@ -22,7 +22,6 @@ def make_service(athlete: Athlete | None = None) -> AthleteProfileService:
     return AthleteProfileService(athlete_repo, workout_repo, gemini_api_key="fake-key")
 
 
-@pytest.mark.asyncio
 async def test_update_profile_name():
     service = make_service()
 
@@ -31,7 +30,6 @@ async def test_update_profile_name():
     assert updated.name == "John Doe"
 
 
-@pytest.mark.asyncio
 async def test_set_primary_goal_replaces_existing():
     athlete = make_athlete()
     athlete = athlete.model_copy(
@@ -46,7 +44,6 @@ async def test_set_primary_goal_replaces_existing():
     assert result.goals[0].description == "Run a marathon"
 
 
-@pytest.mark.asyncio
 async def test_remove_primary_goal_clears_goals():
     athlete = make_athlete()
     athlete = athlete.model_copy(
@@ -59,7 +56,6 @@ async def test_remove_primary_goal_clears_goals():
     assert result.goals == []
 
 
-@pytest.mark.asyncio
 async def test_add_schedule_slot_appends_slot():
     service = make_service()
     slot = ScheduleTemplateSlot(workout_type=WorkoutType.RUN, day_of_week=0)
@@ -69,7 +65,6 @@ async def test_add_schedule_slot_appends_slot():
     assert len(result.schedule_template) == 1
 
 
-@pytest.mark.asyncio
 async def test_add_schedule_slot_persists_correct_type():
     service = make_service()
     slot = ScheduleTemplateSlot(workout_type=WorkoutType.CLIMBING, day_of_week=3)
@@ -79,7 +74,6 @@ async def test_add_schedule_slot_persists_correct_type():
     assert result.schedule_template[0].workout_type == WorkoutType.CLIMBING
 
 
-@pytest.mark.asyncio
 async def test_add_schedule_slot_persists_correct_day():
     service = make_service()
     slot = ScheduleTemplateSlot(workout_type=WorkoutType.RUN, day_of_week=4)
@@ -89,7 +83,6 @@ async def test_add_schedule_slot_persists_correct_day():
     assert result.schedule_template[0].day_of_week == 4
 
 
-@pytest.mark.asyncio
 async def test_add_schedule_slot_saves_athlete():
     athlete_repo = AsyncMock()
     athlete_repo.get = AsyncMock(return_value=make_athlete())
@@ -103,7 +96,6 @@ async def test_add_schedule_slot_saves_athlete():
     athlete_repo.save.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_remove_schedule_slot_removes_correct_slot():
     athlete = make_athlete()
     athlete = athlete.model_copy(update={"schedule_template": [
@@ -118,7 +110,6 @@ async def test_remove_schedule_slot_removes_correct_slot():
     assert result.schedule_template[0].workout_type == WorkoutType.CLIMBING
 
 
-@pytest.mark.asyncio
 async def test_remove_schedule_slot_saves_athlete():
     athlete = make_athlete()
     athlete = athlete.model_copy(update={"schedule_template": [
@@ -135,7 +126,6 @@ async def test_remove_schedule_slot_saves_athlete():
     athlete_repo.save.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_remove_schedule_slot_raises_on_invalid_index():
     service = make_service()
 
