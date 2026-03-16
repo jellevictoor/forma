@@ -2,6 +2,8 @@ services:
   fitness-coach:
     build: .
     container_name: fitness-coach
+    ports:
+      - "8080:8080"
     volumes:
       - ./data:/app/data
       - ./.env:/app/.env:ro
@@ -9,4 +11,4 @@ services:
       - .env
     stdin_open: true
     tty: true
-    command: ["chat"]
+    command: ["uv", "run", "serve"]

@@ -6,7 +6,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml .
+COPY pyproject.toml README.md .
 
 # Install dependencies
 RUN uv sync --no-dev
@@ -21,6 +21,6 @@ RUN mkdir -p data
 ENV PYTHONPATH=/app/src
 ENV DATABASE_PATH=/app/data/fitness_coach.db
 
-# Run the CLI
-ENTRYPOINT ["uv", "run", "fitness-coach"]
-CMD ["--help"]
+# Run the web server
+ENTRYPOINT ["uv", "run", "serve"]
+CMD []
