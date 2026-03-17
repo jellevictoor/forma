@@ -32,7 +32,7 @@
             'surface':     'var(--color-surface)',
             'surface-alt': 'var(--color-surface-alt)',
             'edge':        'var(--color-edge)',
-            /* Text — semantic aliases replacing gray-* classes */
+            /* Text — semantic aliases */
             'primary':   'var(--color-text)',
             'secondary': 'var(--color-text-secondary)',
             'muted':     'var(--color-text-muted)',
@@ -42,26 +42,81 @@
     }
   </script>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen flex">
 
-  <nav class="bg-nav-bg text-white shadow-md">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center gap-10">
-      <a href="/" class="font-semibold text-xl tracking-tight text-mint">forma</a>
-      <div class="flex gap-7 text-sm" style="color:var(--color-text-muted)">
-        <a href="/" data-nav-href="/" class="hover:text-white transition-colors">Overview</a>
-        <a href="/activities/all/1" data-nav-href="/activities" class="hover:text-white transition-colors">Activities</a>
-        <a href="/analytics/run" data-nav-href="/analytics" class="hover:text-white transition-colors">Analytics</a>
-        <a href="/progress" data-nav-href="/progress" class="hover:text-white transition-colors">Progress</a>
-        <a href="/insights" data-nav-href="/insights" class="hover:text-white transition-colors">Insights</a>
-        <span class="opacity-20 select-none">|</span>
-        <a href="/plan" data-nav-href="/plan" class="hover:text-white transition-colors">Plan</a>
-        <a href="/profile" data-nav-href="/profile" class="hover:text-white transition-colors">Profile</a>
-      </div>
-      <div class="ml-auto flex items-center gap-4">
-        <span id="nav-year" class="text-xs font-medium tracking-widest" style="color:var(--color-text-muted)" title="Showing current year data"></span>
-        <!-- Strava sync button -->
-        <div class="flex items-center gap-2">
-          <span id="sync-result" class="hidden text-xs font-medium" style="color:var(--color-text-muted)"></span>
+  <!-- ── Sidebar ───────────────────────────────────────────── -->
+  <aside id="sidebar"
+         class="fixed inset-y-0 left-0 z-40 w-56 flex flex-col -translate-x-full md:translate-x-0 transition-transform duration-200"
+         style="background:var(--color-nav)">
+
+    <!-- Logo -->
+    <div class="h-14 flex items-center px-5 shrink-0">
+      <a href="/" class="text-xl font-semibold tracking-tight text-mint">forma</a>
+    </div>
+
+    <!-- Nav links -->
+    <nav class="flex-1 px-3 py-2 flex flex-col gap-0.5 overflow-y-auto">
+
+      <a href="/" data-nav-href="/" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>
+        </svg>
+        Overview
+      </a>
+
+      <a href="/activities/all/1" data-nav-href="/activities" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+        </svg>
+        Activities
+      </a>
+
+      <a href="/analytics/run" data-nav-href="/analytics" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+        </svg>
+        Analytics
+      </a>
+
+      <a href="/progress" data-nav-href="/progress" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"/>
+        </svg>
+        Progress
+      </a>
+
+      <a href="/insights" data-nav-href="/insights" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
+        </svg>
+        Insights
+      </a>
+
+      <!-- Divider -->
+      <div class="my-2 mx-1 h-px" style="background:rgba(255,255,255,0.06)"></div>
+
+      <a href="/plan" data-nav-href="/plan" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
+        </svg>
+        Plan
+      </a>
+
+      <a href="/profile" data-nav-href="/profile" class="nav-link">
+        <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+        </svg>
+        Profile
+      </a>
+
+    </nav>
+
+    <!-- Sidebar footer: year + sync + theme -->
+    <div class="shrink-0 px-4 py-4" style="border-top:1px solid rgba(255,255,255,0.06)">
+      <div class="flex items-center justify-between">
+        <span id="nav-year" class="text-xs font-medium tracking-widest" style="color:var(--color-text-muted)" title="Current year"></span>
+        <div class="flex items-center gap-0.5">
+          <span id="sync-result" class="hidden text-xs mr-1.5 font-medium" style="color:var(--color-text-muted)"></span>
           <button id="sync-btn" onclick="triggerSync()"
                   class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   style="color:var(--color-text-muted)" title="Sync from Strava" aria-label="Sync from Strava">
@@ -72,39 +127,66 @@
               <path d="M8 16H3v5"/>
             </svg>
           </button>
+          <button id="theme-toggle" onclick="toggleTheme()"
+                  class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                  style="color:var(--color-text-muted)" title="Toggle theme" aria-label="Toggle theme">
+            <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" class="hidden w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+            </svg>
+            <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
         </div>
-        <button id="theme-toggle" onclick="toggleTheme()"
-                class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
-                style="color:var(--color-text-muted)" title="Toggle theme" aria-label="Toggle theme">
-          <!-- Sun icon (shown in dark mode) -->
-          <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" class="hidden w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-          </svg>
-          <!-- Moon icon (shown in light mode) -->
-          <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
       </div>
     </div>
-  </nav>
 
-  <main class="max-w-6xl mx-auto px-6 py-10">
-    {% block content %}{% endblock %}
+  </aside>
+
+  <!-- ── Mobile header ─────────────────────────────────────── -->
+  <header class="md:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center px-4 gap-3 shadow-sm" style="background:var(--color-nav)">
+    <button onclick="toggleSidebar()"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+            style="color:var(--color-text-muted)" aria-label="Open navigation">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+      </svg>
+    </button>
+    <a href="/" class="text-lg font-semibold tracking-tight text-mint">forma</a>
+  </header>
+
+  <!-- ── Sidebar overlay (mobile) ──────────────────────────── -->
+  <div id="sidebar-overlay" class="fixed inset-0 z-30 bg-black/50 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+  <!-- ── Main content ──────────────────────────────────────── -->
+  <main class="flex-1 md:pl-56 pt-14 md:pt-0 min-h-screen">
+    <div class="max-w-5xl mx-auto px-6 py-8">
+      {% block content %}{% endblock %}
+    </div>
   </main>
 
   <script>
-    // Active nav state
+    // Active nav state + dynamic year
     (function() {
       const path = window.location.pathname;
       document.querySelectorAll('[data-nav-href]').forEach(link => {
         const href = link.dataset.navHref;
         const isActive = href === '/' ? path === '/' : path.startsWith(href);
-        if (isActive) link.style.color = 'white';
+        if (isActive) {
+          link.classList.add('nav-link-active');
+        }
       });
       const yearEl = document.getElementById('nav-year');
       if (yearEl) yearEl.textContent = new Date().getFullYear();
     })();
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const isOpen = !sidebar.classList.contains('-translate-x-full');
+      sidebar.classList.toggle('-translate-x-full', isOpen);
+      overlay.classList.toggle('hidden', isOpen);
+    }
   </script>
 
   <script>
@@ -147,10 +229,8 @@
       document.getElementById('icon-moon').classList.toggle('hidden', isDark);
     }
 
-    // Initialise icon on load
     updateThemeIcon(document.documentElement.classList.contains('dark'));
 
-    // Follow system preference when no stored preference
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
       if (!localStorage.getItem('theme')) {
         document.documentElement.classList.toggle('dark', e.matches);

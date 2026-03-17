@@ -157,6 +157,39 @@ tbody tr:nth-child(even) {
 
 /* ── Tab transitions ────────────────────────────────────────── */
 
+/* ── Sidebar nav links ──────────────────────────────────────── */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  transition: background-color 150ms ease, color 150ms ease;
+  text-decoration: none;
+}
+
+.nav-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-link-active {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.nav-link-active .nav-icon {
+  color: var(--color-mint);
+}
+
 /* ── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse { animation: none; }
