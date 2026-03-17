@@ -53,6 +53,7 @@ class OverviewStats:
     sport_summaries: list[SportSummary]
     recent_workouts: list[Workout]
     weekly_volumes: list[dict]
+    personal_records: list[PersonalRecord]
     year: int
 
 
@@ -72,10 +73,12 @@ class AnalyticsService:
         sport_summaries = await self._analytics.sport_summaries(athlete_id, year)
         recent_workouts = await self._workouts.get_recent(athlete_id, count=5)
         weekly_volumes = await self._analytics.weekly_volume(athlete_id, None, year)
+        personal_records = await self._analytics.personal_records_for_run(athlete_id, PR_DISTANCES_METERS, year)
         return OverviewStats(
             sport_summaries=sport_summaries,
             recent_workouts=recent_workouts,
             weekly_volumes=weekly_volumes,
+            personal_records=personal_records,
             year=year,
         )
 

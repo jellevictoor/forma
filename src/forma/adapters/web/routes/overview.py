@@ -1,5 +1,6 @@
 """Overview dashboard routes."""
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -29,7 +30,7 @@ async def overview_page(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     stats = await service.overview_stats(athlete_id)
-    return templates.TemplateResponse(request, "overview.html", {"stats": stats})
+    return templates.TemplateResponse(request, "overview.html", {"stats": stats, "today": date.today()})
 
 
 @router.get("/api/overview/weekly-volume")
@@ -82,6 +83,16 @@ async def sync_api(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     synced = await sync.execute(athlete_id)
+    return {"synced": synced}
+
+
+@router.post("/api/sync/full")
+async def sync_full_api(
+    sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    """Re-fetch and overwrite all activities from Strava, preserving subjective fields."""
+    synced = await sync.execute(athlete_id, full=True, force_update=True)
     return {"synced": synced}
 
 

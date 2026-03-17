@@ -1,137 +1,512 @@
 {% extends "base.html" %}
-{% block title %}Overview — forma{% endblock %}
+{% block title %}forma{% endblock %}
+
+{# ── Macros ─────────────────────────────────────────────────── #}
+{% macro sport_color(t) -%}
+  {%- if t == 'run' %}var(--color-mint)
+  {%- elif t == 'strength' %}var(--color-sky)
+  {%- elif t == 'climbing' %}var(--color-amber)
+  {%- else %}var(--color-edge){% endif -%}
+{%- endmacro %}
+
+{% macro sport_label(t) -%}
+  {%- if t == 'run' %}Running
+  {%- elif t == 'strength' %}Strength
+  {%- elif t == 'climbing' %}Climbing
+  {%- else %}{{ t | capitalize }}{% endif -%}
+{%- endmacro %}
+
+{% macro sport_dot(t) -%}
+<span class="w-2 h-2 rounded-full inline-block shrink-0
+  {%- if t == 'run' %} sport-run
+  {%- elif t == 'strength' %} sport-strength
+  {%- elif t == 'climbing' %} sport-climbing
+  {%- else %} bg-edge{% endif %}"></span>
+{%- endmacro %}
+
+{% macro fmt_pace(pace) -%}
+  {%- set m = pace | int -%}
+  {%- set s = ((pace - m) * 60) | round | int -%}
+  {{- m }}:{{'%02d' % s}} /km
+{%- endmacro %}
+
+{% macro fmt_hms(secs) -%}
+  {%- set h = secs // 3600 -%}
+  {%- set m = (secs % 3600) // 60 -%}
+  {%- set s = secs % 60 -%}
+  {%- if h > 0 %}{{- h }}:{{'%02d' % m}}:{{'%02d' % s}}
+  {%- else %}{{- m }}:{{'%02d' % s}}{% endif -%}
+{%- endmacro %}
+
+{% set pr_label = {1000: '1 km', 5000: '5 km', 10000: '10 km', 21097: 'Half', 42195: 'Marathon'} %}
 
 {% block content %}
-<div class="mb-8">
-  <h1 class="text-2xl font-semibold text-primary">Overview</h1>
-  <p class="text-muted text-sm mt-1">Your training at a glance</p>
+
+{# ── Greeting ─────────────────────────────────────────────── #}
+<div class="mb-8 flex items-end justify-between">
+  <div>
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-1" id="greeting-date"></p>
+    <h1 class="text-3xl font-bold text-primary" id="greeting">forma</h1>
+  </div>
+  <p class="text-xs text-muted hidden md:block" id="week-context"></p>
 </div>
 
-<!-- Sport summaries -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-  {% for summary in stats.sport_summaries %}
-  <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm hover:shadow-md transition-shadow">
-    <div class="flex items-center justify-between mb-4">
-      <span class="text-xs font-medium uppercase tracking-widest text-muted">{{ summary.workout_type }}</span>
-      {% if summary.workout_type == 'run' %}
-        <span class="w-2.5 h-2.5 rounded-full sport-run"></span>
-      {% elif summary.workout_type == 'strength' %}
-        <span class="w-2.5 h-2.5 rounded-full sport-strength"></span>
-      {% elif summary.workout_type == 'climbing' %}
-        <span class="w-2.5 h-2.5 rounded-full sport-climbing"></span>
-      {% else %}
-        <span class="w-2.5 h-2.5 rounded-full bg-gray-200"></span>
-      {% endif %}
+{# ── This week KPIs ───────────────────────────────────────── #}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Sessions</p>
+    <p class="text-4xl font-bold text-primary" id="kpi-sessions">—</p>
+    <p class="text-xs text-muted mt-1">this week</p>
+    <p class="text-xs mt-2 font-medium" id="kpi-sessions-delta"></p>
+  </div>
+
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Run distance</p>
+    <p class="text-4xl font-bold text-primary" id="kpi-km">—</p>
+    <p class="text-xs text-muted mt-1">km this week</p>
+    <p class="text-xs mt-2 font-medium" id="kpi-km-delta"></p>
+  </div>
+
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Training time</p>
+    <p class="text-4xl font-bold text-primary" id="kpi-hours">—</p>
+    <p class="text-xs text-muted mt-1">hours this week</p>
+    <p class="text-xs mt-2 font-medium" id="kpi-hours-delta"></p>
+  </div>
+
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Streak</p>
+    <p class="text-4xl font-bold text-primary" id="kpi-streak">—</p>
+    <p class="text-xs text-muted mt-1">consecutive days</p>
+    <p class="text-xs mt-2 font-medium text-muted" id="kpi-streak-sub"></p>
+  </div>
+
+</div>
+
+{# ── Last activity + Coach focus ──────────────────────────── #}
+{% set last = stats.recent_workouts[0] if stats.recent_workouts else none %}
+<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+
+  {# Last activity #}
+  <div class="md:col-span-3 bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden">
+    {% if last %}
+    <div class="h-1" style="background:{{ sport_color(last.workout_type.value) }}"></div>
+    <div class="p-6">
+      <div class="flex items-start justify-between mb-2">
+        <p class="text-xs font-medium uppercase tracking-widest text-muted">Last activity</p>
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+          {{ sport_dot(last.workout_type.value) }}
+          {{ sport_label(last.workout_type.value) }}
+        </span>
+      </div>
+      <h2 class="text-xl font-semibold text-primary mb-1">{{ last.name }}</h2>
+      <p class="text-xs text-muted mb-5">{{ last.start_time.strftime('%A, %-d %B %Y') }}</p>
+
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="bg-surface-alt rounded-xl p-4 text-center">
+          <p class="text-2xl font-bold text-primary">{{ "%.0f" | format(last.duration_minutes) }}</p>
+          <p class="text-xs text-muted mt-1">minutes</p>
+        </div>
+        {% if last.distance_km %}
+        <div class="bg-surface-alt rounded-xl p-4 text-center">
+          <p class="text-2xl font-bold text-primary">{{ "%.2f" | format(last.distance_km) }}</p>
+          <p class="text-xs text-muted mt-1">km</p>
+        </div>
+        {% endif %}
+        {% if last.pace_formatted() %}
+        <div class="bg-surface-alt rounded-xl p-4 text-center">
+          <p class="text-2xl font-bold text-primary">{{ last.pace_formatted() }}</p>
+          <p class="text-xs text-muted mt-1">pace</p>
+        </div>
+        {% elif last.average_heartrate %}
+        <div class="bg-surface-alt rounded-xl p-4 text-center">
+          <p class="text-2xl font-bold text-primary">{{ "%.0f" | format(last.average_heartrate) }}</p>
+          <p class="text-xs text-muted mt-1">avg bpm</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <a href="/activities/detail/{{ last.id }}"
+         class="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-secondary transition-colors cursor-pointer">
+        View details
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
     </div>
-    <p class="text-4xl font-bold text-primary mb-1">{{ summary.total_workouts }}</p>
-    <p class="text-sm text-muted mb-3">sessions</p>
-    {% if summary.total_distance_meters > 0 %}
-    <p class="text-sm text-secondary">{{ "%.0f"|format(summary.total_distance_meters / 1000) }} km total</p>
-    {% endif %}
-    {% if summary.most_recent %}
-    <p class="text-xs text-muted mt-1">Last: {{ summary.most_recent }}</p>
+    {% else %}
+    <div class="p-6 text-center text-muted text-sm py-14">
+      No activities yet — sync with Strava to get started.
+    </div>
     {% endif %}
   </div>
-  {% else %}
-  <div class="col-span-3 text-center text-muted py-16 text-sm">
-    No workouts yet. Sync your Strava activities to get started.
+
+  {# Weekly focus #}
+  <div class="md:col-span-2 bg-surface rounded-2xl border border-edge shadow-sm p-6 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-xs font-medium uppercase tracking-widest text-muted">This week's focus</p>
+      <button id="recap-stale-badge"
+              class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-opacity hover:opacity-75 flex items-center gap-1.5"
+              style="background:var(--color-amber-subtle);color:var(--color-amber-subtle-text)">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <div id="recap-focus-content" class="flex-1 min-h-[80px]">
+      <div class="animate-pulse space-y-2.5">
+        <div class="h-2 bg-surface-alt rounded w-4/5"></div>
+        <div class="h-2 bg-surface-alt rounded w-3/5"></div>
+        <div class="h-2 bg-surface-alt rounded w-4/5"></div>
+      </div>
+    </div>
+
+    <div class="mt-4 pt-4 border-t border-edge space-y-2">
+      <p id="recap-summary-text" class="text-sm text-secondary leading-relaxed"></p>
+      <button id="recap-generate-btn"
+              class="hidden text-xs text-muted hover:text-secondary transition-colors cursor-pointer">
+        Generate weekly recap
+      </button>
+    </div>
   </div>
-  {% endfor %}
+
 </div>
 
-<!-- Weekly volume chart -->
-<div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm mb-8">
-  <h2 class="text-sm font-medium uppercase tracking-widest text-muted mb-5">Weekly volume</h2>
-  <div class="chart-container chart-loading" id="weekly-volume-chart" style="min-height:200px"></div>
-</div>
-
-<!-- Training log calendar -->
-<div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm mb-8">
+{# ── 12-week volume ───────────────────────────────────────────── #}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-center justify-between mb-5">
-    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Training log</h2>
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">12-week volume</h2>
     <div class="flex gap-4 text-xs text-muted">
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm sport-run"></span>Run</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm sport-strength"></span>Strength</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm sport-climbing"></span>Climbing</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full sport-run"></span>Running</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full sport-strength"></span>Strength</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full sport-climbing"></span>Climbing</span>
+    </div>
+  </div>
+  <div class="chart-container chart-loading" id="volume-chart" style="min-height:180px"></div>
+</div>
+
+{# ── Year totals + Personal records ──────────────────────────── #}
+<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+
+  {# Year totals #}
+  <div class="md:col-span-3 bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted mb-5">{{ stats.year }} totals</h2>
+    {% if stats.sport_summaries %}
+    <div class="space-y-5">
+      {% for s in stats.sport_summaries %}
+      {% set days_since = (today - s.most_recent).days if s.most_recent else none %}
+      <div class="flex items-start gap-4">
+        <div class="w-1 rounded-full shrink-0 self-stretch" style="background:{{ sport_color(s.workout_type) }}"></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-sm font-semibold text-primary">{{ sport_label(s.workout_type) }}</span>
+            <span class="text-xs text-muted">
+              {%- if days_since == 0 %}today
+              {%- elif days_since == 1 %}yesterday
+              {%- elif days_since %}{{ days_since }} days ago
+              {%- else %}—{% endif %}
+            </span>
+          </div>
+          <div class="flex items-baseline gap-3 flex-wrap">
+            <span class="text-3xl font-bold text-primary leading-none">{{ s.total_workouts }}</span>
+            <span class="text-sm text-muted">sessions</span>
+            {% if s.total_distance_meters > 0 %}
+            <span class="text-sm font-semibold text-secondary">{{ "%.0f" | format(s.total_distance_meters / 1000) }} km</span>
+            {% endif %}
+            <span class="text-xs text-muted">{{ (s.total_duration_seconds / 3600) | round(1) }} h</span>
+          </div>
+        </div>
+      </div>
+      {% if not loop.last %}<div class="border-t border-edge"></div>{% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-muted py-4">No activities recorded this year.</p>
+    {% endif %}
+  </div>
+
+  {# Running PRs #}
+  <div class="md:col-span-2 bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted mb-5">Personal records</h2>
+    {% if stats.personal_records %}
+    <div class="space-y-1">
+      {% for pr in stats.personal_records %}
+      {% set label = pr_label.get(pr.distance_meters | int, (pr.distance_meters / 1000) | int ~ ' km') %}
+      <div class="flex items-center justify-between py-2.5 border-b border-edge last:border-0">
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold text-muted w-14 shrink-0">{{ label }}</span>
+          <span class="text-sm font-semibold text-primary">{{ fmt_hms(pr.duration_seconds) }}</span>
+        </div>
+        <div class="text-right">
+          <p class="text-xs font-medium text-secondary">{{ fmt_pace(pr.pace_min_per_km) }}</p>
+          <p class="text-xs text-muted">{{ pr.achieved_on.strftime('%d %b %Y') }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-muted py-4">No running records yet this year.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Training calendar ────────────────────────────────────────── #}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Training log · {{ stats.year }}</h2>
+    <div class="flex gap-4 text-xs text-muted">
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-run"></span>Run</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-strength"></span>Strength</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-climbing"></span>Climbing</span>
     </div>
   </div>
   <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
 
-<!-- Weekly recap -->
-<div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm mb-8" id="weekly-recap-card">
-  <div class="flex items-center justify-between mb-5">
-    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Weekly recap</h2>
-    <div class="flex items-center gap-2">
-      <button id="recap-stale-badge" class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-opacity hover:opacity-75 flex items-center gap-1.5" style="background:var(--color-amber-subtle);color:var(--color-amber-subtle-text)" aria-label="New activity detected — click to refresh recap">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-        New activity — refresh
-      </button>
-      <button id="recap-generate-btn" class="hidden text-xs text-muted hover:text-secondary transition-colors cursor-pointer" aria-label="Generate weekly recap">Generate recap</button>
-    </div>
-  </div>
-  <div id="weekly-recap-content" class="text-muted text-sm" aria-live="polite">
-    <div class="animate-pulse flex gap-2 items-center"><div class="h-2 bg-surface-alt rounded w-3/4"></div></div>
-  </div>
-</div>
-
-<!-- Recent workouts -->
-{% if stats.recent_workouts %}
-<div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm">
-  <h2 class="text-sm font-medium uppercase tracking-widest text-muted mb-5">Recent activities</h2>
-  <table class="w-full text-sm">
-    <thead>
-      <tr class="text-left text-xs text-muted uppercase tracking-wide border-b border-edge">
-        <th class="pb-3 font-medium">Date</th>
-        <th class="pb-3 font-medium">Activity</th>
-        <th class="pb-3 font-medium">Type</th>
-        <th class="pb-3 font-medium">Duration</th>
-        <th class="pb-3 font-medium">Distance</th>
-        <th class="pb-3 font-medium">Pace</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for w in stats.recent_workouts %}
-      <tr class="border-b border-edge hover:bg-surface-alt transition-colors">
-        <td class="py-3 text-muted">{{ w.start_time.strftime('%d %b %Y') }}</td>
-        <td class="py-3">
-          <a href="/activities/detail/{{ w.id }}" class="text-mint hover:opacity-75 transition-opacity font-medium">{{ w.name }}</a>
-        </td>
-        <td class="py-3 text-secondary capitalize">
-          <span class="inline-flex items-center gap-1.5">
-            {% if w.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>Running
-            {% elif w.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>Strength
-            {% elif w.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>Climbing
-            {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{{ w.workout_type.value|capitalize }}{% endif %}
-          </span>
-        </td>
-        <td class="py-3">{{ "%.0f"|format(w.duration_minutes) }} min</td>
-        <td class="py-3">{% if w.distance_km %}{{ "%.1f"|format(w.distance_km) }} km{% else %}<span class="value-empty">—</span>{% endif %}</td>
-        <td class="py-3">{% if w.pace_formatted() %}{{ w.pace_formatted() }}{% else %}<span class="value-empty">—</span>{% endif %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
-
 <script>
-// Training log calendar heatmap
+// ── Greeting + context ───────────────────────────────────────────
+(function() {
+  const now = new Date();
+  const h = now.getHours();
+  document.getElementById('greeting').textContent =
+    h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('greeting-date').textContent =
+    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  const jan1 = new Date(now.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((now - jan1) / 86400000) + 1;
+  const weekNum = Math.ceil((dayOfYear + jan1.getDay()) / 7);
+  document.getElementById('week-context').textContent = `Week ${weekNum} · Day ${dayOfYear}`;
+})();
+
+// ── Delta badge helper ───────────────────────────────────────────
+function renderDelta(id, curr, prev, suffix) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (prev === 0) { el.textContent = ''; return; }
+  const diff = curr - prev;
+  const sign = diff >= 0 ? '+' : '';
+  const val = Number.isInteger(diff) ? diff : diff.toFixed(1);
+  el.textContent = `${sign}${val}${suffix} vs last week`;
+  el.style.color = diff >= 0 ? 'var(--color-mint)' : 'var(--color-negative)';
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────
+(async function() {
+  const data = await fetch('/api/overview/weekly-volume').then(r => r.json());
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const thisMon = new Date(now); thisMon.setDate(now.getDate() - dow);
+  const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
+  const thisW = thisMon.toISOString().slice(0, 10);
+  const lastW = lastMon.toISOString().slice(0, 10);
+
+  const tw = data.filter(d => d.week_start === thisW);
+  const lw = data.filter(d => d.week_start === lastW);
+  const sum = (arr, f) => arr.reduce((a, b) => a + (b[f] || 0), 0);
+
+  const thisSess = sum(tw, 'workout_count');
+  const lastSess = sum(lw, 'workout_count');
+  const thisKm   = sum(tw.filter(d => d.workout_type === 'run'), 'distance_km');
+  const lastKm   = sum(lw.filter(d => d.workout_type === 'run'), 'distance_km');
+  const thisH    = sum(tw, 'duration_hours');
+  const lastH    = sum(lw, 'duration_hours');
+
+  document.getElementById('kpi-sessions').textContent = thisSess;
+  document.getElementById('kpi-km').textContent = thisKm.toFixed(1);
+  document.getElementById('kpi-hours').textContent = thisH.toFixed(1);
+
+  renderDelta('kpi-sessions-delta', thisSess, lastSess, '');
+  renderDelta('kpi-km-delta', thisKm, lastKm, ' km');
+  renderDelta('kpi-hours-delta', thisH, lastH, ' h');
+})();
+
+// ── Streak ───────────────────────────────────────────────────────
+(async function() {
+  const workouts = await fetch('/api/overview/training-log').then(r => r.json());
+  const el = document.getElementById('kpi-streak');
+  const sub = document.getElementById('kpi-streak-sub');
+  if (!workouts.length) { el.textContent = '0'; sub.textContent = 'start training!'; return; }
+
+  const dates = new Set(workouts.map(w => w.date));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const toStr = d => d.toISOString().slice(0, 10);
+  const yday = new Date(today); yday.setDate(yday.getDate() - 1);
+
+  if (!dates.has(toStr(today)) && !dates.has(toStr(yday))) {
+    el.textContent = '0';
+    sub.textContent = 'rest day today';
+    return;
+  }
+
+  const cursor = dates.has(toStr(today)) ? new Date(today) : new Date(yday);
+  let streak = 0;
+  while (dates.has(toStr(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  el.textContent = streak;
+  sub.textContent = streak >= 14 ? 'outstanding consistency!'
+    : streak >= 7 ? 'great consistency!'
+    : `${7 - streak} day${7 - streak !== 1 ? 's' : ''} to a 7-day streak`;
+})();
+
+// ── Weekly recap ─────────────────────────────────────────────────
+(function() {
+  const focusEl   = document.getElementById('recap-focus-content');
+  const summaryEl = document.getElementById('recap-summary-text');
+  const staleBadge = document.getElementById('recap-stale-badge');
+  const genBtn    = document.getElementById('recap-generate-btn');
+
+  function renderFocus(focus) {
+    if (!focus || !focus.length) {
+      focusEl.innerHTML = '<p class="text-sm text-muted">No focus items in this recap.</p>';
+      return;
+    }
+    focusEl.innerHTML = `<ul class="space-y-2.5">${focus.map(tip =>
+      `<li class="flex gap-2.5 items-start text-sm text-secondary leading-snug">
+         <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 sport-run"></span>${tip}
+       </li>`
+    ).join('')}</ul>`;
+  }
+
+  function showSkeleton() {
+    focusEl.innerHTML = `<div class="animate-pulse space-y-2.5">
+      <div class="h-2 bg-surface-alt rounded w-4/5"></div>
+      <div class="h-2 bg-surface-alt rounded w-3/5"></div>
+      <div class="h-2 bg-surface-alt rounded w-4/5"></div>
+    </div>`;
+    summaryEl.textContent = '';
+  }
+
+  async function refresh() {
+    staleBadge.disabled = true;
+    staleBadge.classList.add('hidden');
+    showSkeleton();
+    try {
+      const r = await fetch('/api/overview/weekly-recap/refresh', {method: 'POST'}).then(r => r.json());
+      renderFocus(r.focus);
+      summaryEl.textContent = r.summary || '';
+      genBtn.classList.add('hidden');
+    } catch {
+      focusEl.innerHTML = '<p class="text-sm text-muted">Could not generate recap.</p>';
+    } finally {
+      staleBadge.disabled = false;
+    }
+  }
+
+  staleBadge.addEventListener('click', refresh);
+  genBtn.addEventListener('click', refresh);
+
+  (async function load() {
+    try {
+      const r = await fetch('/api/overview/weekly-recap').then(r => r.json());
+      if (!r.cached) {
+        focusEl.innerHTML = '<p class="text-sm text-muted">Generate a recap to see your weekly focus.</p>';
+        genBtn.classList.remove('hidden');
+        return;
+      }
+      renderFocus(r.focus);
+      summaryEl.textContent = r.summary || '';
+      if (r.stale) staleBadge.classList.remove('hidden');
+    } catch {
+      focusEl.innerHTML = '<p class="text-sm text-muted">Could not load recap.</p>';
+    }
+  })();
+})();
+
+// ── 12-week stacked volume chart ─────────────────────────────────
+(async function() {
+  const allData = await fetch('/api/overview/weekly-volume').then(r => r.json());
+  const container = document.getElementById('volume-chart');
+  container.classList.remove('chart-loading');
+  if (!allData.length) return;
+
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const thisMon = new Date(now); thisMon.setDate(now.getDate() - dow);
+
+  const weekKeys = Array.from({length: 12}, (_, i) => {
+    const d = new Date(thisMon); d.setDate(thisMon.getDate() - (11 - i) * 7);
+    return d.toISOString().slice(0, 10);
+  });
+  const cutoff = weekKeys[0];
+
+  const SPORTS = ['run', 'strength', 'climbing'];
+  const COLOR  = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
+
+  const byWS = {};
+  for (const d of allData) {
+    if (d.week_start < cutoff) continue;
+    if (!byWS[d.week_start]) byWS[d.week_start] = {};
+    byWS[d.week_start][d.workout_type] = d.duration_hours;
+  }
+
+  const stackData = weekKeys.map(w => {
+    const e = {week: w};
+    SPORTS.forEach(s => { e[s] = byWS[w]?.[s] || 0; });
+    return e;
+  });
+
+  const W = container.clientWidth || 700;
+  const H = 180;
+  const M = {top: 8, right: 12, bottom: 28, left: 38};
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const maxH = d3.max(stackData, d => SPORTS.reduce((a, s) => a + d[s], 0)) || 1;
+  const x = d3.scaleBand().domain(weekKeys).range([M.left, W - M.right]).padding(0.25);
+  const y = d3.scaleLinear().domain([0, maxH]).nice().range([H - M.bottom, M.top]);
+
+  svg.append('g').attr('transform', `translate(${M.left},0)`)
+    .call(d3.axisLeft(y).ticks(4).tickSize(-(W - M.left - M.right)).tickFormat(''))
+    .call(g => g.select('.domain').remove())
+    .selectAll('line').style('stroke', 'var(--color-chart-grid)').style('stroke-dasharray', '2,3');
+
+  d3.stack().keys(SPORTS)(stackData).forEach((layer, si) => {
+    svg.selectAll(null).data(layer).join('rect')
+      .attr('x', d => x(d.data.week))
+      .attr('y', d => y(d[1]))
+      .attr('height', d => Math.max(0, y(d[0]) - y(d[1])))
+      .attr('width', x.bandwidth())
+      .attr('rx', si === 0 ? 3 : 0)
+      .style('fill', COLOR[SPORTS[si]]);
+  });
+
+  const fmtW = w => { const [yr, mo, dy] = w.split('-'); return d3.timeFormat('%-d %b')(new Date(+yr, +mo-1, +dy)); };
+  const ticks = weekKeys.filter((_, i) => i % 2 === 0);
+
+  svg.append('g').attr('transform', `translate(0,${H - M.bottom})`)
+    .call(d3.axisBottom(x).tickValues(ticks).tickFormat(fmtW).tickSize(0))
+    .call(g => g.select('.domain').remove())
+    .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
+
+  svg.append('g').attr('transform', `translate(${M.left},0)`)
+    .call(d3.axisLeft(y).ticks(4).tickFormat(d => d + 'h'))
+    .call(g => g.select('.domain').remove())
+    .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
+})();
+
+// ── Training log calendar heatmap ────────────────────────────────
 (async function() {
   const workouts = await fetch('/api/overview/training-log').then(r => r.json());
   const container = document.getElementById('training-log-chart');
   container.classList.remove('chart-loading');
   if (!workouts.length) {
-    container.innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">No training data yet</p>';
+    container.innerHTML = '<p class="text-center text-muted py-6 text-sm">No training data yet.</p>';
     return;
   }
 
   const YEAR = {{ stats.year }};
-  const CELL = 13;
-  const GAP = 2;
-  const STEP = CELL + GAP;
+  const CELL = 13, GAP = 2, STEP = CELL + GAP;
   const COLOR = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
-  const DAYS = ['M', '', 'W', '', 'F', '', ''];
+  const DAY_LABELS = ['M', '', 'W', '', 'F', '', ''];
 
   const byDate = {};
   for (const w of workouts) {
@@ -141,222 +516,76 @@
 
   const jan1 = new Date(YEAR, 0, 1);
   const startOffset = (jan1.getDay() + 6) % 7;
-  const totalDays = (YEAR % 4 === 0 && (YEAR % 100 !== 0 || YEAR % 400 === 0)) ? 366 : 365;
+  const isLeap = YEAR % 4 === 0 && (YEAR % 100 !== 0 || YEAR % 400 === 0);
+  const totalDays = isLeap ? 366 : 365;
   const totalWeeks = Math.ceil((totalDays + startOffset) / 7);
+  const mL = 22, mT = 20;
 
-  const marginLeft = 22;
-  const marginTop = 20;
-  const width = marginLeft + totalWeeks * STEP;
-  const height = marginTop + 7 * STEP + 24;
-
-  const svg = d3.select(container)
-    .append('svg')
-    .attr('viewBox', `0 0 ${width} ${height}`)
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', `0 0 ${mL + totalWeeks * STEP} ${mT + 7 * STEP + 20}`)
     .attr('preserveAspectRatio', 'xMinYMid meet')
-    .style('width', '100%')
-    .style('height', 'auto')
-    .style('min-width', `${width}px`)
-    .attr('role', 'img')
-    .attr('aria-label', `Training log heatmap for ${YEAR} showing workout days by sport type`);
+    .style('width', '100%').style('height', 'auto')
+    .style('min-width', `${mL + totalWeeks * STEP}px`);
 
   let lastMonth = -1;
   for (let w = 0; w < totalWeeks; w++) {
-    const dayIndex = w * 7 - startOffset;
-    if (dayIndex < 0) continue;
-    const d = new Date(YEAR, 0, dayIndex + 1);
+    const di = w * 7 - startOffset;
+    if (di < 0) continue;
+    const d = new Date(YEAR, 0, di + 1);
     if (d.getFullYear() !== YEAR) continue;
     if (d.getMonth() !== lastMonth) {
       lastMonth = d.getMonth();
-      svg.append('text')
-        .attr('x', marginLeft + w * STEP)
-        .attr('y', marginTop - 6)
-        .attr('font-size', '10')
-        .style('fill', 'var(--color-chart-axis)')
+      svg.append('text').attr('x', mL + w * STEP).attr('y', mT - 6)
+        .attr('font-size', '10').style('fill', 'var(--color-chart-axis)')
         .text(d.toLocaleString('default', {month: 'short'}));
     }
   }
 
-  DAYS.forEach((label, i) => {
-    if (!label) return;
-    svg.append('text')
-      .attr('x', marginLeft - 4)
-      .attr('y', marginTop + i * STEP + CELL - 3)
-      .attr('font-size', '9')
-      .style('fill', 'var(--color-chart-axis)')
-      .attr('text-anchor', 'end')
-      .text(label);
+  DAY_LABELS.forEach((lbl, i) => {
+    if (!lbl) return;
+    svg.append('text').attr('x', mL - 4).attr('y', mT + i * STEP + CELL - 3)
+      .attr('font-size', '9').style('fill', 'var(--color-chart-axis)').attr('text-anchor', 'end').text(lbl);
   });
 
-  const tooltip = d3.select(container)
-    .append('div')
-    .style('position', 'fixed')
-    .style('background', 'var(--color-tooltip-bg)')
-    .style('border', '1px solid var(--color-tooltip-border)')
-    .style('border-radius', '8px')
-    .style('padding', '8px 12px')
-    .style('font-size', '12px')
-    .style('pointer-events', 'none')
-    .style('opacity', 0)
-    .style('line-height', '1.6')
-    .style('z-index', '50');
+  const tip = d3.select(container).append('div')
+    .style('position', 'fixed').style('pointer-events', 'none').style('opacity', 0)
+    .style('background', 'var(--color-tooltip-bg)').style('border', '1px solid var(--color-tooltip-border)')
+    .style('border-radius', '8px').style('padding', '8px 12px')
+    .style('font-size', '12px').style('line-height', '1.6').style('z-index', '50');
 
   for (let w = 0; w < totalWeeks; w++) {
     for (let dow = 0; dow < 7; dow++) {
-      const dayIndex = w * 7 + dow - startOffset;
-      if (dayIndex < 0 || dayIndex >= totalDays) continue;
-      const d = new Date(YEAR, 0, dayIndex + 1);
+      const di = w * 7 + dow - startOffset;
+      if (di < 0 || di >= totalDays) continue;
+      const d = new Date(YEAR, 0, di + 1);
       if (d.getFullYear() !== YEAR) continue;
-      const dateStr = d.toISOString().slice(0, 10);
-      const entries = byDate[dateStr];
-
-      const x = marginLeft + w * STEP;
-      const y = marginTop + dow * STEP;
+      const ds = d.toISOString().slice(0, 10);
+      const entries = byDate[ds];
 
       const cell = svg.append('rect')
-        .attr('x', x).attr('y', y)
-        .attr('width', CELL).attr('height', CELL)
-        .attr('rx', 2)
-        .attr('fill-opacity', entries ? Math.min(0.3 + entries.length * 0.35, 1) : 1);
+        .attr('x', mL + w * STEP).attr('y', mT + dow * STEP)
+        .attr('width', CELL).attr('height', CELL).attr('rx', 2);
 
       if (entries) {
         const primary = entries.reduce((a, b) => a.duration_seconds > b.duration_seconds ? a : b);
-        cell.style('fill', COLOR[primary.workout_type] || 'var(--color-edge)');
-        cell.style('cursor', 'pointer')
+        cell.style('fill', COLOR[primary.workout_type] || 'var(--color-edge)')
+          .style('fill-opacity', Math.min(0.3 + entries.length * 0.35, 1))
+          .style('cursor', 'pointer')
           .on('mousemove', function(event) {
-            const lines = entries.map(w =>
-              `<div style="color:var(--color-text)">${w.name || w.workout_type} <span style="color:var(--color-chart-axis)">${Math.round(w.duration_seconds/60)}min</span></div>`
-            ).join('');
-            tooltip
-              .style('opacity', 1)
-              .style('left', (event.clientX + 12) + 'px')
-              .style('top', (event.clientY - 10) + 'px')
-              .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${dateStr}</div>${lines}`);
+            tip.style('opacity', 1)
+              .style('left', (event.clientX + 12) + 'px').style('top', (event.clientY - 10) + 'px')
+              .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${ds}</div>` +
+                entries.map(e =>
+                  `<div style="color:var(--color-tooltip-text)">${e.name || e.workout_type}
+                   <span style="color:var(--color-chart-axis)">${Math.round(e.duration_seconds/60)} min</span></div>`
+                ).join(''));
           })
-          .on('mouseleave', () => tooltip.style('opacity', 0));
+          .on('mouseleave', () => tip.style('opacity', 0));
       } else {
-        cell.style('fill', 'var(--color-surface-alt)');
+        cell.style('fill', 'var(--color-surface-alt)').style('fill-opacity', 1);
       }
     }
   }
-})();
-
-// Weekly recap
-(function() {
-  const content = document.getElementById('weekly-recap-content');
-  const staleBadge = document.getElementById('recap-stale-badge');
-  const generateBtn = document.getElementById('recap-generate-btn');
-
-  function renderRecap(recap) {
-    if (!recap.summary || recap.summary.startsWith('No workouts')) {
-      content.innerHTML = '<p class="text-gray-400">No workouts recorded this week.</p>';
-      return;
-    }
-    const focusItems = (recap.focus || []).map(tip =>
-      `<li class="flex gap-2 items-start"><span class="mt-1 w-1.5 h-1.5 rounded-full sport-run shrink-0"></span><span>${tip}</span></li>`
-    ).join('');
-    content.innerHTML = `
-      <p class="text-gray-700 mb-3">${recap.summary}</p>
-      <p class="text-gray-600 mb-1"><span class="font-medium text-gray-800">Highlight:</span> ${recap.highlight}</p>
-      <p class="text-gray-600 mb-4"><span class="font-medium text-gray-800">Form:</span> ${recap.form_note}</p>
-      ${focusItems ? `<p class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-2">Focus next week</p><ul class="space-y-1 text-sm text-gray-600">${focusItems}</ul>` : ''}
-    `;
-  }
-
-  function showSkeleton() {
-    content.innerHTML = '<div class="animate-pulse space-y-2"><div class="h-2 bg-surface-alt rounded w-3/4"></div><div class="h-2 bg-surface-alt rounded w-1/2"></div></div>';
-  }
-
-  async function refresh() {
-    staleBadge.disabled = true;
-    generateBtn.disabled = true;
-    staleBadge.querySelector('svg').classList.add('animate-spin');
-    showSkeleton();
-    staleBadge.classList.add('hidden');
-    try {
-      const recap = await fetch('/api/overview/weekly-recap/refresh', {method: 'POST'}).then(r => r.json());
-      renderRecap(recap);
-      generateBtn.classList.add('hidden');
-    } catch {
-      content.innerHTML = '<p class="text-gray-300">Could not generate recap.</p>';
-    } finally {
-      staleBadge.disabled = false;
-      generateBtn.disabled = false;
-      staleBadge.querySelector('svg').classList.remove('animate-spin');
-    }
-  }
-
-  staleBadge.addEventListener('click', refresh);
-  generateBtn.addEventListener('click', refresh);
-
-  (async function load() {
-    try {
-      const recap = await fetch('/api/overview/weekly-recap').then(r => r.json());
-      if (!recap.cached) {
-        content.innerHTML = '<p class="text-gray-400 text-sm">No recap generated yet.</p>';
-        generateBtn.classList.remove('hidden');
-        return;
-      }
-      renderRecap(recap);
-      if (recap.stale) {
-        staleBadge.classList.remove('hidden');
-      }
-    } catch {
-      content.innerHTML = '<p class="text-gray-300">Could not load recap.</p>';
-    }
-  })();
-})();
-
-// Weekly volume chart
-(async function() {
-  const data = await fetch('/api/overview/weekly-volume').then(r => r.json());
-  const container = document.getElementById('weekly-volume-chart');
-  container.classList.remove('chart-loading');
-  if (!data.length) return;
-
-  const width = container.clientWidth || 700;
-  const height = 200;
-  const margin = {top: 10, right: 16, bottom: 30, left: 44};
-
-  const svg = d3.select(container)
-    .append('svg')
-    .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet');
-
-  const x = d3.scaleBand()
-    .domain(data.map(d => d.week_start))
-    .range([margin.left, width - margin.right])
-    .padding(0.25);
-
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d.distance_km)]).nice()
-    .range([height - margin.bottom, margin.top]);
-
-  const colorMap = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
-
-  svg.selectAll('rect')
-    .data(data)
-    .join('rect')
-    .attr('x', d => x(d.week_start))
-    .attr('y', d => y(d.distance_km))
-    .attr('width', x.bandwidth())
-    .attr('height', d => y(0) - y(d.distance_km))
-    .style('fill', d => colorMap[d.workout_type] || 'var(--color-surface-alt)')
-    .attr('rx', 3);
-
-  const fmtWeek = d => { const p = d.split('-'); return d3.timeFormat('%b %-d')(new Date(+p[0], +p[1]-1, +p[2])); };
-  const weeks = [...new Set(data.map(d => d.week_start))];
-  const xTicks = weeks.length > 16 ? weeks.filter((_, i) => i % 4 === 0) : weeks;
-  svg.append('g')
-    .attr('transform', `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x).tickValues(xTicks).tickFormat(fmtWeek).tickSize(0))
-    .call(g => g.select('.domain').remove())
-    .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
-
-  svg.append('g')
-    .attr('transform', `translate(${margin.left},0)`)
-    .call(d3.axisLeft(y).ticks(4).tickFormat(d => d + ' km'))
-    .call(g => g.select('.domain').remove())
-    .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 })();
 </script>
 {% endblock %}

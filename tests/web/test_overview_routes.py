@@ -21,6 +21,7 @@ def make_mock_analytics_service() -> AnalyticsService:
             sport_summaries=[SportSummary("run", 10, 50000, 36000, None)],
             recent_workouts=[],
             weekly_volumes=[],
+            personal_records=[],
         )
     )
     service.weekly_volume_chart_data = AsyncMock(return_value=[])

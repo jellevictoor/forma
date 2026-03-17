@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from forma.application.analytics_service import AnalyticsService, OverviewStats
-from forma.ports.workout_analytics_repository import SportSummary, WeeklyVolume
+from forma.ports.workout_analytics_repository import PersonalRecord, SportSummary, WeeklyVolume
 
 
 def make_analytics_repo():
@@ -55,6 +55,21 @@ async def test_overview_stats_includes_sport_summaries():
     result = await service.overview_stats("athlete1")
 
     assert len(result.sport_summaries) == 1
+
+
+async def test_overview_stats_includes_personal_records():
+    analytics_repo = make_analytics_repo()
+    analytics_repo.personal_records_for_run = AsyncMock(
+        return_value=[
+            PersonalRecord("run", 5000.0, 1230, 4.1, date(2026, 2, 15), "w1"),
+        ]
+    )
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.overview_stats("athlete1")
+
+    assert len(result.personal_records) == 1
 
 
 async def test_weekly_volume_chart_data_delegates_to_repo():
