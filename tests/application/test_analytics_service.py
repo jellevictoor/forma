@@ -449,7 +449,7 @@ async def test_weekly_volume_with_months_uses_range_repo():
     workout_repo = make_workout_repo()
     service = AnalyticsService(analytics_repo, workout_repo)
 
-    result = await service.weekly_volume_chart_data("athlete1", "run", months=3)
+    await service.weekly_volume_chart_data("athlete1", "run", months=3)
 
     assert analytics_repo.weekly_volume_for_range.called
 

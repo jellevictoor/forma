@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from google import genai
 
+from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
 
@@ -28,12 +29,22 @@ class TrainingInsightsService:
         analytics_repo: WorkoutAnalyticsRepository,
         workout_repo: WorkoutRepository,
         gemini_api_key: str,
+        cache_repo: InsightsCacheRepository,
     ) -> None:
         self._analytics = analytics_repo
         self._workouts = workout_repo
         self._client = genai.Client(api_key=gemini_api_key)
+        self._cache = cache_repo
 
-    async def analyse(self, athlete_id: str, year: int) -> TrainingInsights:
+    async def get_cached(self, athlete_id: str, year: int) -> CachedInsights | None:
+        return await self._cache.get(athlete_id, year)
+
+    async def generate_and_cache(self, athlete_id: str, year: int) -> CachedInsights:
+        insights = await self._generate(athlete_id, year)
+        await self._cache.save(athlete_id, year, insights)
+        return await self._cache.get(athlete_id, year)
+
+    async def _generate(self, athlete_id: str, year: int) -> TrainingInsights:
         noted_workouts = await self._analytics.workouts_with_notes(athlete_id, year)
         all_recent = await self._workouts.get_recent(athlete_id, count=50)
 
@@ -48,7 +59,6 @@ class TrainingInsightsService:
 
         prompt = self._build_prompt(noted_workouts, all_recent)
         response = self._client.models.generate_content(model=INSIGHT_MODEL, contents=prompt)
-
         return self._parse_response(response.text, len(noted_workouts))
 
     def _build_prompt(self, noted_workouts: list[dict], recent_workouts: list) -> str:

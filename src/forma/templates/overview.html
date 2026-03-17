@@ -3,16 +3,16 @@
 
 {% block content %}
 <div class="mb-8">
-  <h1 class="text-2xl font-semibold text-gray-900">Overview</h1>
-  <p class="text-gray-400 text-sm mt-1">Your training at a glance</p>
+  <h1 class="text-2xl font-semibold text-primary">Overview</h1>
+  <p class="text-muted text-sm mt-1">Your training at a glance</p>
 </div>
 
 <!-- Sport summaries -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
   {% for summary in stats.sport_summaries %}
-  <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm">
+  <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm hover:shadow-md transition-shadow">
     <div class="flex items-center justify-between mb-4">
-      <span class="text-xs font-medium uppercase tracking-widest text-gray-400">{{ summary.workout_type }}</span>
+      <span class="text-xs font-medium uppercase tracking-widest text-muted">{{ summary.workout_type }}</span>
       {% if summary.workout_type == 'run' %}
         <span class="w-2.5 h-2.5 rounded-full sport-run"></span>
       {% elif summary.workout_type == 'strength' %}
@@ -23,17 +23,17 @@
         <span class="w-2.5 h-2.5 rounded-full bg-gray-200"></span>
       {% endif %}
     </div>
-    <p class="text-4xl font-bold text-gray-900 mb-1">{{ summary.total_workouts }}</p>
-    <p class="text-sm text-gray-400 mb-3">sessions</p>
+    <p class="text-4xl font-bold text-primary mb-1">{{ summary.total_workouts }}</p>
+    <p class="text-sm text-muted mb-3">sessions</p>
     {% if summary.total_distance_meters > 0 %}
-    <p class="text-sm text-gray-600">{{ "%.0f"|format(summary.total_distance_meters / 1000) }} km total</p>
+    <p class="text-sm text-secondary">{{ "%.0f"|format(summary.total_distance_meters / 1000) }} km total</p>
     {% endif %}
     {% if summary.most_recent %}
-    <p class="text-xs text-gray-400 mt-1">Last: {{ summary.most_recent }}</p>
+    <p class="text-xs text-muted mt-1">Last: {{ summary.most_recent }}</p>
     {% endif %}
   </div>
   {% else %}
-  <div class="col-span-3 text-center text-gray-400 py-16 text-sm">
+  <div class="col-span-3 text-center text-muted py-16 text-sm">
     No workouts yet. Sync your Strava activities to get started.
   </div>
   {% endfor %}
@@ -41,37 +41,36 @@
 
 <!-- Weekly volume chart -->
 <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm mb-8">
-  <h2 class="text-sm font-medium uppercase tracking-widest text-gray-400 mb-5">Weekly volume</h2>
-  <div class="chart-container" id="weekly-volume-chart" style="min-height:200px"></div>
+  <h2 class="text-sm font-medium uppercase tracking-widest text-muted mb-5">Weekly volume</h2>
+  <div class="chart-container chart-loading" id="weekly-volume-chart" style="min-height:200px"></div>
 </div>
 
 <!-- Training log calendar -->
 <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm mb-8">
   <div class="flex items-center justify-between mb-5">
-    <h2 class="text-sm font-medium uppercase tracking-widest text-gray-400">Training log</h2>
-    <div class="flex gap-4 text-xs text-gray-400">
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Training log</h2>
+    <div class="flex gap-4 text-xs text-muted">
       <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm sport-run"></span>Run</span>
       <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm sport-strength"></span>Strength</span>
       <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm sport-climbing"></span>Climbing</span>
     </div>
   </div>
-  <div id="training-log-chart" style="overflow-x:auto"></div>
+  <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
 
 <!-- Weekly recap -->
 <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm mb-8" id="weekly-recap-card">
   <div class="flex items-center justify-between mb-5">
-    <h2 class="text-sm font-medium uppercase tracking-widest text-gray-400">Weekly recap</h2>
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Weekly recap</h2>
     <div class="flex items-center gap-2">
-      <span id="recap-stale-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full" style="background:#FEF3C7;color:#92400E">New activity — refresh to update</span>
-      <button id="recap-refresh-btn" class="hidden text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1" title="Refresh recap">
-        <svg id="recap-refresh-icon" xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-        Refresh
+      <button id="recap-stale-badge" class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-opacity hover:opacity-75 flex items-center gap-1.5" style="background:var(--color-amber-subtle);color:var(--color-amber-subtle-text)" aria-label="New activity detected — click to refresh recap">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        New activity — refresh
       </button>
-      <button id="recap-generate-btn" class="hidden text-xs text-gray-400 hover:text-gray-600 transition-colors">Generate</button>
+      <button id="recap-generate-btn" class="hidden text-xs text-muted hover:text-secondary transition-colors cursor-pointer" aria-label="Generate weekly recap">Generate recap</button>
     </div>
   </div>
-  <div id="weekly-recap-content" class="text-gray-400 text-sm">
+  <div id="weekly-recap-content" class="text-muted text-sm" aria-live="polite">
     <div class="animate-pulse flex gap-2 items-center"><div class="h-2 bg-surface-alt rounded w-3/4"></div></div>
   </div>
 </div>
@@ -79,10 +78,10 @@
 <!-- Recent workouts -->
 {% if stats.recent_workouts %}
 <div class="bg-surface rounded-2xl p-6 border border-edge shadow-sm">
-  <h2 class="text-sm font-medium uppercase tracking-widest text-gray-400 mb-5">Recent activities</h2>
+  <h2 class="text-sm font-medium uppercase tracking-widest text-muted mb-5">Recent activities</h2>
   <table class="w-full text-sm">
     <thead>
-      <tr class="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-edge">
+      <tr class="text-left text-xs text-muted uppercase tracking-wide border-b border-edge">
         <th class="pb-3 font-medium">Date</th>
         <th class="pb-3 font-medium">Activity</th>
         <th class="pb-3 font-medium">Type</th>
@@ -94,11 +93,18 @@
     <tbody>
       {% for w in stats.recent_workouts %}
       <tr class="border-b border-edge hover:bg-surface-alt transition-colors">
-        <td class="py-3 text-gray-400">{{ w.start_time.strftime('%d %b %Y') }}</td>
+        <td class="py-3 text-muted">{{ w.start_time.strftime('%d %b %Y') }}</td>
         <td class="py-3">
           <a href="/activities/detail/{{ w.id }}" class="text-mint hover:opacity-75 transition-opacity font-medium">{{ w.name }}</a>
         </td>
-        <td class="py-3 text-gray-500 capitalize">{{ w.workout_type.value }}</td>
+        <td class="py-3 text-secondary capitalize">
+          <span class="inline-flex items-center gap-1.5">
+            {% if w.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>Running
+            {% elif w.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>Strength
+            {% elif w.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>Climbing
+            {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{{ w.workout_type.value|capitalize }}{% endif %}
+          </span>
+        </td>
         <td class="py-3">{{ "%.0f"|format(w.duration_minutes) }} min</td>
         <td class="py-3">{% if w.distance_km %}{{ "%.1f"|format(w.distance_km) }} km{% else %}<span class="value-empty">—</span>{% endif %}</td>
         <td class="py-3">{% if w.pace_formatted() %}{{ w.pace_formatted() }}{% else %}<span class="value-empty">—</span>{% endif %}</td>
@@ -114,6 +120,7 @@
 (async function() {
   const workouts = await fetch('/api/overview/training-log').then(r => r.json());
   const container = document.getElementById('training-log-chart');
+  container.classList.remove('chart-loading');
   if (!workouts.length) {
     container.innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">No training data yet</p>';
     return;
@@ -144,8 +151,13 @@
 
   const svg = d3.select(container)
     .append('svg')
-    .attr('width', width)
-    .attr('height', height);
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMinYMid meet')
+    .style('width', '100%')
+    .style('height', 'auto')
+    .style('min-width', `${width}px`)
+    .attr('role', 'img')
+    .attr('aria-label', `Training log heatmap for ${YEAR} showing workout days by sport type`);
 
   let lastMonth = -1;
   for (let w = 0; w < totalWeeks; w++) {
@@ -232,7 +244,6 @@
 (function() {
   const content = document.getElementById('weekly-recap-content');
   const staleBadge = document.getElementById('recap-stale-badge');
-  const refreshBtn = document.getElementById('recap-refresh-btn');
   const generateBtn = document.getElementById('recap-generate-btn');
 
   function renderRecap(recap) {
@@ -256,28 +267,25 @@
   }
 
   async function refresh() {
-    const icon = document.getElementById('recap-refresh-icon');
-    refreshBtn.disabled = true;
+    staleBadge.disabled = true;
     generateBtn.disabled = true;
-    if (icon) icon.classList.add('animate-spin');
+    staleBadge.querySelector('svg').classList.add('animate-spin');
     showSkeleton();
     staleBadge.classList.add('hidden');
     try {
       const recap = await fetch('/api/overview/weekly-recap/refresh', {method: 'POST'}).then(r => r.json());
       renderRecap(recap);
-      staleBadge.classList.add('hidden');
-      refreshBtn.classList.remove('hidden');
       generateBtn.classList.add('hidden');
     } catch {
       content.innerHTML = '<p class="text-gray-300">Could not generate recap.</p>';
     } finally {
-      refreshBtn.disabled = false;
+      staleBadge.disabled = false;
       generateBtn.disabled = false;
-      if (icon) icon.classList.remove('animate-spin');
+      staleBadge.querySelector('svg').classList.remove('animate-spin');
     }
   }
 
-  refreshBtn.addEventListener('click', refresh);
+  staleBadge.addEventListener('click', refresh);
   generateBtn.addEventListener('click', refresh);
 
   (async function load() {
@@ -289,7 +297,6 @@
         return;
       }
       renderRecap(recap);
-      refreshBtn.classList.remove('hidden');
       if (recap.stale) {
         staleBadge.classList.remove('hidden');
       }
@@ -302,9 +309,10 @@
 // Weekly volume chart
 (async function() {
   const data = await fetch('/api/overview/weekly-volume').then(r => r.json());
+  const container = document.getElementById('weekly-volume-chart');
+  container.classList.remove('chart-loading');
   if (!data.length) return;
 
-  const container = document.getElementById('weekly-volume-chart');
   const width = container.clientWidth || 700;
   const height = 200;
   const margin = {top: 10, right: 16, bottom: 30, left: 44};

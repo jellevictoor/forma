@@ -16,9 +16,9 @@
       <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-climbing"></span>Climbing</span>
     </div>
     <div class="flex gap-1" id="range-toggle">
-      <button data-months="3" class="px-3 py-1 rounded-full text-xs font-medium transition-colors tab-active">3m</button>
-      <button data-months="6" class="px-3 py-1 rounded-full text-xs font-medium transition-colors tab-inactive">6m</button>
-      <button data-months="12" class="px-3 py-1 rounded-full text-xs font-medium transition-colors tab-inactive">12m</button>
+      <button data-months="3" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-active cursor-pointer">3m</button>
+      <button data-months="6" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-inactive cursor-pointer">6m</button>
+      <button data-months="12" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-inactive cursor-pointer">12m</button>
     </div>
   </div>
   <div class="chart-container" id="unified-volume-chart" style="min-height:220px; position:relative"></div>
@@ -28,7 +28,7 @@
 <div class="flex gap-2 mb-6">
   {% for s in [('run', 'Running'), ('strength', 'Strength'), ('climbing', 'Climbing')] %}
   <a href="/analytics/{{ s[0] }}"
-     class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+     class="px-4 py-2.5 rounded-full text-sm font-medium transition-colors
             {% if sport == s[0] %}tab-active{% else %}tab-inactive{% endif %}">
     {{ s[1] }}
   </a>
@@ -84,7 +84,9 @@ function drawStackedBarChart(containerId, data) {
   const svg = d3.select(container)
     .append('svg')
     .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet');
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .attr('role', 'img')
+    .attr('aria-label', `Weekly training volume across all sports for the last ${currentMonths} months`);
 
   const x = d3.scaleBand()
     .domain(data.map(d => d.week_start))
@@ -158,7 +160,24 @@ function drawStackedBarChart(containerId, data) {
         .style('top', (event.offsetY - 10) + 'px')
         .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-text);font-weight:600;margin-top:2px">Total: ${total.toFixed(1)}h</div>`);
     })
-    .on('mouseleave', () => tooltip.style('opacity', 0));
+    .on('mouseleave', () => tooltip.style('opacity', 0))
+    .on('touchstart', function(event, d) {
+      event.preventDefault();
+      const touch = event.touches[0];
+      const rect = container.getBoundingClientRect();
+      const total = d.run_hours + d.strength_hours + d.climbing_hours;
+      const lines = [
+        d.run_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-mint)">Running:</span> ${d.run_hours}h</div>` : '',
+        d.strength_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-sky)">Strength:</span> ${d.strength_hours}h</div>` : '',
+        d.climbing_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-amber)">Climbing:</span> ${d.climbing_hours}h</div>` : '',
+      ].filter(Boolean).join('');
+      tooltip
+        .style('opacity', 1)
+        .style('left', (touch.clientX - rect.left + 12) + 'px')
+        .style('top', (touch.clientY - rect.top - 10) + 'px')
+        .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-text);font-weight:600;margin-top:2px">Total: ${total.toFixed(1)}h</div>`);
+      setTimeout(() => tooltip.style('opacity', 0), 3000);
+    }, {passive: false});
 
   const xTicks = data.length > 16 ? data.filter((_, i) => i % 4 === 0) : data;
   svg.append('g')
@@ -209,8 +228,8 @@ document.getElementById('range-toggle').addEventListener('click', function(e) {
   currentMonths = parseInt(btn.dataset.months, 10);
   this.querySelectorAll('button').forEach(b => {
     b.className = b === btn
-      ? 'px-3 py-1 rounded-full text-xs font-medium transition-colors tab-active'
-      : 'px-3 py-1 rounded-full text-xs font-medium transition-colors tab-inactive';
+      ? 'px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-active cursor-pointer'
+      : 'px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-inactive cursor-pointer';
   });
   loadAllCharts(currentMonths);
 });
@@ -230,7 +249,9 @@ function drawBarChart(containerId, data, yKey, yFormat) {
   const svg = d3.select(container)
     .append('svg')
     .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet');
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .attr('role', 'img')
+    .attr('aria-label', `Weekly ${SPORT} ${yKey === 'distance_km' ? 'distance' : 'duration'} chart`);
 
   const x = d3.scaleBand()
     .domain(data.map(d => d.week_start))
@@ -289,7 +310,9 @@ function drawLineChart(containerId, data, yKey) {
   const svg = d3.select(container)
     .append('svg')
     .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet');
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .attr('role', 'img')
+    .attr('aria-label', 'Pace trend over time showing average min/km per week');
 
   const x = d3.scaleTime()
     .domain(d3.extent(parsed, d => d.date))

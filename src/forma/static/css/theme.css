@@ -22,6 +22,8 @@
   /* Semantic */
   --color-negative: #DC2626;
   --color-empty:    #94A3B8;
+  --color-amber-subtle: #FEF3C7;
+  --color-amber-subtle-text: #92400E;
 
   /* Chart helpers */
   --color-chart-axis:   #94A3B8;
@@ -46,12 +48,14 @@
 
   --color-text:           #EDF2F9;
   --color-text-secondary: #94A3B8;
-  --color-text-muted:     #4E6A86;
+  --color-text-muted:     #6B8FAF;
 
   --color-negative: #F87171;
   --color-empty:    #3A5272;
+  --color-amber-subtle: rgba(232, 168, 74, 0.15);
+  --color-amber-subtle-text: #E8A84A;
 
-  --color-chart-axis:   #4E6A86;
+  --color-chart-axis:   #6B8FAF;
   --color-chart-grid:   #213349;
   --color-effort-bar:   rgba(255, 255, 255, 0.05);
   --color-chart-empty-bar: rgba(78, 106, 134, 0.12);
@@ -59,7 +63,7 @@
   --color-tooltip-bg:     #1A2C3E;
   --color-tooltip-border: #213349;
   --color-tooltip-text:   #94A3B8;
-  --color-tooltip-date:   #4E6A86;
+  --color-tooltip-date:   #94A3B8;
 }
 
 /* ── Base ──────────────────────────────────────────────────── */
@@ -130,4 +134,10 @@ tbody tr:nth-child(even) {
 .chart-container svg {
   width: 100%;
   height: auto;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse { animation: none; }
+  .animate-spin  { animation: none; }
 }

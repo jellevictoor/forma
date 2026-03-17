@@ -3,8 +3,11 @@
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
+from forma.adapters.sqlite_activity_analysis import SQLiteActivityAnalysis
 from forma.adapters.sqlite_analytics import SQLiteAnalyticsRepository
+from forma.adapters.sqlite_chat import SQLiteChat
 from forma.adapters.sqlite_execution_session import SQLiteExecutionSession
+from forma.adapters.sqlite_insights_cache import SQLiteInsightsCache
 from forma.adapters.sqlite_plan_cache import SQLitePlanCache
 from forma.adapters.sqlite_recap_cache import SQLiteRecapCache
 from forma.adapters.sqlite_storage import SQLiteStorage
@@ -15,6 +18,7 @@ from forma.application.sync_all_activities import FullStravaSync
 from forma.application.training_insights import TrainingInsightsService
 from forma.application.weekly_recap import WeeklyRecapService
 from forma.application.weight_tracking_service import WeightTrackingService
+from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.workout_execution_service import WorkoutExecutionService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.config import get_settings
@@ -36,7 +40,8 @@ def _create_insights_service() -> TrainingInsightsService:
     db_path = settings.database_path
     analytics_repo = SQLiteAnalyticsRepository(db_path)
     workout_repo = SQLiteStorage(db_path)
-    return TrainingInsightsService(analytics_repo, workout_repo, settings.gemini_api_key)
+    cache_repo = SQLiteInsightsCache(db_path)
+    return TrainingInsightsService(analytics_repo, workout_repo, settings.gemini_api_key, cache_repo)
 
 
 @lru_cache
@@ -122,6 +127,22 @@ async def get_strava_sync() -> AsyncIterator[FullStravaSync]:
         yield FullStravaSync(client, SQLiteStorage(settings.database_path))
     finally:
         await client.close()
+
+
+@lru_cache
+def _create_activity_analysis_service() -> ActivityAnalysisService:
+    settings = get_settings()
+    db_path = settings.database_path
+    workout_repo = SQLiteStorage(db_path)
+    analytics_repo = SQLiteAnalyticsRepository(db_path)
+    athlete_repo = SQLiteStorage(db_path)
+    cache_repo = SQLiteActivityAnalysis(db_path)
+    chat_repo = SQLiteChat(db_path)
+    return ActivityAnalysisService(workout_repo, analytics_repo, athlete_repo, settings.gemini_api_key, cache_repo, chat_repo)
+
+
+async def get_activity_analysis_service() -> ActivityAnalysisService:
+    return _create_activity_analysis_service()
 
 
 @lru_cache

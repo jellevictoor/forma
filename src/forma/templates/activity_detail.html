@@ -68,10 +68,246 @@
 </div>
 
 {% if workout.description %}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-3">Description</h2>
   <p class="text-gray-700 text-sm whitespace-pre-wrap">{{ workout.description }}</p>
 </div>
 {% endif %}
+
+<!-- AI analysis -->
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6" id="analysis-card">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400">Activity analysis</h2>
+    {% if not cached_analysis %}
+    <button
+      id="analyse-btn"
+      onclick="runAnalysis('{{ workout.id }}')"
+      class="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1.5"
+    >
+      <svg id="analyse-spinner" class="hidden w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      Analyse this activity
+    </button>
+    {% else %}
+    <span class="text-xs text-gray-300">{{ cached_analysis.generated_at.strftime('%d %b %Y') }}</span>
+    {% endif %}
+  </div>
+
+  <div id="analysis-error" class="hidden text-xs text-red-500 mb-4"></div>
+
+  {% if cached_analysis %}
+  <div id="analysis-content">
+    {{ _render_analysis(cached_analysis.analysis) }}
+  </div>
+  {% else %}
+  <div id="analysis-placeholder" class="text-sm text-gray-400 py-4">
+    No analysis yet. Click "Analyse this activity" to generate one.
+  </div>
+  <div id="analysis-content" class="hidden"></div>
+  {% endif %}
+</div>
+
+<!-- Chat panel — only shown when analysis exists -->
+{% if cached_analysis or chat_messages %}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mt-6" id="chat-card">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Ask your coach</h2>
+
+  <div id="chat-messages" class="space-y-4 mb-5 max-h-[480px] overflow-y-auto">
+    {% for msg in chat_messages %}
+    <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %}">
+      <div class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed
+        {% if msg.role == 'user' %}bg-nav text-white{% else %}bg-surface-alt text-gray-700{% endif %}">
+        {{ msg.content }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="chat-error" class="hidden text-xs text-red-500 mb-3"></div>
+
+  <form id="chat-form" class="flex gap-2" onsubmit="sendChatMessage(event, '{{ workout.id }}')">
+    <input
+      id="chat-input"
+      type="text"
+      placeholder="Ask something about this workout…"
+      class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+      autocomplete="off"
+    />
+    <button
+      type="submit"
+      id="chat-send-btn"
+      class="px-4 py-2.5 bg-nav text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+    >
+      Send
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{% macro _render_analysis(a) %}
+<dl class="space-y-4 text-sm">
+  <div>
+    <dt class="text-xs font-medium text-gray-400 mb-1">Performance</dt>
+    <dd class="text-gray-700 leading-relaxed" id="field-performance">{{ a.performance_assessment }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium text-gray-400 mb-1">Training load</dt>
+    <dd class="text-gray-700 leading-relaxed" id="field-load">{{ a.training_load_context }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium text-gray-400 mb-1">Goal relevance</dt>
+    <dd class="text-gray-700 leading-relaxed" id="field-goals">{{ a.goal_relevance }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium text-gray-400 mb-1">Compared to recent</dt>
+    <dd class="text-gray-700 leading-relaxed" id="field-comparison">{{ a.comparison_to_recent }}</dd>
+  </div>
+  <div class="pt-3 border-t border-edge">
+    <dt class="text-xs font-medium text-gray-400 mb-1">Takeaway</dt>
+    <dd class="text-gray-800 font-medium leading-relaxed pl-3 border-l-2" style="border-color: var(--color-mint)" id="field-takeaway">{{ a.takeaway }}</dd>
+  </div>
+</dl>
+{% endmacro %}
+
+<script>
+async function sendChatMessage(event, workoutId) {
+  event.preventDefault();
+  const input = document.getElementById('chat-input');
+  const messages = document.getElementById('chat-messages');
+  const errorEl = document.getElementById('chat-error');
+  const sendBtn = document.getElementById('chat-send-btn');
+  const message = input.value.trim();
+  if (!message) return;
+
+  errorEl.classList.add('hidden');
+  input.value = '';
+  sendBtn.disabled = true;
+
+  // Show chat panel if hidden (first message after analysis generated inline)
+  const chatCard = document.getElementById('chat-card');
+  if (chatCard) chatCard.classList.remove('hidden');
+
+  appendMessage(messages, 'user', message);
+  const thinking = appendMessage(messages, 'model', '…');
+
+  try {
+    const res = await fetch(`/activities/detail/${workoutId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      thinking.remove();
+      errorEl.textContent = data.error || 'Something went wrong.';
+      errorEl.classList.remove('hidden');
+    } else {
+      thinking.querySelector('div').textContent = data.response;
+    }
+  } catch {
+    thinking.remove();
+    errorEl.textContent = 'Connection error. Please try again.';
+    errorEl.classList.remove('hidden');
+  }
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+function appendMessage(container, role, text) {
+  const wrapper = document.createElement('div');
+  wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+  const bubble = document.createElement('div');
+  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-nav text-white' : 'bg-surface-alt text-gray-700'}`;
+  bubble.textContent = text;
+  wrapper.appendChild(bubble);
+  container.appendChild(wrapper);
+  container.scrollTop = container.scrollHeight;
+  return wrapper;
+}
+
+// After analysis is generated inline, show the chat panel
+function showChatPanel(workoutId) {
+  const existing = document.getElementById('chat-card');
+  if (existing) { existing.classList.remove('hidden'); return; }
+  const card = document.createElement('div');
+  card.id = 'chat-card';
+  card.className = 'bg-surface rounded-2xl border border-edge shadow-sm p-6 mt-6';
+  card.innerHTML = `
+    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Ask your coach</h2>
+    <div id="chat-messages" class="space-y-4 mb-5 max-h-[480px] overflow-y-auto"></div>
+    <div id="chat-error" class="hidden text-xs text-red-500 mb-3"></div>
+    <form id="chat-form" class="flex gap-2" onsubmit="sendChatMessage(event, '${workoutId}')">
+      <input id="chat-input" type="text" placeholder="Ask something about this workout…"
+        class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+        autocomplete="off" />
+      <button type="submit" id="chat-send-btn"
+        class="px-4 py-2.5 bg-nav text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50">
+        Send
+      </button>
+    </form>`;
+  document.getElementById('analysis-card').after(card);
+}
+
+async function runAnalysis(workoutId) {
+  const btn = document.getElementById('analyse-btn');
+  const spinner = document.getElementById('analyse-spinner');
+  const placeholder = document.getElementById('analysis-placeholder');
+  const content = document.getElementById('analysis-content');
+  const errorEl = document.getElementById('analysis-error');
+
+  btn.disabled = true;
+  spinner.classList.remove('hidden');
+  errorEl.classList.add('hidden');
+
+  try {
+    const res = await fetch(`/activities/detail/${workoutId}/analyse`, { method: 'POST' });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Analysis failed. Please try again.';
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+      spinner.classList.add('hidden');
+      return;
+    }
+
+    if (placeholder) placeholder.classList.add('hidden');
+    btn.classList.add('hidden');
+
+    content.innerHTML = `
+      <dl class="space-y-4 text-sm">
+        <div>
+          <dt class="text-xs font-medium text-gray-400 mb-1">Performance</dt>
+          <dd class="text-gray-700 leading-relaxed">${data.performance_assessment}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-400 mb-1">Training load</dt>
+          <dd class="text-gray-700 leading-relaxed">${data.training_load_context}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-400 mb-1">Goal relevance</dt>
+          <dd class="text-gray-700 leading-relaxed">${data.goal_relevance}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-400 mb-1">Compared to recent</dt>
+          <dd class="text-gray-700 leading-relaxed">${data.comparison_to_recent}</dd>
+        </div>
+        <div class="pt-3 border-t border-edge">
+          <dt class="text-xs font-medium text-gray-400 mb-1">Takeaway</dt>
+          <dd class="text-gray-800 font-medium leading-relaxed pl-3 border-l-2" style="border-color: var(--color-mint)">${data.takeaway}</dd>
+        </div>
+      </dl>`;
+    content.classList.remove('hidden');
+    showChatPanel(workoutId);
+  } catch {
+    errorEl.textContent = 'Something went wrong. Please try again.';
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+    spinner.classList.add('hidden');
+  }
+}
+</script>
 {% endif %}
 {% endblock %}
