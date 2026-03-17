@@ -144,8 +144,9 @@
     {% for msg in chat_messages %}
     <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %}">
       <div class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed
-        {% if msg.role == 'user' %}bg-nav text-white{% else %}bg-surface-alt text-secondary{% endif %}">
-        {{ msg.content }}
+        {% if msg.role == 'user' %}bg-nav text-white{% else %}bg-surface-alt text-secondary prose-chat{% endif %}"
+        {% if msg.role == 'model' %}data-markdown="{{ msg.content | e }}"{% endif %}>
+        {% if msg.role == 'user' %}{{ msg.content }}{% endif %}
       </div>
     </div>
     {% endfor %}
@@ -169,17 +170,42 @@
   </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+function renderMarkdown(text) {
+  return marked.parse(text, { breaks: true });
+}
+
+// Render server-side model messages that were stored as raw markdown
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-markdown]').forEach(el => {
+    el.innerHTML = renderMarkdown(el.dataset.markdown);
+  });
+  // Scroll chat to bottom if there are messages
+  const chatMessages = document.getElementById('chat-messages');
+  if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
 function appendMessage(container, role, text) {
   const wrapper = document.createElement('div');
   wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
   const bubble = document.createElement('div');
-  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-nav text-white' : 'bg-surface-alt text-secondary'}`;
-  bubble.textContent = text;
+  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-nav text-white' : 'bg-surface-alt text-secondary prose-chat'}`;
+  if (role === 'model') {
+    bubble.innerHTML = renderMarkdown(text);
+  } else {
+    bubble.textContent = text;
+  }
   wrapper.appendChild(bubble);
   container.appendChild(wrapper);
   container.scrollTop = container.scrollHeight;
   return wrapper;
+}
+
+// For the "thinking" placeholder, update with rendered markdown when response arrives
+function updateBubble(wrapper, text) {
+  const bubble = wrapper.querySelector('div');
+  bubble.innerHTML = renderMarkdown(text);
 }
 
 async function sendChatMessage(event, workoutId) {
@@ -210,7 +236,7 @@ async function sendChatMessage(event, workoutId) {
       errorEl.textContent = data.error || 'Something went wrong.';
       errorEl.classList.remove('hidden');
     } else {
-      thinkingRow.querySelector('div').textContent = data.response;
+      updateBubble(thinkingRow, data.response);
     }
   } catch {
     thinkingRow.remove();
