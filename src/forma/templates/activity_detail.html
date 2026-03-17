@@ -105,24 +105,50 @@
 
 {% if workout.workout_type.value == 'run' %}
 <!-- Route map -->
-<div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden mb-6" id="map-card">
+<div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden mb-4" id="map-card">
   <div class="flex items-center justify-between px-6 pt-5 pb-4">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Route</h2>
     <div id="map-toggle" class="hidden flex gap-1">
-      <button id="btn-pace" onclick="setMapMode('pace')" class="px-3 py-1 rounded-lg tab-active text-xs cursor-pointer">Pace</button>
-      <button id="btn-hr" onclick="setMapMode('hr')" class="px-3 py-1 rounded-lg tab-inactive text-xs cursor-pointer">HR</button>
+      <button id="btn-pace"  onclick="setMapMode('pace')"  class="px-3 py-1 rounded-lg tab-active  text-xs cursor-pointer">Pace</button>
+      <button id="btn-zones" onclick="setMapMode('zones')" class="px-3 py-1 rounded-lg tab-inactive text-xs cursor-pointer">HR zones</button>
     </div>
   </div>
-  <div id="map-loading" class="chart-loading mx-6 mb-6 rounded-xl" style="height: 400px;"></div>
-  <div id="map-container" class="hidden px-6 pb-5">
-    <div id="run-map" style="height: 400px; border-radius: 0.75rem; overflow: hidden;"></div>
-    <div class="mt-3 flex items-center gap-3 text-xs text-muted">
+  <div id="map-loading" class="chart-loading mx-6 mb-6 rounded-xl" style="height: 380px;"></div>
+  <div id="map-container" class="hidden px-6 pb-4">
+    <div id="run-map" style="height: 380px; border-radius: 0.75rem; overflow: hidden;"></div>
+    <!-- pace legend -->
+    <div id="legend-pace" class="mt-3 flex items-center gap-3 text-xs text-muted">
       <span id="legend-low"></span>
       <div id="legend-gradient" class="flex-1 h-1.5 rounded-full"></div>
       <span id="legend-high"></span>
     </div>
+    <!-- zones legend -->
+    <div id="legend-zones" class="hidden mt-3 flex items-center gap-4 text-xs text-muted flex-wrap">
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#60A5FA"></span>Z1 Warm-up 50–60%</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#34D399"></span>Z2 Endurance 60–70%</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#FBBF24"></span>Z3 Aerobic 70–80%</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#F97316"></span>Z4 Threshold 80–90%</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#EF4444"></span>Z5 VO₂max 90–100%</span>
+    </div>
   </div>
   <p id="map-error" class="hidden px-6 pb-6 text-xs text-muted text-center">No GPS data available for this activity.</p>
+</div>
+
+<!-- Pace + HR chart (shown when streams loaded) -->
+<div id="charts-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm px-6 pt-5 pb-6 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Pace &amp; heart rate</h2>
+    <div id="chart-crosshair-label" class="text-xs text-muted font-mono hidden"></div>
+  </div>
+  <svg id="activity-svg" class="w-full" style="overflow:visible"></svg>
+  <!-- zone legend strips -->
+  <div id="chart-zone-legend" class="hidden mt-4 flex items-center gap-4 text-xs text-muted flex-wrap">
+    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#60A5FA"></span>Z1 Warm-up 50–60%</span>
+    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#34D399"></span>Z2 Endurance 60–70%</span>
+    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#FBBF24"></span>Z3 Aerobic 70–80%</span>
+    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#F97316"></span>Z4 Threshold 80–90%</span>
+    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#EF4444"></span>Z5 VO₂max 90–100%</span>
+  </div>
 </div>
 {% endif %}
 
@@ -191,7 +217,7 @@
       id="chat-input"
       type="text"
       placeholder="Ask something about this workout…"
-      class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-primary placeholder-muted focus:outline-none focus:border-gray-400 transition-colors"
+      class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-primary placeholder-muted focus:outline-none focus:border-mint/40 transition-colors"
       autocomplete="off"
     />
     <button
@@ -203,7 +229,7 @@
 </div>
 
 {% if workout.workout_type.value == 'run' %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WPuE=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 {% endif %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
@@ -285,89 +311,351 @@ async function sendChatMessage(event, workoutId) {
 }
 
 {% if workout.workout_type.value == 'run' %}
-// ── Route map ──────────────────────────────────────────────
+// ── Route map + charts ─────────────────────────────────────
+// Max HR: athlete profile → age-based formula (220 - age) → 185 default
+{% if athlete and athlete.max_heartrate %}
+const MAX_HR = {{ athlete.max_heartrate }};
+{% elif athlete and athlete.age %}
+const MAX_HR = {{ 220 - athlete.age }};
+{% else %}
+const MAX_HR = 185;
+{% endif %}
+
+// Standard 5-zone system (% of max HR) — colors chosen for clear visual separation
+const HR_ZONES = [
+  { name:'Z1', label:'Warm-up',     lo:0.50, hi:0.60, color:'#60A5FA' }, // blue
+  { name:'Z2', label:'Endurance',   lo:0.60, hi:0.70, color:'#34D399' }, // green
+  { name:'Z3', label:'Aerobic',     lo:0.70, hi:0.80, color:'#FBBF24' }, // yellow
+  { name:'Z4', label:'Threshold',   lo:0.80, hi:0.90, color:'#F97316' }, // orange
+  { name:'Z5', label:'VO\u2082max', lo:0.90, hi:1.00, color:'#EF4444' }, // red
+];
+
 const MAP_LOW  = '#B2F0E4';
 const MAP_MID  = '#2DD4AA';
 const MAP_HIGH = '#0A6A50';
 
-let _mapInstance = null;
-let _streamsData  = null;
-let _routeLayer   = null;
-let _mapMode      = 'pace';
+let _mapInstance   = null;
+let _streamsData   = null;
+let _routeLayer    = null;
+let _posMarker     = null;
+let _mapMode       = 'pace';
 
 function _hexToRgb(hex) {
   return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
 }
-
-function _rgbToHex(r, g, b) {
-  return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+function _rgbToHex(r,g,b) {
+  return '#'+[r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
 }
-
-function _lerp(c1, c2, t) {
-  const [r1,g1,b1] = _hexToRgb(c1), [r2,g2,b2] = _hexToRgb(c2);
-  return _rgbToHex(r1+(r2-r1)*t, g1+(g2-g1)*t, b1+(b2-b1)*t);
+function _lerp(c1,c2,t) {
+  const [r1,g1,b1]=_hexToRgb(c1),[r2,g2,b2]=_hexToRgb(c2);
+  return _rgbToHex(r1+(r2-r1)*t,g1+(g2-g1)*t,b1+(b2-b1)*t);
 }
-
 function _heatColor(t) {
-  return t < 0.5 ? _lerp(MAP_LOW, MAP_MID, t*2) : _lerp(MAP_MID, MAP_HIGH, (t-0.5)*2);
+  return t<0.5 ? _lerp(MAP_LOW,MAP_MID,t*2) : _lerp(MAP_MID,MAP_HIGH,(t-0.5)*2);
+}
+function _zoneColor(hr) {
+  if (!hr || !MAX_HR) return '#CBD5E1';
+  const pct = hr / MAX_HR;
+  if (pct < 0.50) return '#CBD5E1';
+  for (const z of HR_ZONES) { if (pct >= z.lo && pct < z.hi) return z.color; }
+  return '#EF4444';
+}
+function _formatPace(secPerKm) {
+  const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
+  return `${m}:${String(s).padStart(2,'0')}/km`;
+}
+function _formatTime(secs) {
+  const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=Math.floor(secs%60);
+  return h>0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+             : `${m}:${String(s).padStart(2,'0')}`;
 }
 
-function _drawRoute(latlng, values) {
+function _drawRoute(latlng, values, useZones) {
   if (_routeLayer) { _routeLayer.remove(); _routeLayer = null; }
   if (!latlng || latlng.length < 2) return;
-
   const MAX_SEGS = 600;
   const step = Math.max(1, Math.floor(latlng.length / MAX_SEGS));
-  const valid = (values || []).filter(v => v != null && !isNaN(v));
+  const valid = (values||[]).filter(v=>v!=null&&!isNaN(v));
   const minVal = valid.length ? Math.min(...valid) : 0;
   const maxVal = valid.length ? Math.max(...valid) : 1;
   const range  = maxVal - minVal || 1;
-
   const segs = [];
   for (let i = 0; i < latlng.length - step; i += step) {
     const val = values ? values[i] : null;
-    const t   = val != null ? (val - minVal) / range : 0.5;
-    segs.push(L.polyline([latlng[i], latlng[Math.min(i+step, latlng.length-1)]], {
-      color: _heatColor(t), weight: 5, opacity: 0.9, lineCap: 'round',
+    let color;
+    if (useZones) {
+      color = _zoneColor(val);
+    } else {
+      const t = val!=null ? (val-minVal)/range : 0.5;
+      color = _heatColor(t);
+    }
+    segs.push(L.polyline([latlng[i], latlng[Math.min(i+step,latlng.length-1)]], {
+      color, weight:5, opacity:0.9, lineCap:'round',
     }));
   }
   _routeLayer = L.layerGroup(segs).addTo(_mapInstance);
 
-  document.getElementById('legend-gradient').style.background =
-    `linear-gradient(to right, ${MAP_LOW}, ${MAP_MID}, ${MAP_HIGH})`;
+  const showPaceLegend = _mapMode === 'pace';
+  document.getElementById('legend-pace').classList.toggle('hidden', !showPaceLegend);
+  document.getElementById('legend-zones').classList.toggle('hidden', showPaceLegend);
 
-  if (_mapMode === 'pace') {
-    const slowPace = minVal > 0 ? _formatPace(1000 / minVal) : '—';
-    const fastPace = maxVal > 0 ? _formatPace(1000 / maxVal) : '—';
-    document.getElementById('legend-low').textContent  = slowPace;
-    document.getElementById('legend-high').textContent = fastPace;
-  } else {
-    document.getElementById('legend-low').textContent  = `${Math.round(minVal)} bpm`;
-    document.getElementById('legend-high').textContent = `${Math.round(maxVal)} bpm`;
+  if (showPaceLegend) {
+    document.getElementById('legend-gradient').style.background =
+      `linear-gradient(to right, ${MAP_LOW}, ${MAP_MID}, ${MAP_HIGH})`;
+    document.getElementById('legend-low').textContent  = minVal>0 ? _formatPace(1000/minVal) : '—';
+    document.getElementById('legend-high').textContent = maxVal>0 ? _formatPace(1000/maxVal) : '—';
   }
-}
-
-function _formatPace(secPerKm) {
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}:${String(s).padStart(2,'0')}/km`;
 }
 
 function setMapMode(mode) {
   _mapMode = mode;
-  document.getElementById('btn-pace').className =
-    `px-3 py-1 rounded-lg ${mode==='pace' ? 'tab-active' : 'tab-inactive'} text-xs cursor-pointer`;
-  document.getElementById('btn-hr').className =
-    `px-3 py-1 rounded-lg ${mode==='hr' ? 'tab-active' : 'tab-inactive'} text-xs cursor-pointer`;
+  ['pace','zones'].forEach(m => {
+    document.getElementById(`btn-${m}`).className =
+      `px-3 py-1 rounded-lg ${mode===m?'tab-active':'tab-inactive'} text-xs cursor-pointer`;
+  });
   if (!_streamsData) return;
-  _drawRoute(_streamsData.latlng, mode === 'pace' ? _streamsData.velocity_smooth : _streamsData.heartrate);
+  if (mode === 'pace')  _drawRoute(_streamsData.latlng, _streamsData.velocity_smooth, false);
+  if (mode === 'zones') _drawRoute(_streamsData.latlng, _streamsData.heartrate, true);
+}
+
+function _movePosMarker(latlng) {
+  if (!_mapInstance) return;
+  if (!_posMarker) {
+    _posMarker = L.circleMarker(latlng, {
+      radius:7, color:'#fff', weight:2, fillColor:'var(--color-nav)', fillOpacity:1,
+    }).addTo(_mapInstance);
+  } else {
+    _posMarker.setLatLng(latlng);
+  }
+}
+
+// ── D3 charts ─────────────────────────────────────────────
+function _drawCharts(data) {
+  const hasHr = data.has_hr && data.heartrate && data.heartrate.length;
+  const n = data.latlng.length;
+  const step = Math.max(1, Math.floor(n / 600));
+
+  const pts = [];
+  for (let i = 0; i < n; i += step) {
+    const v  = data.velocity_smooth[i];
+    const hr = hasHr ? data.heartrate[i] : null;
+    if (v == null) continue;
+    pts.push({ t: data.time[i] || i, v, hr, ll: data.latlng[i], idx: i });
+  }
+
+  const container = document.getElementById('activity-svg').parentElement;
+  const W  = container.clientWidth - 48; // account for px-6 padding
+  const mL = 52, mR = hasHr ? 48 : 20, mTop = 12, mBot = 28;
+  const paceH = hasHr ? 110 : 180;
+  const gap   = hasHr ? 24  : 0;
+  const hrH   = hasHr ? 140 : 0;
+  const totalH = mTop + paceH + gap + hrH + mBot;
+
+  const svg = d3.select('#activity-svg')
+    .attr('viewBox', `0 0 ${W} ${totalH}`)
+    .attr('height', totalH);
+
+  svg.selectAll('*').remove();
+
+  const xScale = d3.scaleLinear()
+    .domain(d3.extent(pts, d => d.t))
+    .range([mL, W - mR]);
+
+  // ── Pace panel ─────────────────────────────────────────
+  const paceY1 = mTop, paceY2 = mTop + paceH;
+  const paces  = pts.filter(d => d.v > 0.3).map(d => 1000/d.v);
+  const paceMin = d3.min(paces) * 0.92;
+  const paceMax = d3.max(paces) * 1.08;
+  // inverted: lower sec/km = faster = higher on chart
+  const paceScale = d3.scaleLinear().domain([paceMax, paceMin]).range([paceY1, paceY2]);
+
+  // clip
+  svg.append('defs').append('clipPath').attr('id','pace-clip')
+    .append('rect').attr('x',mL).attr('y',paceY1).attr('width',W-mL-mR).attr('height',paceH);
+
+  // pace line
+  const paceLine = d3.line()
+    .x(d => xScale(d.t))
+    .y(d => d.v > 0.3 ? paceScale(1000/d.v) : null)
+    .defined(d => d.v > 0.3)
+    .curve(d3.curveBasis);
+
+  svg.append('path')
+    .datum(pts)
+    .attr('clip-path','url(#pace-clip)')
+    .attr('fill','none')
+    .attr('stroke','var(--color-mint)')
+    .attr('stroke-width',2)
+    .attr('d', paceLine);
+
+  // pace fill
+  const paceArea = d3.area()
+    .x(d => xScale(d.t))
+    .y0(paceY2)
+    .y1(d => d.v > 0.3 ? paceScale(1000/d.v) : paceY2)
+    .defined(d => d.v > 0.3)
+    .curve(d3.curveBasis);
+
+  svg.append('path')
+    .datum(pts)
+    .attr('clip-path','url(#pace-clip)')
+    .attr('fill','var(--color-mint)')
+    .attr('fill-opacity',0.12)
+    .attr('d', paceArea);
+
+  // pace y-axis
+  const paceAxis = d3.axisLeft(paceScale).ticks(4)
+    .tickFormat(s => _formatPace(s));
+  svg.append('g').attr('transform',`translate(${mL},0)`)
+    .call(paceAxis)
+    .call(g => g.select('.domain').remove())
+    .call(g => g.selectAll('line').attr('stroke','var(--color-edge)').attr('x2', W-mL-mR))
+    .call(g => g.selectAll('text').attr('x',-8).attr('fill','var(--color-text-muted)').style('font-size','10px'));
+
+  // ── HR panel ─────────────────────────────────────────────
+  if (hasHr) {
+    const hrY1 = paceY2 + gap, hrY2 = hrY1 + hrH;
+    const hrMin = Math.max(40, (d3.min(pts.filter(d=>d.hr), d=>d.hr)||60) - 10);
+    const hrMax = Math.min(MAX_HR * 1.05, (d3.max(pts, d=>d.hr)||180) + 5);
+    const hrScale = d3.scaleLinear().domain([hrMin, hrMax]).range([hrY2, hrY1]);
+
+    svg.append('defs').append('clipPath').attr('id','hr-clip')
+      .append('rect').attr('x',mL).attr('y',hrY1).attr('width',W-mL-mR).attr('height',hrH);
+
+    // zone bands
+    for (const z of HR_ZONES) {
+      const yTop = hrScale(Math.min(z.hi * MAX_HR, hrMax));
+      const yBot = hrScale(Math.max(z.lo * MAX_HR, hrMin));
+      if (yBot <= hrY1 || yTop >= hrY2) continue;
+      svg.append('rect')
+        .attr('x',mL).attr('y',Math.max(yTop,hrY1))
+        .attr('width',W-mL-mR)
+        .attr('height',Math.min(yBot,hrY2)-Math.max(yTop,hrY1))
+        .attr('fill',z.color).attr('fill-opacity',0.08);
+      // zone label on right
+      const labelY = (Math.max(yTop,hrY1)+Math.min(yBot,hrY2))/2;
+      if (Math.min(yBot,hrY2)-Math.max(yTop,hrY1) > 12) {
+        svg.append('text')
+          .attr('x',W-mR+4).attr('y',labelY+4)
+          .attr('fill',z.color).style('font-size','9px').style('font-weight','600')
+          .text(z.name);
+      }
+    }
+
+    // HR line
+    const hrLine = d3.line()
+      .x(d => xScale(d.t))
+      .y(d => d.hr ? hrScale(d.hr) : null)
+      .defined(d => d.hr != null)
+      .curve(d3.curveBasis);
+
+    svg.append('path')
+      .datum(pts)
+      .attr('clip-path','url(#hr-clip)')
+      .attr('fill','none')
+      .attr('stroke','#F97316')
+      .attr('stroke-width',1.5)
+      .attr('d', hrLine);
+
+    // HR area
+    const hrArea = d3.area()
+      .x(d => xScale(d.t))
+      .y0(hrY2)
+      .y1(d => d.hr ? hrScale(d.hr) : hrY2)
+      .defined(d => d.hr != null)
+      .curve(d3.curveBasis);
+
+    svg.append('path')
+      .datum(pts)
+      .attr('clip-path','url(#hr-clip)')
+      .attr('fill','#F97316')
+      .attr('fill-opacity',0.10)
+      .attr('d', hrArea);
+
+    // HR y-axis
+    const hrAxis = d3.axisLeft(hrScale).ticks(4).tickFormat(d=>`${d}`);
+    svg.append('g').attr('transform',`translate(${mL},0)`)
+      .call(hrAxis)
+      .call(g => g.select('.domain').remove())
+      .call(g => g.selectAll('line').attr('stroke','var(--color-edge)').attr('x2', W-mL-mR))
+      .call(g => g.selectAll('text').attr('x',-8).attr('fill','var(--color-text-muted)').style('font-size','10px'));
+
+    // HR label
+    svg.append('text').attr('x',6).attr('y',(hrY1+hrY2)/2+4)
+      .attr('fill','var(--color-text-muted)').style('font-size','9px')
+      .style('writing-mode','vertical-rl').text('HR bpm');
+
+    document.getElementById('chart-zone-legend').classList.remove('hidden');
+
+    // ── shared x-axis ───────────────────────────────────
+    const xAxis = d3.axisBottom(xScale).ticks(6).tickFormat(s=>_formatTime(s));
+    svg.append('g').attr('transform',`translate(0,${hrY2})`)
+      .call(xAxis)
+      .call(g => g.select('.domain').attr('stroke','var(--color-edge)'))
+      .call(g => g.selectAll('line').attr('stroke','var(--color-edge)'))
+      .call(g => g.selectAll('text').attr('fill','var(--color-text-muted)').style('font-size','10px'));
+
+    // ── crosshair ────────────────────────────────────────
+    const vLine = svg.append('line')
+      .attr('stroke','var(--color-edge)').attr('stroke-width',1)
+      .attr('y1',mTop).attr('y2',hrY2).style('display','none');
+
+    const dotPace = svg.append('circle').attr('r',4)
+      .attr('fill','var(--color-mint)').attr('stroke','var(--color-surface)').attr('stroke-width',2)
+      .style('display','none');
+
+    const dotHr = svg.append('circle').attr('r',4)
+      .attr('fill','#F97316').attr('stroke','var(--color-surface)').attr('stroke-width',2)
+      .style('display','none');
+
+    const overlay = svg.append('rect')
+      .attr('x',mL).attr('y',mTop)
+      .attr('width',W-mL-mR).attr('height',hrY2-mTop)
+      .attr('fill','none').style('cursor','crosshair')
+      .attr('pointer-events','all');
+
+    const bisect = d3.bisector(d=>d.t).left;
+    const label  = document.getElementById('chart-crosshair-label');
+
+    overlay.on('mousemove', function(event) {
+      const [mx] = d3.pointer(event, this);
+      const t0   = xScale.invert(mx + mL);
+      const i    = Math.max(0, Math.min(pts.length-1, bisect(pts, t0)));
+      const p    = pts[i];
+      vLine.attr('x1',xScale(p.t)).attr('x2',xScale(p.t)).style('display',null);
+      if (p.v > 0.3) {
+        dotPace.attr('cx',xScale(p.t)).attr('cy',paceScale(1000/p.v)).style('display',null);
+      }
+      if (p.hr) {
+        dotHr.attr('cx',xScale(p.t)).attr('cy',hrScale(p.hr)).style('display',null);
+      }
+      let txt = _formatTime(p.t);
+      if (p.v > 0.3) txt += `  ${_formatPace(1000/p.v)}`;
+      if (p.hr) txt += `  ${Math.round(p.hr)} bpm`;
+      label.textContent = txt;
+      label.classList.remove('hidden');
+      _movePosMarker(p.ll);
+    }).on('mouseleave', () => {
+      vLine.style('display','none');
+      dotPace.style('display','none');
+      dotHr.style('display','none');
+      label.classList.add('hidden');
+    });
+  } else {
+    // no HR — just x-axis under pace panel
+    const xAxis = d3.axisBottom(xScale).ticks(6).tickFormat(s=>_formatTime(s));
+    svg.append('g').attr('transform',`translate(0,${paceY2})`)
+      .call(xAxis)
+      .call(g => g.select('.domain').attr('stroke','var(--color-edge)'))
+      .call(g => g.selectAll('line').attr('stroke','var(--color-edge)'))
+      .call(g => g.selectAll('text').attr('fill','var(--color-text-muted)').style('font-size','10px'));
+  }
 }
 
 async function loadActivityMap(workoutId) {
   try {
     const res = await fetch(`/activities/detail/${workoutId}/streams`);
     document.getElementById('map-loading').classList.add('hidden');
-
     const payload = await res.json();
     if (!res.ok) {
       const errEl = document.getElementById('map-error');
@@ -375,7 +663,6 @@ async function loadActivityMap(workoutId) {
       errEl.classList.remove('hidden');
       return;
     }
-
     _streamsData = payload;
     if (!_streamsData.latlng || _streamsData.latlng.length < 2) {
       document.getElementById('map-error').textContent = 'No GPS data available for this activity.';
@@ -384,20 +671,21 @@ async function loadActivityMap(workoutId) {
     }
 
     document.getElementById('map-container').classList.remove('hidden');
-
     _mapInstance = L.map('run-map', { zoomControl: true });
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19,
+      subdomains:'abcd', maxZoom:19,
     }).addTo(_mapInstance);
-
-    _mapInstance.fitBounds(L.latLngBounds(_streamsData.latlng), { padding: [20, 20] });
+    _mapInstance.fitBounds(L.latLngBounds(_streamsData.latlng), { padding:[20,20] });
 
     if (_streamsData.has_hr) {
       document.getElementById('map-toggle').classList.remove('hidden');
     }
+    _drawRoute(_streamsData.latlng, _streamsData.velocity_smooth, false);
 
-    _drawRoute(_streamsData.latlng, _streamsData.velocity_smooth);
+    // charts
+    document.getElementById('charts-card').classList.remove('hidden');
+    _drawCharts(_streamsData);
   } catch (err) {
     console.error('Map load error:', err);
     document.getElementById('map-loading').classList.add('hidden');

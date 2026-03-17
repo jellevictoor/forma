@@ -1,3 +1,7 @@
+- small commits, short consice commit messages
+- keep docker-compose runnable at all time
+- use the ux/ui skill to pay attention to the Ux, really think with me for goo ideas
+
 ## Core Principles (Quick Reference)
 
 - **Hexagonal Architecture**: Domain → Ports → Adapters (dependencies point inward)
@@ -97,8 +101,48 @@ Routes are thin — no business logic, only call the `AnalyticsService`.
 ## UI/UX Patterns
 
 - Always use Tailwind CSS classes, minimise custom CSS
+- **Never use inline `style="color:var(--color-*)"` or `style="background:var(--color-*)"` in templates** — use semantic Tailwind classes instead (`text-primary`, `text-muted`, `text-secondary`, `bg-surface`, `bg-surface-alt`, `border-edge`)
+- The same rule applies to JS-generated HTML strings (e.g. inside `innerHTML = \`...\``)
 - Always give feedback on submitted actions (loading state, success, error)
 - Use Tailwind info/warning/error utility classes for feedback
+
+### Page header pattern (every page)
+Every page starts with this header block:
+```html
+<div class="mb-6">
+  <h1 class="text-3xl font-bold text-primary">Page title</h1>
+  <p class="text-xs text-muted mt-1">Short subtitle describing the page</p>
+</div>
+```
+
+### Activity / sport accent pattern
+When showing an activity with a sport type, use a left accent bar:
+```html
+<div class="flex items-center gap-3">
+  <div class="w-1 h-10 rounded-full shrink-0" style="background:{{ sport_color }}"></div>
+  <div>
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-0.5">meta info</p>
+    <h1 class="text-3xl font-bold text-primary">{{ workout.name }}</h1>
+  </div>
+</div>
+```
+Note: `style="background:{{ sport_color }}"` is the one acceptable inline style since it comes from a Jinja2 variable; in JS-generated HTML use `style="background:${sportColor}"` similarly.
+
+### Card section header pattern
+```html
+<h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Section title</h2>
+```
+
+### Form inputs pattern
+All inputs/selects use these classes:
+```
+w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary
+```
+
+### Warning / stale state badge
+```html
+<div class="px-4 py-3 bg-amber/10 border border-amber/30 rounded-lg text-sm text-amber flex items-center gap-2">
+```
 
 ### URL State Management
 

@@ -60,6 +60,19 @@
             class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
           />
         </div>
+        <div>
+          <label class="block text-xs text-secondary mb-1" for="max_heartrate">Max heart rate (bpm)</label>
+          <input
+            type="number"
+            id="max_heartrate"
+            name="max_heartrate"
+            value="{{ athlete.max_heartrate if athlete and athlete.max_heartrate else '' }}"
+            min="100"
+            max="230"
+            placeholder="{{ (220 - athlete.age) if athlete and athlete.age else '185' }}"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
+          />
+        </div>
       </div>
       <div>
         <label class="block text-xs text-secondary mb-1" for="notes">Notes</label>
@@ -299,7 +312,7 @@ async function getAdvice() {
     tipsList.innerHTML = '';
     (data.training_tips || []).forEach(tip => {
       const li = document.createElement('li');
-      li.className = 'flex gap-2.5 text-sm text-gray-700';
+      li.className = 'flex gap-2.5 text-sm text-secondary';
       li.innerHTML = `<span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 sport-run"></span>${tip}`;
       tipsList.appendChild(li);
     });
