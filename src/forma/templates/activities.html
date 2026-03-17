@@ -18,77 +18,98 @@
   {% endfor %}
 </div>
 
+{% if workouts %}
+
+{# Group workouts by relative date label #}
+{% set ns = namespace(last_label='') %}
+<div class="space-y-1">
+{% for w in workouts %}
+{% set days_ago = (today - w.start_time.date()).days %}
+{% if days_ago == 0 %}{% set label = 'Today' %}
+{% elif days_ago == 1 %}{% set label = 'Yesterday' %}
+{% elif days_ago < 7 %}{% set label = w.start_time.strftime('%A') %}
+{% elif days_ago < 14 %}{% set label = 'Last week' %}
+{% else %}{% set label = w.start_time.strftime('%B %Y') %}{% endif %}
+
+{% if label != ns.last_label %}
+{% if not loop.first %}</div>{% endif %}
+{% set ns.last_label = label %}
+<p class="text-xs font-medium uppercase tracking-widest text-muted mt-6 mb-2 first:mt-0">{{ label }}</p>
 <div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden">
-  {% if workouts %}
-  <table class="w-full text-sm">
-    <thead class="bg-surface-alt">
-      <tr class="text-left text-xs text-muted uppercase tracking-wide">
-        <th class="w-0.5 p-0"></th>
-        <th class="px-4 py-3 font-medium">Date</th>
-        <th class="px-4 py-3 font-medium">Activity</th>
-        <th class="px-4 py-3 font-medium">Type</th>
-        <th class="px-4 py-3 font-medium">Duration</th>
-        <th class="px-4 py-3 font-medium">Distance</th>
-        <th class="px-4 py-3 font-medium">Pace</th>
-        <th class="px-4 py-3 font-medium">Avg HR</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for w in workouts %}
-      {% set sport_bg =
-        'var(--color-mint)' if w.workout_type.value == 'run' else
-        'var(--color-sky)' if w.workout_type.value == 'strength' else
-        'var(--color-amber)' if w.workout_type.value == 'climbing' else
-        'var(--color-edge)'
-      %}
-      <tr class="border-t border-edge hover:bg-surface-alt transition-colors cursor-pointer" onclick="window.location='/activities/detail/{{ w.id }}'">
-        <td class="p-0" style="background:{{ sport_bg }};width:3px"></td>
-        <td class="px-4 py-3 text-muted whitespace-nowrap">{{ w.start_time.strftime('%d %b %Y') }}</td>
-        <td class="px-4 py-3">
-          <a href="/activities/detail/{{ w.id }}" class="font-medium text-primary hover:text-mint transition-colors" onclick="event.stopPropagation()">{{ w.name }}</a>
-        </td>
-        <td class="px-4 py-3">
-          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-secondary">
-            {% if w.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>Running
-            {% elif w.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>Strength
-            {% elif w.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>Climbing
-            {% else %}<span class="w-1.5 h-1.5 rounded-full bg-edge"></span>{{ w.workout_type.value | capitalize }}{% endif %}
-          </span>
-        </td>
-        <td class="px-4 py-3 text-secondary">{{ "%.0f"|format(w.duration_minutes) }} min</td>
-        <td class="px-4 py-3 text-secondary">
-          {% if w.distance_km %}{{ "%.1f"|format(w.distance_km) }} km{% else %}<span class="value-empty">—</span>{% endif %}
-        </td>
-        <td class="px-4 py-3 text-secondary">
-          {% if w.pace_formatted() %}{{ w.pace_formatted() }}{% else %}<span class="value-empty">—</span>{% endif %}
-        </td>
-        <td class="px-4 py-3 text-secondary">
-          {% if w.average_heartrate %}{{ "%.0f"|format(w.average_heartrate) }}{% else %}<span class="value-empty">—</span>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% endif %}
 
-  {% if total_pages > 1 %}
-  <div class="px-5 py-4 border-t border-edge flex items-center justify-between text-sm text-muted">
-    <span>{{ total }} activities</span>
-    <div class="flex items-center gap-2">
-      {% if page > 1 %}
-      <a href="/activities/{{ sport }}/{{ page - 1 }}" class="px-3 py-1.5 rounded-lg border border-edge text-secondary hover:text-primary transition-colors">Previous</a>
-      {% endif %}
-      <span class="px-2">{{ page }} / {{ total_pages }}</span>
-      {% if page < total_pages %}
-      <a href="/activities/{{ sport }}/{{ page + 1 }}" class="px-3 py-1.5 rounded-lg border border-edge text-secondary hover:text-primary transition-colors">Next</a>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
+{% set sport_color =
+  'var(--color-mint)' if w.workout_type.value == 'run' else
+  'var(--color-sky)' if w.workout_type.value == 'strength' else
+  'var(--color-amber)' if w.workout_type.value == 'climbing' else
+  'var(--color-edge)'
+%}
+<a href="/activities/detail/{{ w.id }}"
+   class="flex items-center gap-4 px-5 py-4 hover:bg-surface-alt transition-colors cursor-pointer group border-b border-edge last:border-0">
+  {# Sport accent #}
+  <div class="w-0.5 h-10 rounded-full shrink-0" style="background:{{ sport_color }}"></div>
 
-  {% else %}
-  <div class="text-center text-muted py-16 text-sm">
-    No activities found for this filter.
+  {# Sport dot + type #}
+  <div class="shrink-0 flex flex-col items-center gap-1 w-12">
+    <span class="w-2.5 h-2.5 rounded-full
+      {%- if w.workout_type.value == 'run' %} sport-run
+      {%- elif w.workout_type.value == 'strength' %} sport-strength
+      {%- elif w.workout_type.value == 'climbing' %} sport-climbing
+      {%- else %} bg-edge{% endif %}"></span>
+    <span class="text-xs text-muted leading-none">
+      {%- if w.workout_type.value == 'run' %}Run
+      {%- elif w.workout_type.value == 'strength' %}Strength
+      {%- elif w.workout_type.value == 'climbing' %}Climbing
+      {%- else %}{{ w.workout_type.value | capitalize }}{% endif -%}
+    </span>
   </div>
-  {% endif %}
+
+  {# Name + date #}
+  <div class="flex-1 min-w-0">
+    <p class="text-sm font-medium text-primary truncate group-hover:text-mint transition-colors">{{ w.name }}</p>
+    <p class="text-xs text-muted mt-0.5">{{ w.start_time.strftime('%-d %b %Y · %H:%M') }}</p>
+  </div>
+
+  {# Metrics chips #}
+  <div class="hidden sm:flex items-center gap-2 shrink-0">
+    <span class="text-xs font-medium text-secondary bg-surface-alt px-2.5 py-1 rounded-full">{{ "%.0f"|format(w.duration_minutes) }} min</span>
+    {% if w.distance_km %}
+    <span class="text-xs font-medium px-2.5 py-1 rounded-full" style="background:color-mix(in srgb, {{ sport_color }} 10%, transparent); color:{{ sport_color }}">{{ "%.1f"|format(w.distance_km) }} km</span>
+    {% endif %}
+    {% if w.pace_formatted() %}
+    <span class="text-xs text-muted bg-surface-alt px-2.5 py-1 rounded-full">{{ w.pace_formatted() }}</span>
+    {% endif %}
+    {% if w.average_heartrate %}
+    <span class="text-xs text-muted bg-surface-alt px-2.5 py-1 rounded-full">{{ "%.0f"|format(w.average_heartrate) }} bpm</span>
+    {% endif %}
+  </div>
+
+  {# Arrow #}
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-muted group-hover:text-secondary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+
+{% if loop.last %}</div>{% endif %}
+{% endfor %}
 </div>
+
+{% if total_pages > 1 %}
+<div class="mt-6 flex items-center justify-between text-sm text-muted">
+  <span>{{ total }} activities</span>
+  <div class="flex items-center gap-2">
+    {% if page > 1 %}
+    <a href="/activities/{{ sport }}/{{ page - 1 }}" class="px-4 py-2 rounded-xl border border-edge text-secondary hover:text-primary hover:bg-surface transition-colors">Previous</a>
+    {% endif %}
+    <span class="px-3 py-2 text-xs text-muted">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/activities/{{ sport }}/{{ page + 1 }}" class="px-4 py-2 rounded-xl border border-edge text-secondary hover:text-primary hover:bg-surface transition-colors">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm text-center py-16">
+  <p class="text-sm text-muted">No activities found for this filter.</p>
+</div>
+{% endif %}
 {% endblock %}

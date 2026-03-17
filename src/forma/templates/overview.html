@@ -103,7 +103,7 @@
 </div>
 
 {# ── This week KPIs ───────────────────────────────────────── #}
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
 
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Sessions</p>
@@ -136,6 +136,19 @@
     <p class="text-xs mt-1.5 font-medium text-muted" id="kpi-streak-sub"></p>
   </div>
 
+</div>
+
+{# ── Training calendar ────────────────────────────────────────── #}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Training log · {{ stats.year }}</h2>
+    <div class="flex gap-4 text-xs text-muted">
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-run"></span>Run</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-strength"></span>Strength</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-climbing"></span>Climbing</span>
+    </div>
+  </div>
+  <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
 
 {# ── Recent activities + Coach focus ──────────────────────── #}
@@ -290,19 +303,6 @@
     {% endif %}
   </div>
 
-</div>
-
-{# ── Training calendar ────────────────────────────────────────── #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
-  <div class="flex items-center justify-between mb-5">
-    <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Training log · {{ stats.year }}</h2>
-    <div class="flex gap-4 text-xs text-muted">
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-run"></span>Run</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-strength"></span>Strength</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-climbing"></span>Climbing</span>
-    </div>
-  </div>
-  <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
 
 <script>

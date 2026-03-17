@@ -1,5 +1,6 @@
 """Activities listing routes."""
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -9,11 +10,13 @@ from fastapi.templating import Jinja2Templates
 
 from forma.adapters.web.dependencies import (
     get_activity_analysis_service,
+    get_activity_stream_service,
     get_analytics_service,
     get_athlete_id,
     get_workout_repo,
 )
 from forma.application.activity_analysis_service import ActivityAnalysisService
+from forma.application.activity_stream_service import ActivityStreamService
 from forma.application.analytics_service import AnalyticsService
 from forma.ports.workout_repository import WorkoutRepository
 
@@ -85,6 +88,25 @@ async def chat_about_activity(
         return JSONResponse({"error": "Workout not found"}, status_code=404)
 
 
+@router.get("/activities/detail/{activity_id}/streams")
+async def activity_streams(
+    activity_id: str,
+    stream_service: Annotated[ActivityStreamService, Depends(get_activity_stream_service)],
+):
+    try:
+        streams = await stream_service.get_or_fetch(activity_id)
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+    if not streams or not streams.latlng:
+        return JSONResponse({"error": "No GPS data available"}, status_code=404)
+    return JSONResponse({
+        "latlng": streams.latlng,
+        "velocity_smooth": streams.velocity_smooth,
+        "heartrate": streams.heartrate,
+        "has_hr": bool(streams.heartrate),
+    })
+
+
 @router.get("/activities/{sport}/{page}", response_class=HTMLResponse)
 async def activities_page(
     request: Request,
@@ -108,5 +130,6 @@ async def activities_page(
             "page": page,
             "total": total,
             "total_pages": total_pages,
+            "today": date.today(),
         },
     )
