@@ -206,7 +206,7 @@ function dayCard(day) {
             <span class="text-xs font-medium capitalize" style="color:${intensityColor}">${day.intensity}</span>
             <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>
             <button type="button" onclick="toggleExercises(this)"
-                    class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75">${hasExercises ? 'Hide' : 'Details'}</button>
+                    class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer">${hasExercises ? 'Hide' : 'Details'}</button>
           ` : `<span class="text-xs italic text-muted">Rest day</span>`}
         </div>
       </div>
