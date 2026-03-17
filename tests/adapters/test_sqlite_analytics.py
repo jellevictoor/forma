@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from fitness_coach.adapters.sqlite_analytics import SQLiteAnalyticsRepository
-from fitness_coach.adapters.sqlite_storage import SQLiteStorage
-from fitness_coach.domain.workout import Workout, WorkoutType
+from forma.adapters.sqlite_analytics import SQLiteAnalyticsRepository
+from forma.adapters.sqlite_storage import SQLiteStorage
+from forma.domain.workout import Workout, WorkoutType
 
 
 def make_workout(

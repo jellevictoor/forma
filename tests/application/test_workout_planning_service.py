@@ -4,10 +4,10 @@ from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 
-from fitness_coach.application.workout_planning_service import WorkoutPlanningService
-from fitness_coach.domain.athlete import Athlete
-from fitness_coach.domain.workout import Workout, WorkoutType
-from fitness_coach.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay, WeeklyPlan
+from forma.application.workout_planning_service import WorkoutPlanningService
+from forma.domain.athlete import Athlete
+from forma.domain.workout import Workout, WorkoutType
+from forma.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay, WeeklyPlan
 
 
 def make_athlete() -> Athlete:

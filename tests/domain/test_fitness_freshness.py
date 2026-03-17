@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 
-from fitness_coach.domain.fitness_freshness import compute_fitness_freshness
+from forma.domain.fitness_freshness import compute_fitness_freshness
 
 
 def test_returns_list_of_dicts():

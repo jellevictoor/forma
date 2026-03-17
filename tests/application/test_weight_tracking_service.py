@@ -4,8 +4,8 @@ from datetime import date, timedelta
 from unittest.mock import AsyncMock
 
 
-from fitness_coach.application.weight_tracking_service import WeightTrackingService
-from fitness_coach.domain.weight_entry import WeightEntry
+from forma.application.weight_tracking_service import WeightTrackingService
+from forma.domain.weight_entry import WeightEntry
 
 
 def make_entry(

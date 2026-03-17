@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from fitness_coach.adapters.web.app import create_app
-from fitness_coach.application.analytics_service import AnalyticsService, OverviewStats
-from fitness_coach.application.sync_all_activities import FullStravaSync
-from fitness_coach.application.weekly_recap import WeeklyRecapService
-from fitness_coach.ports.recap_cache_repository import CachedRecap
-from fitness_coach.ports.workout_analytics_repository import SportSummary
+from forma.adapters.web.app import create_app
+from forma.application.analytics_service import AnalyticsService, OverviewStats
+from forma.application.sync_all_activities import FullStravaSync
+from forma.application.weekly_recap import WeeklyRecapService
+from forma.ports.recap_cache_repository import CachedRecap
+from forma.ports.workout_analytics_repository import SportSummary
 
 
 def make_mock_analytics_service() -> AnalyticsService:
@@ -74,7 +74,7 @@ def client(tmp_path):
     async def override_strava_sync():
         return make_mock_strava_sync()
 
-    from fitness_coach.adapters.web.dependencies import (
+    from forma.adapters.web.dependencies import (
         get_analytics_service,
         get_athlete_id,
         get_strava_sync,
@@ -106,7 +106,7 @@ def client_no_cache(tmp_path):
     async def override_strava_sync():
         return make_mock_strava_sync()
 
-    from fitness_coach.adapters.web.dependencies import (
+    from forma.adapters.web.dependencies import (
         get_analytics_service,
         get_athlete_id,
         get_strava_sync,

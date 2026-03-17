@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from fitness_coach.adapters.web.app import create_app
-from fitness_coach.application.athlete_profile_service import AthleteProfileService
-from fitness_coach.application.workout_planning_service import WorkoutPlanningService
-from fitness_coach.domain.athlete import Athlete
-from fitness_coach.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay
+from forma.adapters.web.app import create_app
+from forma.application.athlete_profile_service import AthleteProfileService
+from forma.application.workout_planning_service import WorkoutPlanningService
+from forma.domain.athlete import Athlete
+from forma.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay
 
 
 def make_athlete() -> Athlete:
@@ -57,7 +57,7 @@ def make_mock_profile_service() -> AthleteProfileService:
 def client():
     app = create_app()
 
-    from fitness_coach.adapters.web.dependencies import (
+    from forma.adapters.web.dependencies import (
         get_athlete_id,
         get_athlete_profile_service,
         get_workout_planning_service,
@@ -76,7 +76,7 @@ def client():
 def client_no_cache():
     app = create_app()
 
-    from fitness_coach.adapters.web.dependencies import (
+    from forma.adapters.web.dependencies import (
         get_athlete_id,
         get_athlete_profile_service,
         get_workout_planning_service,

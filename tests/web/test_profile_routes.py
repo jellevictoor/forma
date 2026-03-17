@@ -6,11 +6,11 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from fitness_coach.adapters.web.app import create_app
-from fitness_coach.application.athlete_profile_service import AthleteProfileService
-from fitness_coach.application.weight_tracking_service import WeightTrackingService
-from fitness_coach.domain.athlete import Athlete
-from fitness_coach.domain.weight_entry import WeightEntry
+from forma.adapters.web.app import create_app
+from forma.application.athlete_profile_service import AthleteProfileService
+from forma.application.weight_tracking_service import WeightTrackingService
+from forma.domain.athlete import Athlete
+from forma.domain.weight_entry import WeightEntry
 
 
 def make_athlete() -> Athlete:
@@ -50,7 +50,7 @@ def client():
     async def override_weight_service():
         return make_mock_weight_service()
 
-    from fitness_coach.adapters.web.dependencies import (
+    from forma.adapters.web.dependencies import (
         get_athlete_id,
         get_athlete_profile_service,
         get_weight_tracking_service,

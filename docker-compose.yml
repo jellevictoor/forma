@@ -1,7 +1,7 @@
 services:
-  fitness-coach:
+  forma:
     build: .
-    container_name: fitness-coach
+    container_name: forma
     ports:
       - "8080:8080"
     volumes:
@@ -11,4 +11,4 @@ services:
       - .env
     stdin_open: true
     tty: true
-    command: ["uv", "run", "serve"]
+    command: ["uv", "run", "uvicorn", "forma.__main__:app", "--host", "0.0.0.0", "--port", "8080"]

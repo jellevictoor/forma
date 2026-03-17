@@ -2,8 +2,8 @@
 
 import pytest
 
-from fitness_coach.domain.athlete import Athlete, Goal, GoalType, ScheduleTemplateSlot
-from fitness_coach.domain.workout import WorkoutType
+from forma.domain.athlete import Athlete, Goal, GoalType, ScheduleTemplateSlot
+from forma.domain.workout import WorkoutType
 
 
 @pytest.fixture

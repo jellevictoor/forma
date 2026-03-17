@@ -4,8 +4,8 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from fitness_coach.adapters.sqlite_plan_cache import SQLitePlanCache
-from fitness_coach.ports.plan_cache_repository import PlannedDay, WeeklyPlan
+from forma.adapters.sqlite_plan_cache import SQLitePlanCache
+from forma.ports.plan_cache_repository import PlannedDay, WeeklyPlan
 
 
 @pytest.fixture

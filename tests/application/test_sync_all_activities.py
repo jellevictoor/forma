@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from fitness_coach.application.sync_all_activities import FullStravaSync
-from fitness_coach.domain.workout import Workout, WorkoutType
+from forma.application.sync_all_activities import FullStravaSync
+from forma.domain.workout import Workout, WorkoutType
 from datetime import datetime, timezone
 
 

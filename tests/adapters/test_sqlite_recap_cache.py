@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from fitness_coach.adapters.sqlite_recap_cache import SQLiteRecapCache
-from fitness_coach.ports.recap_cache_repository import WeeklyRecap
+from forma.adapters.sqlite_recap_cache import SQLiteRecapCache
+from forma.ports.recap_cache_repository import WeeklyRecap
 
 
 @pytest.fixture

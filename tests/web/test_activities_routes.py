@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from fitness_coach.adapters.web.app import create_app
-from fitness_coach.application.analytics_service import AnalyticsService
-from fitness_coach.domain.workout import Workout, WorkoutType
+from forma.adapters.web.app import create_app
+from forma.application.analytics_service import AnalyticsService
+from forma.domain.workout import Workout, WorkoutType
 
 
 def make_workout(workout_id: str = "w1") -> Workout:
@@ -37,7 +37,7 @@ def client():
     async def override_service():
         return make_mock_service([make_workout()], 1)
 
-    from fitness_coach.adapters.web.dependencies import get_analytics_service, get_athlete_id
+    from forma.adapters.web.dependencies import get_analytics_service, get_athlete_id
     app.dependency_overrides[get_analytics_service] = override_service
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
     return TestClient(app, follow_redirects=True)

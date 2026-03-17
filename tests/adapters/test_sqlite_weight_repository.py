@@ -4,9 +4,9 @@ from datetime import date
 
 import pytest
 
-from fitness_coach.adapters.sqlite_storage import SQLiteStorage
-from fitness_coach.domain.athlete import Athlete
-from fitness_coach.domain.weight_entry import WeightEntry
+from forma.adapters.sqlite_storage import SQLiteStorage
+from forma.domain.athlete import Athlete
+from forma.domain.weight_entry import WeightEntry
 
 
 def make_athlete(athlete_id: str = "athlete1") -> Athlete:

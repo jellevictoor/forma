@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from fitness_coach.application.athlete_profile_service import AthleteProfileService
-from fitness_coach.domain.athlete import Athlete, Goal, GoalType, ScheduleTemplateSlot
-from fitness_coach.domain.workout import WorkoutType
+from forma.application.athlete_profile_service import AthleteProfileService
+from forma.domain.athlete import Athlete, Goal, GoalType, ScheduleTemplateSlot
+from forma.domain.workout import WorkoutType
 
 
 def make_athlete(athlete_id: str = "athlete1") -> Athlete:

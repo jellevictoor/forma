@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 
-from fitness_coach.application.weekly_recap import WeeklyRecapService
-from fitness_coach.domain.workout import Workout, WorkoutType
-from fitness_coach.ports.recap_cache_repository import CachedRecap, WeeklyRecap
+from forma.application.weekly_recap import WeeklyRecapService
+from forma.domain.workout import Workout, WorkoutType
+from forma.ports.recap_cache_repository import CachedRecap, WeeklyRecap
 
 
 def make_workout(workout_id, workout_type, days_ago, duration_seconds=3600, distance_meters=None):

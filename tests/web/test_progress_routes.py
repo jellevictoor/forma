@@ -6,9 +6,9 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from fitness_coach.adapters.web.app import create_app
-from fitness_coach.application.analytics_service import AnalyticsService
-from fitness_coach.ports.workout_analytics_repository import PersonalRecord
+from forma.adapters.web.app import create_app
+from forma.application.analytics_service import AnalyticsService
+from forma.ports.workout_analytics_repository import PersonalRecord
 
 
 def make_mock_service() -> AnalyticsService:
@@ -38,7 +38,7 @@ def client():
     async def override_service():
         return make_mock_service()
 
-    from fitness_coach.adapters.web.dependencies import get_analytics_service, get_athlete_id
+    from forma.adapters.web.dependencies import get_analytics_service, get_athlete_id
     app.dependency_overrides[get_analytics_service] = override_service
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
     return TestClient(app)
