@@ -9,10 +9,10 @@
   --color-nav: #0F1B2D;
 
   /* Page & surfaces */
-  --color-bg:          #F5F6F8;
+  --color-bg:          #EFF4FB;
   --color-surface:     #FFFFFF;
-  --color-surface-alt: #EDEEF1;
-  --color-edge:        #DDE0E8;
+  --color-surface-alt: #E6EDF7;
+  --color-edge:        #CFDAED;
 
   /* Text */
   --color-text:           #111827;
@@ -27,13 +27,13 @@
 
   /* Chart helpers */
   --color-chart-axis:      #9CA3AF;
-  --color-chart-grid:      #E5E7EB;
+  --color-chart-grid:      #CFDAED;
   --color-effort-bar:      rgba(15, 27, 45, 0.06);
   --color-chart-empty-bar: rgba(156, 163, 175, 0.12);
 
   /* Tooltip */
   --color-tooltip-bg:     #FFFFFF;
-  --color-tooltip-border: #DDE0E8;
+  --color-tooltip-border: #CFDAED;
   --color-tooltip-text:   #4B5563;
   --color-tooltip-date:   #9CA3AF;
 }
