@@ -3,59 +3,59 @@
 
 {% block content %}
 <div class="mb-8">
-  <h1 class="text-2xl font-semibold text-gray-900">Progress</h1>
-  <p class="text-gray-400 text-sm mt-1">Personal records, strength consistency, climbing history</p>
+  <h1 class="text-2xl font-semibold text-primary">Progress</h1>
+  <p class="text-muted text-sm mt-1">Personal records, strength consistency, climbing history</p>
 </div>
 
 <!-- Monthly comparison -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6" id="comparison-section">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-1">Progress comparison</h2>
-  <p class="text-xs text-gray-400 mb-5" id="comparison-subtitle">Loading…</p>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Progress comparison</h2>
+  <p class="text-xs text-muted mb-5" id="comparison-subtitle">Loading…</p>
   <div id="comparison-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
 </div>
 
 <!-- Fitness & Freshness -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-start justify-between mb-1">
-    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400">Fitness &amp; freshness</h2>
-    <div class="flex gap-4 text-xs text-gray-400">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Fitness &amp; freshness</h2>
+    <div class="flex gap-4 text-xs text-muted">
       <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-0.5 rounded sport-run"></span>Fitness</span>
       <span class="flex items-center gap-1.5"><span class="inline-block w-5 h-0.5" style="background:var(--color-amber);border-top:1px dashed var(--color-amber);opacity:0.8"></span>Fatigue</span>
       <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-2 rounded-sm opacity-60" style="background:linear-gradient(to bottom, var(--color-mint) 50%, var(--color-amber) 50%)"></span>Form</span>
     </div>
   </div>
-  <p class="text-xs text-gray-400 mb-5">Fitness = 42-day load · Fatigue = 7-day load · Form = Fitness − Fatigue</p>
-  <div id="ff-chart" style="min-height:320px"></div>
+  <p class="text-xs text-muted mb-5">Fitness = 42-day load · Fatigue = 7-day load · Form = Fitness − Fatigue</p>
+  <div id="ff-chart" class="chart-loading" style="min-height:320px"></div>
   <details class="mt-5 group">
-    <summary class="text-xs text-gray-400 cursor-pointer select-none hover:text-gray-600 transition-colors list-none flex items-center gap-1">
+    <summary class="text-xs text-muted cursor-pointer select-none hover:text-secondary transition-colors list-none flex items-center gap-1">
       <span class="group-open:hidden">▸</span><span class="hidden group-open:inline">▾</span>
       How is this calculated?
     </summary>
-    <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-500">
+    <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-secondary">
       <div class="bg-surface-alt rounded-xl p-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="w-2 h-2 rounded-full sport-run"></span>
-          <span class="font-medium text-gray-700">Fitness (CTL)</span>
+          <span class="font-medium text-primary">Fitness (CTL)</span>
         </div>
         <p>Chronic Training Load — exponential moving average over <strong>42 days</strong>. Rises slowly as you train consistently and falls slowly when you rest. Represents your long-term endurance base.</p>
       </div>
       <div class="bg-surface-alt rounded-xl p-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="w-2 h-2 rounded-full sport-climbing"></span>
-          <span class="font-medium text-gray-700">Fatigue (ATL)</span>
+          <span class="font-medium text-primary">Fatigue (ATL)</span>
         </div>
         <p>Acute Training Load — exponential moving average over <strong>7 days</strong>. Spikes quickly after hard training and drops fast during rest. Represents how tired you are right now.</p>
       </div>
       <div class="bg-surface-alt rounded-xl p-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="w-2 h-2 rounded-full sport-strength"></span>
-          <span class="font-medium text-gray-700">Form (TSB)</span>
+          <span class="font-medium text-primary">Form (TSB)</span>
         </div>
         <p>Training Stress Balance = Fitness − Fatigue. <span style="color:var(--color-mint)">Positive</span> means you are fresh and ready to perform. <span style="color:var(--color-amber)">Negative</span> means you are fatigued — normal during a training block.</p>
       </div>
       <div class="bg-surface-alt rounded-xl p-4 md:col-span-3">
         <div class="flex items-center gap-2 mb-2">
-          <span class="font-medium text-gray-700">Daily effort score</span>
+          <span class="font-medium text-primary">Daily effort score</span>
         </div>
         <p>Each day's effort is summed across all workouts. <strong>When heart rate is available:</strong> effort = hours × (avg HR ÷ 150)² × 100 — so an hour at 150 bpm = 100 points, an hour at 120 bpm ≈ 64 points. <strong>Without heart rate:</strong> effort = duration in minutes.</p>
       </div>
@@ -65,10 +65,10 @@
 
 <!-- Running PRs -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Running personal records</h2>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Running personal records</h2>
   <table class="w-full text-sm" id="pr-table">
     <thead>
-      <tr class="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-edge">
+      <tr class="text-left text-xs text-muted uppercase tracking-wide border-b border-edge">
         <th class="pb-3 font-medium">Distance</th>
         <th class="pb-3 font-medium">Time</th>
         <th class="pb-3 font-medium">Pace</th>
@@ -76,21 +76,21 @@
       </tr>
     </thead>
     <tbody id="pr-body">
-      <tr><td colspan="4" class="py-6 text-center text-gray-400 text-sm">Loading…</td></tr>
+      <tr><td colspan="4" class="py-6 text-center text-muted text-sm">Loading…</td></tr>
     </tbody>
   </table>
 </div>
 
 <!-- Strength frequency -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Strength session frequency</h2>
-  <div class="chart-container" id="strength-chart" style="min-height:180px"></div>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Strength session frequency</h2>
+  <div class="chart-container chart-loading" id="strength-chart" style="min-height:180px"></div>
 </div>
 
 <!-- Climbing history -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Climbing history</h2>
-  <div id="climbing-list" class="text-sm text-gray-400">Loading…</div>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Climbing history</h2>
+  <div id="climbing-list" class="text-sm text-muted">Loading…</div>
 </div>
 
 <script>
@@ -194,6 +194,7 @@
 (async function() {
   const ffData = await fetch('/api/progress/fitness-freshness').then(r => r.json());
   const ffContainer = document.getElementById('ff-chart');
+  ffContainer.classList.remove('chart-loading');
   if (!ffData.length) {
     ffContainer.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">No training data yet</p>';
     return;
@@ -346,9 +347,11 @@
     .call(g => g.select('.domain').remove())
     .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
-  const tooltip = d3.select(ffContainer)
+  // Tooltip — fixed positioning to avoid clipping
+  const tooltip = d3.select('body')
     .append('div')
-    .style('position', 'absolute')
+    .attr('class', 'chart-tooltip')
+    .style('position', 'fixed')
     .style('background', 'var(--color-tooltip-bg)')
     .style('border', '1px solid var(--color-tooltip-border)')
     .style('border-radius', '8px')
@@ -357,11 +360,11 @@
     .style('pointer-events', 'none')
     .style('opacity', 0)
     .style('line-height', '1.6')
-    .style('z-index', '10');
+    .style('z-index', '50');
 
   const bisect = d3.bisector(d => d.date).left;
 
-  function showTooltip(event, offsetY) {
+  function showTooltip(event) {
     const [mx] = d3.pointer(event, ffContainer);
     const x0 = xTop.invert(mx);
     const i = bisect(data, x0, 1);
@@ -369,8 +372,8 @@
     const formColor = d.form >= 0 ? 'var(--color-mint)' : 'var(--color-amber)';
     tooltip
       .style('opacity', 1)
-      .style('left', (mx + 12) + 'px')
-      .style('top', (offsetY + margin.top) + 'px')
+      .style('left', (event.clientX + 12) + 'px')
+      .style('top', (event.clientY - 10) + 'px')
       .html(`
         <div style="color:var(--color-tooltip-date);margin-bottom:4px">${d3.timeFormat('%b %d')(d.date)}</div>
         <div style="color:var(--color-tooltip-text)">Effort: <b style="color:var(--color-text)">${d.effort}</b></div>
@@ -386,7 +389,7 @@
     .attr('height', totalHeight)
     .attr('fill', 'none')
     .attr('pointer-events', 'all')
-    .on('mousemove', function(event) { showTooltip(event, 0); })
+    .on('mousemove', function(event) { showTooltip(event); })
     .on('mouseleave', () => tooltip.style('opacity', 0));
 })();
 
@@ -427,6 +430,7 @@ const DISTANCE_LABELS = {
 
   const strengthData = await fetch('/api/progress/strength-frequency').then(r => r.json());
   const strengthContainer = document.getElementById('strength-chart');
+  strengthContainer.classList.remove('chart-loading');
   if (!strengthData.length) {
     strengthContainer.innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">No strength data yet</p>';
   } else {

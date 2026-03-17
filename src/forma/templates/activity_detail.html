@@ -1,26 +1,53 @@
 {% extends "base.html" %}
 {% block title %}{{ workout.name if workout else 'Activity' }} — forma{% endblock %}
 
+{% macro _render_analysis(a) %}
+<dl class="space-y-4 text-sm">
+  <div>
+    <dt class="text-xs font-medium text-muted mb-1">Performance</dt>
+    <dd class="text-secondary leading-relaxed">{{ a.performance_assessment }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium text-muted mb-1">Training load</dt>
+    <dd class="text-secondary leading-relaxed">{{ a.training_load_context }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium text-muted mb-1">Goal relevance</dt>
+    <dd class="text-secondary leading-relaxed">{{ a.goal_relevance }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium text-muted mb-1">Compared to recent</dt>
+    <dd class="text-secondary leading-relaxed">{{ a.comparison_to_recent }}</dd>
+  </div>
+  <div class="pt-3 border-t border-edge">
+    <dt class="text-xs font-medium text-muted mb-1">Takeaway</dt>
+    <dd class="text-primary font-medium leading-relaxed pl-3 border-l-2" style="border-color: var(--color-mint)">{{ a.takeaway }}</dd>
+  </div>
+</dl>
+{% endmacro %}
+
 {% block content %}
 {% if not workout %}
-<div class="text-center text-gray-400 py-16 text-sm">Activity not found.</div>
+<div class="text-center text-muted py-16 text-sm">Activity not found.</div>
 {% else %}
 <div class="mb-6">
-  <a href="/activities/all/1" class="text-sm text-gray-400 hover:text-gray-600 transition-colors">← Back to activities</a>
+  <a href="/activities/all/1" class="text-sm text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Back to activities
+  </a>
 </div>
 
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-7 mb-6">
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-gray-900">{{ workout.name }}</h1>
-      <p class="text-gray-400 text-sm mt-1.5 flex items-center gap-2">
+      <h1 class="text-2xl font-semibold text-primary">{{ workout.name }}</h1>
+      <p class="text-muted text-sm mt-1.5 flex items-center gap-2">
         {{ workout.start_time.strftime('%A, %d %B %Y at %H:%M') }}
-        <span class="inline-flex items-center gap-1.5 text-xs font-medium capitalize text-gray-500">
-          {% if workout.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>
-          {% elif workout.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>
-          {% elif workout.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>
-          {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{% endif %}
-          {{ workout.workout_type.value }}
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-secondary">
+          {% if workout.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>Running
+          {% elif workout.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>Strength
+          {% elif workout.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>Climbing
+          {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{{ workout.workout_type.value|capitalize }}{% endif %}
         </span>
       </p>
     </div>
@@ -30,59 +57,59 @@
 <!-- Stats grid -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-gray-400 uppercase tracking-widest mb-2">Duration</p>
-    <p class="text-3xl font-bold text-gray-900">{{ "%.0f"|format(workout.duration_minutes) }}</p>
-    <p class="text-xs text-gray-400 mt-1">min</p>
+    <p class="text-xs text-muted uppercase tracking-widest mb-2">Duration</p>
+    <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.duration_minutes) }}</p>
+    <p class="text-xs text-muted mt-1">min</p>
   </div>
 
   {% if workout.distance_km %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-gray-400 uppercase tracking-widest mb-2">Distance</p>
-    <p class="text-3xl font-bold text-gray-900">{{ "%.2f"|format(workout.distance_km) }}</p>
-    <p class="text-xs text-gray-400 mt-1">km</p>
+    <p class="text-xs text-muted uppercase tracking-widest mb-2">Distance</p>
+    <p class="text-3xl font-bold text-primary">{{ "%.2f"|format(workout.distance_km) }}</p>
+    <p class="text-xs text-muted mt-1">km</p>
   </div>
   {% endif %}
 
   {% if workout.pace_formatted() %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-gray-400 uppercase tracking-widest mb-2">Pace</p>
-    <p class="text-3xl font-bold text-gray-900">{{ workout.pace_formatted() }}</p>
+    <p class="text-xs text-muted uppercase tracking-widest mb-2">Pace</p>
+    <p class="text-3xl font-bold text-primary">{{ workout.pace_formatted() }}</p>
   </div>
   {% endif %}
 
   {% if workout.average_heartrate %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-gray-400 uppercase tracking-widest mb-2">Average heart rate</p>
-    <p class="text-3xl font-bold text-gray-900">{{ "%.0f"|format(workout.average_heartrate) }}</p>
-    <p class="text-xs text-gray-400 mt-1">bpm</p>
+    <p class="text-xs text-muted uppercase tracking-widest mb-2">Average heart rate</p>
+    <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.average_heartrate) }}</p>
+    <p class="text-xs text-muted mt-1">bpm</p>
   </div>
   {% endif %}
 
   {% if workout.elevation_gain_meters %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-gray-400 uppercase tracking-widest mb-2">Elevation gain</p>
-    <p class="text-3xl font-bold text-gray-900">{{ "%.0f"|format(workout.elevation_gain_meters) }}</p>
-    <p class="text-xs text-gray-400 mt-1">m</p>
+    <p class="text-xs text-muted uppercase tracking-widest mb-2">Elevation gain</p>
+    <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.elevation_gain_meters) }}</p>
+    <p class="text-xs text-muted mt-1">m</p>
   </div>
   {% endif %}
 </div>
 
 {% if workout.description %}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-3">Description</h2>
-  <p class="text-gray-700 text-sm whitespace-pre-wrap">{{ workout.description }}</p>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Description</h2>
+  <p class="text-secondary text-sm whitespace-pre-wrap">{{ workout.description }}</p>
 </div>
 {% endif %}
 
 <!-- AI analysis -->
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6" id="analysis-card">
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6" id="analysis-card">
   <div class="flex items-center justify-between mb-5">
-    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400">Activity analysis</h2>
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Activity analysis</h2>
     {% if not cached_analysis %}
     <button
       id="analyse-btn"
       onclick="runAnalysis('{{ workout.id }}')"
-      class="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1.5"
+      class="text-xs text-muted hover:text-secondary transition-colors flex items-center gap-1.5 cursor-pointer"
     >
       <svg id="analyse-spinner" class="hidden w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -91,7 +118,7 @@
       Analyse this activity
     </button>
     {% else %}
-    <span class="text-xs text-gray-300">{{ cached_analysis.generated_at.strftime('%d %b %Y') }}</span>
+    <span class="text-xs text-muted">{{ cached_analysis.generated_at.strftime('%d %b %Y') }}</span>
     {% endif %}
   </div>
 
@@ -102,23 +129,22 @@
     {{ _render_analysis(cached_analysis.analysis) }}
   </div>
   {% else %}
-  <div id="analysis-placeholder" class="text-sm text-gray-400 py-4">
+  <div id="analysis-placeholder" class="text-sm text-muted py-4">
     No analysis yet. Click "Analyse this activity" to generate one.
   </div>
   <div id="analysis-content" class="hidden"></div>
   {% endif %}
 </div>
 
-<!-- Chat panel — only shown when analysis exists -->
-{% if cached_analysis or chat_messages %}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mt-6" id="chat-card">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Ask your coach</h2>
+<!-- Chat panel — hidden until analysis exists, then revealed -->
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6{% if not cached_analysis and not chat_messages %} hidden{% endif %}" id="chat-card">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Ask your coach</h2>
 
   <div id="chat-messages" class="space-y-4 mb-5 max-h-[480px] overflow-y-auto">
     {% for msg in chat_messages %}
     <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %}">
       <div class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed
-        {% if msg.role == 'user' %}bg-nav text-white{% else %}bg-surface-alt text-gray-700{% endif %}">
+        {% if msg.role == 'user' %}bg-nav text-white{% else %}bg-surface-alt text-secondary{% endif %}">
         {{ msg.content }}
       </div>
     </div>
@@ -132,46 +158,30 @@
       id="chat-input"
       type="text"
       placeholder="Ask something about this workout…"
-      class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
+      class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-primary placeholder-muted focus:outline-none focus:border-gray-400 transition-colors"
       autocomplete="off"
     />
     <button
       type="submit"
       id="chat-send-btn"
-      class="px-4 py-2.5 bg-nav text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-    >
-      Send
-    </button>
+      class="px-4 py-2.5 bg-nav text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
+    >Send</button>
   </form>
 </div>
-{% endif %}
-
-{% macro _render_analysis(a) %}
-<dl class="space-y-4 text-sm">
-  <div>
-    <dt class="text-xs font-medium text-gray-400 mb-1">Performance</dt>
-    <dd class="text-gray-700 leading-relaxed" id="field-performance">{{ a.performance_assessment }}</dd>
-  </div>
-  <div>
-    <dt class="text-xs font-medium text-gray-400 mb-1">Training load</dt>
-    <dd class="text-gray-700 leading-relaxed" id="field-load">{{ a.training_load_context }}</dd>
-  </div>
-  <div>
-    <dt class="text-xs font-medium text-gray-400 mb-1">Goal relevance</dt>
-    <dd class="text-gray-700 leading-relaxed" id="field-goals">{{ a.goal_relevance }}</dd>
-  </div>
-  <div>
-    <dt class="text-xs font-medium text-gray-400 mb-1">Compared to recent</dt>
-    <dd class="text-gray-700 leading-relaxed" id="field-comparison">{{ a.comparison_to_recent }}</dd>
-  </div>
-  <div class="pt-3 border-t border-edge">
-    <dt class="text-xs font-medium text-gray-400 mb-1">Takeaway</dt>
-    <dd class="text-gray-800 font-medium leading-relaxed pl-3 border-l-2" style="border-color: var(--color-mint)" id="field-takeaway">{{ a.takeaway }}</dd>
-  </div>
-</dl>
-{% endmacro %}
 
 <script>
+function appendMessage(container, role, text) {
+  const wrapper = document.createElement('div');
+  wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+  const bubble = document.createElement('div');
+  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-nav text-white' : 'bg-surface-alt text-secondary'}`;
+  bubble.textContent = text;
+  wrapper.appendChild(bubble);
+  container.appendChild(wrapper);
+  container.scrollTop = container.scrollHeight;
+  return wrapper;
+}
+
 async function sendChatMessage(event, workoutId) {
   event.preventDefault();
   const input = document.getElementById('chat-input');
@@ -185,12 +195,8 @@ async function sendChatMessage(event, workoutId) {
   input.value = '';
   sendBtn.disabled = true;
 
-  // Show chat panel if hidden (first message after analysis generated inline)
-  const chatCard = document.getElementById('chat-card');
-  if (chatCard) chatCard.classList.remove('hidden');
-
   appendMessage(messages, 'user', message);
-  const thinking = appendMessage(messages, 'model', '…');
+  const thinkingRow = appendMessage(messages, 'model', '…');
 
   try {
     const res = await fetch(`/activities/detail/${workoutId}/chat`, {
@@ -200,54 +206,19 @@ async function sendChatMessage(event, workoutId) {
     });
     const data = await res.json();
     if (!res.ok) {
-      thinking.remove();
+      thinkingRow.remove();
       errorEl.textContent = data.error || 'Something went wrong.';
       errorEl.classList.remove('hidden');
     } else {
-      thinking.querySelector('div').textContent = data.response;
+      thinkingRow.querySelector('div').textContent = data.response;
     }
   } catch {
-    thinking.remove();
+    thinkingRow.remove();
     errorEl.textContent = 'Connection error. Please try again.';
     errorEl.classList.remove('hidden');
   }
   sendBtn.disabled = false;
   input.focus();
-}
-
-function appendMessage(container, role, text) {
-  const wrapper = document.createElement('div');
-  wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-  const bubble = document.createElement('div');
-  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-nav text-white' : 'bg-surface-alt text-gray-700'}`;
-  bubble.textContent = text;
-  wrapper.appendChild(bubble);
-  container.appendChild(wrapper);
-  container.scrollTop = container.scrollHeight;
-  return wrapper;
-}
-
-// After analysis is generated inline, show the chat panel
-function showChatPanel(workoutId) {
-  const existing = document.getElementById('chat-card');
-  if (existing) { existing.classList.remove('hidden'); return; }
-  const card = document.createElement('div');
-  card.id = 'chat-card';
-  card.className = 'bg-surface rounded-2xl border border-edge shadow-sm p-6 mt-6';
-  card.innerHTML = `
-    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">Ask your coach</h2>
-    <div id="chat-messages" class="space-y-4 mb-5 max-h-[480px] overflow-y-auto"></div>
-    <div id="chat-error" class="hidden text-xs text-red-500 mb-3"></div>
-    <form id="chat-form" class="flex gap-2" onsubmit="sendChatMessage(event, '${workoutId}')">
-      <input id="chat-input" type="text" placeholder="Ask something about this workout…"
-        class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"
-        autocomplete="off" />
-      <button type="submit" id="chat-send-btn"
-        class="px-4 py-2.5 bg-nav text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50">
-        Send
-      </button>
-    </form>`;
-  document.getElementById('analysis-card').after(card);
 }
 
 async function runAnalysis(workoutId) {
@@ -279,28 +250,31 @@ async function runAnalysis(workoutId) {
     content.innerHTML = `
       <dl class="space-y-4 text-sm">
         <div>
-          <dt class="text-xs font-medium text-gray-400 mb-1">Performance</dt>
-          <dd class="text-gray-700 leading-relaxed">${data.performance_assessment}</dd>
+          <dt class="text-xs font-medium text-muted mb-1">Performance</dt>
+          <dd class="text-secondary leading-relaxed">${data.performance_assessment}</dd>
         </div>
         <div>
-          <dt class="text-xs font-medium text-gray-400 mb-1">Training load</dt>
-          <dd class="text-gray-700 leading-relaxed">${data.training_load_context}</dd>
+          <dt class="text-xs font-medium text-muted mb-1">Training load</dt>
+          <dd class="text-secondary leading-relaxed">${data.training_load_context}</dd>
         </div>
         <div>
-          <dt class="text-xs font-medium text-gray-400 mb-1">Goal relevance</dt>
-          <dd class="text-gray-700 leading-relaxed">${data.goal_relevance}</dd>
+          <dt class="text-xs font-medium text-muted mb-1">Goal relevance</dt>
+          <dd class="text-secondary leading-relaxed">${data.goal_relevance}</dd>
         </div>
         <div>
-          <dt class="text-xs font-medium text-gray-400 mb-1">Compared to recent</dt>
-          <dd class="text-gray-700 leading-relaxed">${data.comparison_to_recent}</dd>
+          <dt class="text-xs font-medium text-muted mb-1">Compared to recent</dt>
+          <dd class="text-secondary leading-relaxed">${data.comparison_to_recent}</dd>
         </div>
         <div class="pt-3 border-t border-edge">
-          <dt class="text-xs font-medium text-gray-400 mb-1">Takeaway</dt>
-          <dd class="text-gray-800 font-medium leading-relaxed pl-3 border-l-2" style="border-color: var(--color-mint)">${data.takeaway}</dd>
+          <dt class="text-xs font-medium text-muted mb-1">Takeaway</dt>
+          <dd class="text-primary font-medium leading-relaxed pl-3 border-l-2" style="border-color:var(--color-mint)">${data.takeaway}</dd>
         </div>
       </dl>`;
     content.classList.remove('hidden');
-    showChatPanel(workoutId);
+
+    // Reveal chat panel now that analysis exists
+    document.getElementById('chat-card').classList.remove('hidden');
+    document.getElementById('chat-input').focus();
   } catch {
     errorEl.textContent = 'Something went wrong. Please try again.';
     errorEl.classList.remove('hidden');

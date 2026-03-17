@@ -3,32 +3,32 @@
 
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold text-gray-900">Analytics</h1>
+  <h1 class="text-2xl font-semibold text-primary">Analytics</h1>
 </div>
 
 <!-- Unified weekly volume chart -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
-    <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400">Weekly volume</h2>
-    <div class="flex items-center gap-4 text-xs text-gray-400">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Weekly volume</h2>
+    <div class="flex items-center gap-4 text-xs text-muted">
       <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-run"></span>Running</span>
       <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-strength"></span>Strength</span>
       <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-climbing"></span>Climbing</span>
     </div>
     <div class="flex gap-1" id="range-toggle">
-      <button data-months="3" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-active cursor-pointer">3m</button>
-      <button data-months="6" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-inactive cursor-pointer">6m</button>
-      <button data-months="12" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-inactive cursor-pointer">12m</button>
+      <button data-months="3" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-active cursor-pointer">3m</button>
+      <button data-months="6" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-inactive cursor-pointer">6m</button>
+      <button data-months="12" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-inactive cursor-pointer">12m</button>
     </div>
   </div>
-  <div class="chart-container" id="unified-volume-chart" style="min-height:220px; position:relative"></div>
+  <div class="chart-container chart-loading" id="unified-volume-chart" style="min-height:220px; position:relative"></div>
 </div>
 
 <!-- Sport tabs -->
 <div class="flex gap-2 mb-6">
   {% for s in [('run', 'Running'), ('strength', 'Strength'), ('climbing', 'Climbing')] %}
   <a href="/analytics/{{ s[0] }}"
-     class="px-4 py-2.5 rounded-full text-sm font-medium transition-colors
+     class="px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer
             {% if sport == s[0] %}tab-active{% else %}tab-inactive{% endif %}">
     {{ s[1] }}
   </a>
@@ -37,18 +37,18 @@
 
 <!-- Sport-specific volume chart -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-5">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">
     {% if sport == 'run' %}Weekly distance{% else %}Weekly duration{% endif %}
   </h2>
-  <div class="chart-container" id="volume-chart" style="min-height:220px"></div>
+  <div class="chart-container chart-loading" id="volume-chart" style="min-height:220px"></div>
 </div>
 
 {% if sport == 'run' %}
 <!-- Pace trend chart -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-gray-400 mb-1">Pace trend</h2>
-  <p class="text-xs text-gray-400 mb-5">Average pace per week (min/km) — lower is faster</p>
-  <div class="chart-container" id="pace-chart" style="min-height:220px"></div>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Pace trend</h2>
+  <p class="text-xs text-muted mb-5">Average pace per week (min/km) — lower is faster</p>
+  <div class="chart-container chart-loading" id="pace-chart" style="min-height:220px"></div>
 </div>
 {% endif %}
 
@@ -70,6 +70,7 @@ function drawStackedBarChart(containerId, data) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
+  container.classList.remove('chart-loading');
 
   const hasData = data.some(d => d.run_hours + d.strength_hours + d.climbing_hours > 0);
   if (!hasData) {
@@ -124,10 +125,11 @@ function drawStackedBarChart(containerId, data) {
     .style('fill', 'var(--color-chart-empty-bar)')
     .attr('rx', 2);
 
-  // Tooltip
-  const tooltip = d3.select(container)
+  // Tooltip — fixed positioning to avoid clipping
+  const tooltip = d3.select('body')
     .append('div')
-    .style('position', 'absolute')
+    .attr('class', 'chart-tooltip')
+    .style('position', 'fixed')
     .style('background', 'var(--color-tooltip-bg)')
     .style('border', '1px solid var(--color-tooltip-border)')
     .style('border-radius', '8px')
@@ -156,15 +158,14 @@ function drawStackedBarChart(containerId, data) {
       ].filter(Boolean).join('');
       tooltip
         .style('opacity', 1)
-        .style('left', (event.offsetX + 12) + 'px')
-        .style('top', (event.offsetY - 10) + 'px')
+        .style('left', (event.clientX + 12) + 'px')
+        .style('top', (event.clientY - 10) + 'px')
         .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-text);font-weight:600;margin-top:2px">Total: ${total.toFixed(1)}h</div>`);
     })
     .on('mouseleave', () => tooltip.style('opacity', 0))
     .on('touchstart', function(event, d) {
       event.preventDefault();
       const touch = event.touches[0];
-      const rect = container.getBoundingClientRect();
       const total = d.run_hours + d.strength_hours + d.climbing_hours;
       const lines = [
         d.run_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-mint)">Running:</span> ${d.run_hours}h</div>` : '',
@@ -173,8 +174,8 @@ function drawStackedBarChart(containerId, data) {
       ].filter(Boolean).join('');
       tooltip
         .style('opacity', 1)
-        .style('left', (touch.clientX - rect.left + 12) + 'px')
-        .style('top', (touch.clientY - rect.top - 10) + 'px')
+        .style('left', (touch.clientX + 12) + 'px')
+        .style('top', (touch.clientY - 10) + 'px')
         .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-text);font-weight:600;margin-top:2px">Total: ${total.toFixed(1)}h</div>`);
       setTimeout(() => tooltip.style('opacity', 0), 3000);
     }, {passive: false});
@@ -228,8 +229,8 @@ document.getElementById('range-toggle').addEventListener('click', function(e) {
   currentMonths = parseInt(btn.dataset.months, 10);
   this.querySelectorAll('button').forEach(b => {
     b.className = b === btn
-      ? 'px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-active cursor-pointer'
-      : 'px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-colors tab-inactive cursor-pointer';
+      ? 'px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-active cursor-pointer'
+      : 'px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-inactive cursor-pointer';
   });
   loadAllCharts(currentMonths);
 });
@@ -238,6 +239,7 @@ document.getElementById('range-toggle').addEventListener('click', function(e) {
 function drawBarChart(containerId, data, yKey, yFormat) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  container.classList.remove('chart-loading');
   if (!data.length) {
     container.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm">No data yet</p>';
     return;
@@ -293,6 +295,7 @@ function drawBarChart(containerId, data, yKey, yFormat) {
 function drawLineChart(containerId, data, yKey) {
   const container = document.getElementById(containerId);
   if (!container) return;
+  container.classList.remove('chart-loading');
   if (!data.length) {
     container.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm">No data yet</p>';
     return;
