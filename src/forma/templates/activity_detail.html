@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ workout.name if workout else 'Activity' }} — forma{% endblock %}
 
+{% block extra_head %}
+{% if workout and workout.workout_type.value == 'run' %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+{% endif %}
+{% endblock %}
+
 {% macro _render_analysis(a) %}
 <dl class="space-y-4 text-sm">
   <div>
@@ -30,26 +36,29 @@
 {% if not workout %}
 <div class="text-center text-muted py-16 text-sm">Activity not found.</div>
 {% else %}
+{% set sport_color =
+  'var(--color-mint)' if workout.workout_type.value == 'run' else
+  'var(--color-sky)' if workout.workout_type.value == 'strength' else
+  'var(--color-amber)' if workout.workout_type.value == 'climbing' else
+  'var(--color-edge)'
+%}
 <div class="mb-6">
-  <a href="/activities/all/1" class="text-sm text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5">
-    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  <a href="/activities/all/1" class="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5 mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     Back to activities
   </a>
-</div>
-
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-7 mb-6">
-  <div class="flex items-start justify-between">
+  <div class="flex items-center gap-3">
+    <div class="w-1 h-10 rounded-full shrink-0" style="background:{{ sport_color }}"></div>
     <div>
-      <h1 class="text-2xl font-semibold text-primary">{{ workout.name }}</h1>
-      <p class="text-muted text-sm mt-1.5 flex items-center gap-2">
-        {{ workout.start_time.strftime('%A, %d %B %Y at %H:%M') }}
-        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-secondary">
-          {% if workout.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>Running
-          {% elif workout.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>Strength
-          {% elif workout.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>Climbing
-          {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{{ workout.workout_type.value|capitalize }}{% endif %}
-        </span>
+      <p class="text-xs font-medium uppercase tracking-widest text-muted mb-0.5">
+        {{ workout.start_time.strftime('%A, %d %B %Y · %H:%M') }}
+        ·
+        {% if workout.workout_type.value == 'run' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-run inline-block"></span>Running</span>
+        {% elif workout.workout_type.value == 'strength' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-strength inline-block"></span>Strength</span>
+        {% elif workout.workout_type.value == 'climbing' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-climbing inline-block"></span>Climbing</span>
+        {% else %}{{ workout.workout_type.value | capitalize }}{% endif %}
       </p>
+      <h1 class="text-3xl font-bold text-primary">{{ workout.name }}</h1>
     </div>
   </div>
 </div>
@@ -93,6 +102,29 @@
   </div>
   {% endif %}
 </div>
+
+{% if workout.workout_type.value == 'run' %}
+<!-- Route map -->
+<div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden mb-6" id="map-card">
+  <div class="flex items-center justify-between px-6 pt-5 pb-4">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Route</h2>
+    <div id="map-toggle" class="hidden flex gap-1">
+      <button id="btn-pace" onclick="setMapMode('pace')" class="px-3 py-1 rounded-lg tab-active text-xs cursor-pointer">Pace</button>
+      <button id="btn-hr" onclick="setMapMode('hr')" class="px-3 py-1 rounded-lg tab-inactive text-xs cursor-pointer">HR</button>
+    </div>
+  </div>
+  <div id="map-loading" class="chart-loading mx-6 mb-6 rounded-xl" style="height: 400px;"></div>
+  <div id="map-container" class="hidden px-6 pb-5">
+    <div id="run-map" style="height: 400px; border-radius: 0.75rem; overflow: hidden;"></div>
+    <div class="mt-3 flex items-center gap-3 text-xs text-muted">
+      <span id="legend-low"></span>
+      <div id="legend-gradient" class="flex-1 h-1.5 rounded-full"></div>
+      <span id="legend-high"></span>
+    </div>
+  </div>
+  <p id="map-error" class="hidden px-6 pb-6 text-xs text-muted text-center">No GPS data available for this activity.</p>
+</div>
+{% endif %}
 
 {% if workout.description %}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
@@ -170,6 +202,9 @@
   </form>
 </div>
 
+{% if workout.workout_type.value == 'run' %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WPuE=" crossorigin=""></script>
+{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 function renderMarkdown(text) {
@@ -181,9 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-markdown]').forEach(el => {
     el.innerHTML = renderMarkdown(el.dataset.markdown);
   });
-  // Scroll chat to bottom if there are messages
   const chatMessages = document.getElementById('chat-messages');
   if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+  {% if workout and workout.workout_type.value == 'run' %}
+  loadActivityMap('{{ workout.id }}');
+  {% endif %}
 });
 
 function appendMessage(container, role, text) {
@@ -246,6 +283,130 @@ async function sendChatMessage(event, workoutId) {
   sendBtn.disabled = false;
   input.focus();
 }
+
+{% if workout.workout_type.value == 'run' %}
+// ── Route map ──────────────────────────────────────────────
+const MAP_LOW  = '#B2F0E4';
+const MAP_MID  = '#2DD4AA';
+const MAP_HIGH = '#0A6A50';
+
+let _mapInstance = null;
+let _streamsData  = null;
+let _routeLayer   = null;
+let _mapMode      = 'pace';
+
+function _hexToRgb(hex) {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+
+function _rgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+}
+
+function _lerp(c1, c2, t) {
+  const [r1,g1,b1] = _hexToRgb(c1), [r2,g2,b2] = _hexToRgb(c2);
+  return _rgbToHex(r1+(r2-r1)*t, g1+(g2-g1)*t, b1+(b2-b1)*t);
+}
+
+function _heatColor(t) {
+  return t < 0.5 ? _lerp(MAP_LOW, MAP_MID, t*2) : _lerp(MAP_MID, MAP_HIGH, (t-0.5)*2);
+}
+
+function _drawRoute(latlng, values) {
+  if (_routeLayer) { _routeLayer.remove(); _routeLayer = null; }
+  if (!latlng || latlng.length < 2) return;
+
+  const MAX_SEGS = 600;
+  const step = Math.max(1, Math.floor(latlng.length / MAX_SEGS));
+  const valid = (values || []).filter(v => v != null && !isNaN(v));
+  const minVal = valid.length ? Math.min(...valid) : 0;
+  const maxVal = valid.length ? Math.max(...valid) : 1;
+  const range  = maxVal - minVal || 1;
+
+  const segs = [];
+  for (let i = 0; i < latlng.length - step; i += step) {
+    const val = values ? values[i] : null;
+    const t   = val != null ? (val - minVal) / range : 0.5;
+    segs.push(L.polyline([latlng[i], latlng[Math.min(i+step, latlng.length-1)]], {
+      color: _heatColor(t), weight: 5, opacity: 0.9, lineCap: 'round',
+    }));
+  }
+  _routeLayer = L.layerGroup(segs).addTo(_mapInstance);
+
+  document.getElementById('legend-gradient').style.background =
+    `linear-gradient(to right, ${MAP_LOW}, ${MAP_MID}, ${MAP_HIGH})`;
+
+  if (_mapMode === 'pace') {
+    const slowPace = minVal > 0 ? _formatPace(1000 / minVal) : '—';
+    const fastPace = maxVal > 0 ? _formatPace(1000 / maxVal) : '—';
+    document.getElementById('legend-low').textContent  = slowPace;
+    document.getElementById('legend-high').textContent = fastPace;
+  } else {
+    document.getElementById('legend-low').textContent  = `${Math.round(minVal)} bpm`;
+    document.getElementById('legend-high').textContent = `${Math.round(maxVal)} bpm`;
+  }
+}
+
+function _formatPace(secPerKm) {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2,'0')}/km`;
+}
+
+function setMapMode(mode) {
+  _mapMode = mode;
+  document.getElementById('btn-pace').className =
+    `px-3 py-1 rounded-lg ${mode==='pace' ? 'tab-active' : 'tab-inactive'} text-xs cursor-pointer`;
+  document.getElementById('btn-hr').className =
+    `px-3 py-1 rounded-lg ${mode==='hr' ? 'tab-active' : 'tab-inactive'} text-xs cursor-pointer`;
+  if (!_streamsData) return;
+  _drawRoute(_streamsData.latlng, mode === 'pace' ? _streamsData.velocity_smooth : _streamsData.heartrate);
+}
+
+async function loadActivityMap(workoutId) {
+  try {
+    const res = await fetch(`/activities/detail/${workoutId}/streams`);
+    document.getElementById('map-loading').classList.add('hidden');
+
+    const payload = await res.json();
+    if (!res.ok) {
+      const errEl = document.getElementById('map-error');
+      errEl.textContent = payload.error || 'No GPS data available for this activity.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    _streamsData = payload;
+    if (!_streamsData.latlng || _streamsData.latlng.length < 2) {
+      document.getElementById('map-error').textContent = 'No GPS data available for this activity.';
+      document.getElementById('map-error').classList.remove('hidden');
+      return;
+    }
+
+    document.getElementById('map-container').classList.remove('hidden');
+
+    _mapInstance = L.map('run-map', { zoomControl: true });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19,
+    }).addTo(_mapInstance);
+
+    _mapInstance.fitBounds(L.latLngBounds(_streamsData.latlng), { padding: [20, 20] });
+
+    if (_streamsData.has_hr) {
+      document.getElementById('map-toggle').classList.remove('hidden');
+    }
+
+    _drawRoute(_streamsData.latlng, _streamsData.velocity_smooth);
+  } catch (err) {
+    console.error('Map load error:', err);
+    document.getElementById('map-loading').classList.add('hidden');
+    const errEl = document.getElementById('map-error');
+    errEl.textContent = err?.message || 'Failed to load map.';
+    errEl.classList.remove('hidden');
+  }
+}
+{% endif %}
 
 async function runAnalysis(workoutId) {
   const btn = document.getElementById('analyse-btn');

@@ -43,51 +43,60 @@
 {% block content %}
 
 {# ── Greeting ─────────────────────────────────────────────── #}
-<div class="mb-6 flex items-end justify-between">
+<div class="mb-6 flex items-start justify-between gap-6">
   <div>
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-1" id="greeting-date"></p>
     <h1 class="text-3xl font-bold text-primary" id="greeting">forma</h1>
+    <p class="text-xs text-muted mt-1" id="week-context"></p>
   </div>
-  <p class="text-xs text-muted hidden md:block" id="week-context"></p>
+  {# Week strip — 7 day dots #}
+  <div class="shrink-0 hidden sm:block">
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-2 text-right">This week</p>
+    <div class="flex gap-2" id="week-strip">
+      <div class="animate-pulse flex gap-2">
+        {% for _ in range(7) %}<div class="w-7 h-7 rounded-full bg-surface-alt"></div>{% endfor %}
+      </div>
+    </div>
+  </div>
 </div>
 
 {# ── Form widget ──────────────────────────────────────────── #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6" id="form-widget">
-  <div class="flex items-center justify-between mb-5">
-    <p class="text-xs font-medium uppercase tracking-widest text-muted">Your form today</p>
-    <span id="form-status-badge" class="text-xs font-bold px-3 py-1 rounded-full transition-colors"></span>
-  </div>
-  <div class="grid grid-cols-3 gap-6 md:gap-10">
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+  <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Your form today</p>
+  <div class="flex items-stretch gap-6 md:gap-10">
 
-    <div>
-      <p class="text-3xl font-bold text-primary tabular-nums" id="form-fitness">—</p>
-      <p class="text-xs font-medium text-muted mt-0.5">Fitness</p>
-      <div class="mt-3 h-1.5 rounded-full overflow-hidden" style="background:var(--color-surface-alt)">
-        <div id="form-fitness-bar" class="h-full rounded-full transition-all duration-700"
-             style="background:var(--color-mint);width:0%"></div>
+    {# Status + bars #}
+    <div class="flex-1 min-w-0">
+      <div class="flex items-baseline gap-3 mb-1">
+        <span id="form-status-word" class="text-5xl font-black tracking-tight leading-none">—</span>
+        <span id="form-tsb" class="text-xl font-bold tabular-nums" style="color:var(--color-text-muted)">—</span>
       </div>
-      <p class="text-xs text-muted mt-1.5">chronic load · 42 days</p>
+      <p id="form-interpretation" class="text-sm text-muted mb-5 leading-snug">Loading…</p>
+
+      <div class="space-y-2">
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-muted w-12 shrink-0">Fitness</span>
+          <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background:var(--color-surface-alt)">
+            <div id="form-fitness-bar" class="h-full rounded-full transition-all duration-700"
+                 style="background:var(--color-mint);width:0%"></div>
+          </div>
+          <span id="form-fitness" class="text-xs font-semibold tabular-nums text-secondary w-8 text-right">—</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-muted w-12 shrink-0">Fatigue</span>
+          <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background:var(--color-surface-alt)">
+            <div id="form-fatigue-bar" class="h-full rounded-full transition-all duration-700"
+                 style="background:var(--color-sky);width:0%"></div>
+          </div>
+          <span id="form-fatigue" class="text-xs font-semibold tabular-nums text-secondary w-8 text-right">—</span>
+        </div>
+      </div>
     </div>
 
-    <div>
-      <p class="text-3xl font-bold text-primary tabular-nums" id="form-fatigue">—</p>
-      <p class="text-xs font-medium text-muted mt-0.5">Fatigue</p>
-      <div class="mt-3 h-1.5 rounded-full overflow-hidden" style="background:var(--color-surface-alt)">
-        <div id="form-fatigue-bar" class="h-full rounded-full transition-all duration-700"
-             style="background:var(--color-sky);width:0%"></div>
-      </div>
-      <p class="text-xs text-muted mt-1.5">acute load · 7 days</p>
-    </div>
-
-    <div>
-      <p class="text-3xl font-bold tabular-nums" id="form-tsb">—</p>
-      <p class="text-xs font-medium text-muted mt-0.5">Form</p>
-      <div class="mt-3 h-1.5 rounded-full overflow-hidden relative" style="background:var(--color-surface-alt)">
-        <div class="absolute inset-y-0 left-1/2 w-px opacity-30" style="background:var(--color-text-muted)"></div>
-        <div id="form-tsb-bar" class="h-full rounded-full transition-all duration-700 absolute inset-y-0"
-             style="left:50%;width:0%"></div>
-      </div>
-      <p class="text-xs text-muted mt-1.5">fitness − fatigue</p>
+    {# 30-day TSB sparkline #}
+    <div class="w-28 md:w-40 shrink-0 flex flex-col">
+      <p class="text-xs text-muted mb-2 text-right">30-day form</p>
+      <div id="form-sparkline" class="flex-1" style="min-height:80px"></div>
     </div>
 
   </div>
@@ -100,28 +109,31 @@
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Sessions</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-sessions">—</p>
     <p class="text-xs text-muted mt-1">this week</p>
-    <p class="text-xs mt-2 font-medium" id="kpi-sessions-delta"></p>
+    <p class="text-xs mt-1.5 font-medium" id="kpi-sessions-delta"></p>
+    <div id="spark-sessions" class="mt-3 -mx-1"></div>
   </div>
 
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Run distance</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-km">—</p>
     <p class="text-xs text-muted mt-1">km this week</p>
-    <p class="text-xs mt-2 font-medium" id="kpi-km-delta"></p>
+    <p class="text-xs mt-1.5 font-medium" id="kpi-km-delta"></p>
+    <div id="spark-km" class="mt-3 -mx-1"></div>
   </div>
 
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Training time</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-hours">—</p>
     <p class="text-xs text-muted mt-1">hours this week</p>
-    <p class="text-xs mt-2 font-medium" id="kpi-hours-delta"></p>
+    <p class="text-xs mt-1.5 font-medium" id="kpi-hours-delta"></p>
+    <div id="spark-hours" class="mt-3 -mx-1"></div>
   </div>
 
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5" id="kpi-streak-card">
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Streak</p>
     <p class="text-4xl font-bold tabular-nums" id="kpi-streak" style="color:var(--color-text)">—</p>
     <p class="text-xs text-muted mt-1">consecutive days</p>
-    <p class="text-xs mt-2 font-medium text-muted" id="kpi-streak-sub"></p>
+    <p class="text-xs mt-1.5 font-medium text-muted" id="kpi-streak-sub"></p>
   </div>
 
 </div>
@@ -138,7 +150,9 @@
       {% for w in stats.recent_workouts %}
       {% set days_ago = (today - w.start_time.date()).days %}
       <a href="/activities/detail/{{ w.id }}"
-         class="flex items-center gap-3 py-2.5 rounded-xl px-2 -mx-2 hover:bg-surface-alt transition-colors cursor-pointer group">
+         class="flex items-center gap-3 py-2.5 rounded-xl pr-2 hover:bg-surface-alt transition-colors cursor-pointer group overflow-hidden">
+        {# Sport accent border #}
+        <div class="w-0.5 self-stretch rounded-full shrink-0" style="background:{{ sport_color(w.workout_type.value) }}"></div>
         {{ sport_dot(w.workout_type.value, 'w-2.5 h-2.5') }}
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium text-primary truncate group-hover:text-mint transition-colors">{{ w.name }}</p>
@@ -292,11 +306,25 @@
 </div>
 
 <script>
-// ── Shared fetch cache (avoid duplicate requests) ────────────────
+// ── Shared fetch cache ────────────────────────────────────────────
 const _cache = {};
 function fetchCached(url) {
   if (!_cache[url]) _cache[url] = fetch(url).then(r => r.json());
   return _cache[url];
+}
+
+// ── Count-up animation ───────────────────────────────────────────
+function countUp(el, target, decimals = 0, duration = 700) {
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    const val = target * ease;
+    el.textContent = decimals > 0 ? val.toFixed(decimals) : Math.round(val);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = decimals > 0 ? target.toFixed(decimals) : target;
+  }
+  requestAnimationFrame(step);
 }
 
 // ── Greeting ─────────────────────────────────────────────────────
@@ -312,7 +340,53 @@ function fetchCached(url) {
   const jan1 = new Date(now.getFullYear(), 0, 1);
   const dayOfYear = Math.floor((now - jan1) / 86400000) + 1;
   const weekNum = Math.ceil((dayOfYear + jan1.getDay()) / 7);
-  document.getElementById('week-context').textContent = `Week ${weekNum} · Day ${dayOfYear}`;
+  document.getElementById('week-context').textContent = `Week ${weekNum} · Day ${dayOfYear} of ${now.getFullYear()}`;
+})();
+
+// ── Week strip ───────────────────────────────────────────────────
+(async function() {
+  const workouts = await fetchCached('/api/overview/training-log');
+  const COLOR = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const mon = new Date(now); mon.setDate(now.getDate() - dow);
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const byDate = {};
+  for (const w of workouts) {
+    if (!byDate[w.date]) byDate[w.date] = [];
+    byDate[w.date].push(w);
+  }
+
+  const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const container = document.getElementById('week-strip');
+  container.innerHTML = DAY_LABELS.map((lbl, i) => {
+    const d = new Date(mon); d.setDate(mon.getDate() + i);
+    const ds = d.toISOString().slice(0, 10);
+    const entries = byDate[ds] || [];
+    const isToday = ds === todayStr;
+    const isFuture = d > now && ds !== todayStr;
+
+    let dotBg = 'var(--color-surface-alt)';
+    if (entries.length) {
+      const primary = entries.reduce((a, b) =>
+        a.duration_seconds > b.duration_seconds ? a : b);
+      dotBg = COLOR[primary.workout_type] || 'var(--color-edge)';
+    }
+
+    const labelClass = isToday ? 'font-bold text-primary' : 'text-muted';
+    const opacity = isFuture ? 'opacity-30' : '';
+    const title = entries.map(e => e.name || e.workout_type).join(', ');
+
+    return `<div class="flex flex-col items-center gap-1.5 ${opacity}" title="${title}">
+      <span class="text-xs ${labelClass}">${lbl}</span>
+      <div class="w-7 h-7 rounded-full flex items-center justify-center relative"
+           style="background:${dotBg}">
+        ${isToday ? `<div class="absolute inset-0 rounded-full ring-2 ring-offset-1" style="ring-color:${dotBg}"></div>` : ''}
+        ${entries.length > 1 ? `<span class="text-xs font-bold leading-none" style="color:var(--color-nav)">${entries.length}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 })();
 
 // ── Form widget ───────────────────────────────────────────────────
@@ -322,53 +396,80 @@ function fetchCached(url) {
     if (!data.length) return;
     const { fitness, fatigue, form } = data[data.length - 1];
 
-    document.getElementById('form-fitness').textContent = fitness.toFixed(1);
-    document.getElementById('form-fatigue').textContent = fatigue.toFixed(1);
+    let label, color, interp;
+    if (form > 10)       { label = 'PEAKING';    color = 'var(--color-mint)';     interp = 'Peak performance window — race or test yourself.'; }
+    else if (form > 0)   { label = 'FRESH';      color = 'var(--color-mint)';     interp = 'Well-rested and ready to perform.'; }
+    else if (form > -10) { label = 'TRAINING';   color = 'var(--color-amber)';    interp = 'In the training zone — building fitness.'; }
+    else if (form > -20) { label = 'BUILDING';   color = 'var(--color-amber)';    interp = 'Heavy load — recovery will bring gains.'; }
+    else                 { label = 'OVERLOADED'; color = 'var(--color-negative)'; interp = 'Too much stress accumulated — prioritise rest.'; }
+
+    const statusEl = document.getElementById('form-status-word');
+    statusEl.textContent = label;
+    statusEl.style.color = color;
 
     const tsbEl = document.getElementById('form-tsb');
     tsbEl.textContent = (form >= 0 ? '+' : '') + form.toFixed(1);
-
-    // Status + color
-    let label, color, bg;
-    if (form > 10)       { label = 'Peaking';    color = 'var(--color-mint)';     bg = 'rgba(0,220,158,0.12)'; }
-    else if (form > 0)   { label = 'Fresh';      color = 'var(--color-mint)';     bg = 'rgba(0,220,158,0.10)'; }
-    else if (form > -10) { label = 'Training';   color = 'var(--color-amber)';    bg = 'rgba(245,166,35,0.12)'; }
-    else if (form > -20) { label = 'Building';   color = 'var(--color-amber)';    bg = 'rgba(245,166,35,0.10)'; }
-    else                 { label = 'Overloaded'; color = 'var(--color-negative)'; bg = 'rgba(239,68,68,0.10)'; }
-
     tsbEl.style.color = color;
-    const badge = document.getElementById('form-status-badge');
-    badge.textContent = label;
-    badge.style.background = bg;
-    badge.style.color = color;
 
-    // Progress bars
+    document.getElementById('form-interpretation').textContent = interp;
+    document.getElementById('form-fitness').textContent = fitness.toFixed(1);
+    document.getElementById('form-fatigue').textContent = fatigue.toFixed(1);
+
     const scale = Math.max(fitness, fatigue, 50);
-    document.getElementById('form-fitness-bar').style.width =
-      `${Math.min((fitness / scale) * 100, 100)}%`;
-    document.getElementById('form-fatigue-bar').style.width =
-      `${Math.min((fatigue / scale) * 100, 100)}%`;
+    document.getElementById('form-fitness-bar').style.width = `${Math.min((fitness / scale) * 100, 100)}%`;
+    document.getElementById('form-fatigue-bar').style.width = `${Math.min((fatigue / scale) * 100, 100)}%`;
 
-    // TSB bar: centred at 50%, range ±30
-    const tsbPct = Math.min(Math.max(50 + (form / 30) * 50, 0), 100);
-    const tsbBar = document.getElementById('form-tsb-bar');
-    if (form >= 0) {
-      tsbBar.style.left = '50%';
-      tsbBar.style.width = `${tsbPct - 50}%`;
-      tsbBar.style.background = color;
-    } else {
-      tsbBar.style.left = `${tsbPct}%`;
-      tsbBar.style.width = `${50 - tsbPct}%`;
-      tsbBar.style.background = color;
-    }
+    // 30-day TSB sparkline
+    const recent = data.slice(-30);
+    const sparkEl = document.getElementById('form-sparkline');
+    const W = sparkEl.clientWidth || 160;
+    const H = sparkEl.clientHeight || 80;
+    const vals = recent.map(d => d.form);
+    const minV = Math.min(...vals) - 2;
+    const maxV = Math.max(...vals) + 2;
+    const xS = d3.scaleLinear().domain([0, vals.length - 1]).range([2, W - 2]);
+    const yS = d3.scaleLinear().domain([minV, maxV]).range([H - 2, 2]);
+
+    const svg = d3.select(sparkEl).append('svg')
+      .attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .style('width', '100%').style('height', '100%');
+
+    // Zero reference line
+    svg.append('line')
+      .attr('x1', 0).attr('y1', yS(0)).attr('x2', W).attr('y2', yS(0))
+      .style('stroke', 'var(--color-edge)').style('stroke-width', 1).style('stroke-dasharray', '3,3');
+
+    // Area fill below/above zero
+    const areaGen = d3.area()
+      .x((d, i) => xS(i)).y0(yS(0)).y1(d => yS(d))
+      .curve(d3.curveCatmullRom.alpha(0.5));
+
+    svg.append('path').datum(vals)
+      .attr('d', areaGen)
+      .style('fill', color).style('fill-opacity', 0.12);
+
+    // Line
+    const lineGen = d3.line()
+      .x((d, i) => xS(i)).y(d => yS(d))
+      .curve(d3.curveCatmullRom.alpha(0.5));
+
+    svg.append('path').datum(vals)
+      .attr('d', lineGen)
+      .style('fill', 'none').style('stroke', color)
+      .style('stroke-width', 1.5).style('opacity', 0.9);
+
+    // Current dot
+    svg.append('circle')
+      .attr('cx', xS(vals.length - 1)).attr('cy', yS(vals[vals.length - 1]))
+      .attr('r', 3).style('fill', color);
   } catch { /* fail silently */ }
 })();
 
 // ── KPI delta helper ─────────────────────────────────────────────
 function renderDelta(id, curr, prev, suffix) {
   const el = document.getElementById(id);
-  if (!el) return;
-  if (prev === 0) { el.textContent = ''; return; }
+  if (!el || prev === 0) return;
   const diff = curr - prev;
   const sign = diff >= 0 ? '+' : '';
   const val = Number.isInteger(diff) ? diff : diff.toFixed(1);
@@ -376,7 +477,31 @@ function renderDelta(id, curr, prev, suffix) {
   el.style.color = diff >= 0 ? 'var(--color-mint)' : 'var(--color-negative)';
 }
 
-// ── KPIs ─────────────────────────────────────────────────────────
+// ── KPI sparkline helper ─────────────────────────────────────────
+function renderSparkline(containerId, values, color) {
+  const el = document.getElementById(containerId);
+  if (!el || !values.length) return;
+  const W = el.clientWidth || 100;
+  const H = 28;
+  const max = Math.max(...values, 0.1);
+  const xS = d3.scaleLinear().domain([0, values.length - 1]).range([0, W]);
+  const yS = d3.scaleLinear().domain([0, max]).range([H - 2, 2]);
+
+  const svg = d3.select(el).append('svg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('width', '100%');
+
+  const area = d3.area().x((d, i) => xS(i)).y0(H).y1(d => yS(d)).curve(d3.curveMonotoneX);
+  const line = d3.line().x((d, i) => xS(i)).y(d => yS(d)).curve(d3.curveMonotoneX);
+
+  svg.append('path').datum(values).attr('d', area)
+    .style('fill', color).style('fill-opacity', 0.15);
+  svg.append('path').datum(values).attr('d', line)
+    .style('fill', 'none').style('stroke', color).style('stroke-width', 1.5).style('opacity', 0.7);
+}
+
+// ── KPIs + sparklines ────────────────────────────────────────────
 (async function() {
   const data = await fetchCached('/api/overview/weekly-volume');
   const now = new Date();
@@ -397,13 +522,27 @@ function renderDelta(id, curr, prev, suffix) {
   const thisH    = sum(tw, 'duration_hours');
   const lastH    = sum(lw, 'duration_hours');
 
-  document.getElementById('kpi-sessions').textContent = thisSess;
-  document.getElementById('kpi-km').textContent = thisKm.toFixed(1);
-  document.getElementById('kpi-hours').textContent = thisH.toFixed(1);
+  countUp(document.getElementById('kpi-sessions'), thisSess);
+  countUp(document.getElementById('kpi-km'), thisKm, 1);
+  countUp(document.getElementById('kpi-hours'), thisH, 1);
 
   renderDelta('kpi-sessions-delta', thisSess, lastSess, '');
   renderDelta('kpi-km-delta', thisKm, lastKm, ' km');
   renderDelta('kpi-hours-delta', thisH, lastH, ' h');
+
+  // 8-week sparklines from weekly-volume data
+  const weeks8 = Array.from({length: 8}, (_, i) => {
+    const d = new Date(thisMon); d.setDate(thisMon.getDate() - (7 - i) * 7);
+    return d.toISOString().slice(0, 10);
+  });
+
+  const sessVals = weeks8.map(w => sum(data.filter(d => d.week_start === w), 'workout_count'));
+  const kmVals   = weeks8.map(w => sum(data.filter(d => d.week_start === w && d.workout_type === 'run'), 'distance_km'));
+  const hVals    = weeks8.map(w => sum(data.filter(d => d.week_start === w), 'duration_hours'));
+
+  renderSparkline('spark-sessions', sessVals, 'var(--color-mint)');
+  renderSparkline('spark-km', kmVals, 'var(--color-mint)');
+  renderSparkline('spark-hours', hVals, 'var(--color-sky)');
 })();
 
 // ── Streak ───────────────────────────────────────────────────────
@@ -411,11 +550,7 @@ function renderDelta(id, curr, prev, suffix) {
   const workouts = await fetchCached('/api/overview/training-log');
   const el = document.getElementById('kpi-streak');
   const sub = document.getElementById('kpi-streak-sub');
-  if (!workouts.length) {
-    el.textContent = '0';
-    sub.textContent = 'start training!';
-    return;
-  }
+  if (!workouts.length) { el.textContent = '0'; sub.textContent = 'start training!'; return; }
 
   const dates = new Set(workouts.map(w => w.date));
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -423,28 +558,20 @@ function renderDelta(id, curr, prev, suffix) {
   const yday = new Date(today); yday.setDate(yday.getDate() - 1);
 
   if (!dates.has(toStr(today)) && !dates.has(toStr(yday))) {
-    el.textContent = '0';
-    sub.textContent = 'rest day today';
-    return;
+    el.textContent = '0'; sub.textContent = 'rest day today'; return;
   }
 
   const cursor = dates.has(toStr(today)) ? new Date(today) : new Date(yday);
   let streak = 0;
-  while (dates.has(toStr(cursor))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
+  while (dates.has(toStr(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1); }
 
-  el.textContent = streak;
+  countUp(el, streak);
   if (streak >= 14) {
-    el.style.color = 'var(--color-mint)';
-    sub.textContent = 'outstanding consistency!';
+    el.style.color = 'var(--color-mint)'; sub.textContent = 'outstanding consistency!';
   } else if (streak >= 7) {
-    el.style.color = 'var(--color-mint)';
-    sub.textContent = 'great consistency!';
+    el.style.color = 'var(--color-mint)'; sub.textContent = 'great consistency!';
   } else if (streak >= 3) {
-    el.style.color = 'var(--color-amber)';
-    sub.textContent = `${7 - streak} days to a 7-day streak`;
+    el.style.color = 'var(--color-amber)'; sub.textContent = `${7 - streak} days to a 7-day streak`;
   } else {
     sub.textContent = `${7 - streak} days to a 7-day streak`;
   }
@@ -479,19 +606,12 @@ function renderDelta(id, curr, prev, suffix) {
   }
 
   async function refresh() {
-    staleBadge.disabled = true;
-    staleBadge.classList.add('hidden');
-    showSkeleton();
+    staleBadge.disabled = true; staleBadge.classList.add('hidden'); showSkeleton();
     try {
       const r = await fetch('/api/overview/weekly-recap/refresh', {method:'POST'}).then(r => r.json());
-      renderFocus(r.focus);
-      summaryEl.textContent = r.summary || '';
-      genBtn.classList.add('hidden');
-    } catch {
-      focusEl.innerHTML = '<p class="text-sm text-muted">Could not generate recap.</p>';
-    } finally {
-      staleBadge.disabled = false;
-    }
+      renderFocus(r.focus); summaryEl.textContent = r.summary || ''; genBtn.classList.add('hidden');
+    } catch { focusEl.innerHTML = '<p class="text-sm text-muted">Could not generate recap.</p>'; }
+    finally { staleBadge.disabled = false; }
   }
 
   staleBadge.addEventListener('click', refresh);
@@ -502,19 +622,15 @@ function renderDelta(id, curr, prev, suffix) {
       const r = await fetch('/api/overview/weekly-recap').then(r => r.json());
       if (!r.cached) {
         focusEl.innerHTML = '<p class="text-sm text-muted">Generate a recap to see your weekly focus.</p>';
-        genBtn.classList.remove('hidden');
-        return;
+        genBtn.classList.remove('hidden'); return;
       }
-      renderFocus(r.focus);
-      summaryEl.textContent = r.summary || '';
+      renderFocus(r.focus); summaryEl.textContent = r.summary || '';
       if (r.stale) staleBadge.classList.remove('hidden');
-    } catch {
-      focusEl.innerHTML = '<p class="text-sm text-muted">Could not load recap.</p>';
-    }
+    } catch { focusEl.innerHTML = '<p class="text-sm text-muted">Could not load recap.</p>'; }
   })();
 })();
 
-// ── 12-week stacked volume chart with tooltips ───────────────────
+// ── 12-week stacked volume chart ─────────────────────────────────
 (async function() {
   const allData = await fetchCached('/api/overview/weekly-volume');
   const container = document.getElementById('volume-chart');
@@ -534,16 +650,11 @@ function renderDelta(id, curr, prev, suffix) {
   const COLOR  = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
   const SPORT_LABEL = {run: 'Running', strength: 'Strength', climbing: 'Climbing'};
 
-  // Build per-week-sport lookup with all metrics
   const byWS = {};
   for (const d of allData) {
     if (!weekKeys.includes(d.week_start)) continue;
     if (!byWS[d.week_start]) byWS[d.week_start] = {};
-    byWS[d.week_start][d.workout_type] = {
-      hours: d.duration_hours,
-      km: d.distance_km,
-      sessions: d.workout_count,
-    };
+    byWS[d.week_start][d.workout_type] = {hours: d.duration_hours, km: d.distance_km, sessions: d.workout_count};
   }
 
   const stackData = weekKeys.map(w => {
@@ -564,13 +675,11 @@ function renderDelta(id, curr, prev, suffix) {
   const x = d3.scaleBand().domain(weekKeys).range([M.left, W - M.right]).padding(0.25);
   const y = d3.scaleLinear().domain([0, maxH]).nice().range([H - M.bottom, M.top]);
 
-  // Gridlines
   svg.append('g').attr('transform', `translate(${M.left},0)`)
     .call(d3.axisLeft(y).ticks(4).tickSize(-(W - M.left - M.right)).tickFormat(''))
     .call(g => g.select('.domain').remove())
     .selectAll('line').style('stroke', 'var(--color-chart-grid)').style('stroke-dasharray', '2,3');
 
-  // Tooltip
   const tip = d3.select('body').append('div')
     .style('position', 'fixed').style('pointer-events', 'none').style('opacity', 0)
     .style('background', 'var(--color-tooltip-bg)').style('border', '1px solid var(--color-tooltip-border)')
@@ -578,7 +687,6 @@ function renderDelta(id, curr, prev, suffix) {
     .style('font-size', '12px').style('line-height', '1.7').style('z-index', '50')
     .style('min-width', '140px');
 
-  // Invisible hit targets per week column
   weekKeys.forEach(w => {
     const weekInfo = byWS[w] || {};
     const totalH = SPORTS.reduce((a, s) => a + (weekInfo[s]?.hours || 0), 0);
@@ -599,20 +707,16 @@ function renderDelta(id, curr, prev, suffix) {
             if (d.km > 0) parts.push(`${d.km.toFixed(1)} km`);
             parts.push(`${d.hours.toFixed(1)} h`);
             if (d.sessions > 1) parts.push(`${d.sessions} sessions`);
-            return `<div style="color:var(--color-tooltip-text)">
-              <span style="color:${COLOR[s]};font-weight:600">${SPORT_LABEL[s]}</span>
-              <span style="color:var(--color-chart-axis);margin-left:6px">${parts.join(' · ')}</span>
-            </div>`;
+            return `<div><span style="color:${COLOR[s]};font-weight:600">${SPORT_LABEL[s]}</span>
+              <span style="color:var(--color-chart-axis);margin-left:6px">${parts.join(' · ')}</span></div>`;
           }).join('');
         tip.style('opacity', 1)
-          .style('left', (event.clientX + 14) + 'px')
-          .style('top', (event.clientY - 10) + 'px')
+          .style('left', (event.clientX + 14) + 'px').style('top', (event.clientY - 10) + 'px')
           .html(`<div style="color:var(--color-tooltip-date);font-weight:600;margin-bottom:4px">${label}</div>${lines}`);
       })
       .on('mouseleave', () => tip.style('opacity', 0));
   });
 
-  // Stacked bars (drawn after hit targets so they're on top visually)
   d3.stack().keys(SPORTS)(stackData).forEach((layer, si) => {
     svg.selectAll(null).data(layer).join('rect')
       .attr('x', d => x(d.data.week))

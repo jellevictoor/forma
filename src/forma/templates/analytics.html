@@ -3,10 +3,11 @@
 
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold text-primary">Analytics</h1>
+  <h1 class="text-3xl font-bold text-primary">Analytics</h1>
+  <p class="text-xs text-muted mt-1">Volume, pace, and consistency trends</p>
 </div>
 
-<!-- Unified weekly volume chart -->
+{# Unified weekly volume chart #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Weekly volume</h2>
@@ -24,7 +25,7 @@
   <div class="chart-container chart-loading" id="unified-volume-chart" style="min-height:220px; position:relative"></div>
 </div>
 
-<!-- Sport tabs -->
+{# Sport tabs #}
 <div class="flex gap-2 mb-6">
   {% for s in [('run', 'Running'), ('strength', 'Strength'), ('climbing', 'Climbing')] %}
   <a href="/analytics/{{ s[0] }}"
@@ -35,7 +36,7 @@
   {% endfor %}
 </div>
 
-<!-- Sport-specific volume chart -->
+{# Sport-specific volume chart #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">
     {% if sport == 'run' %}Weekly distance{% else %}Weekly duration{% endif %}
@@ -44,7 +45,7 @@
 </div>
 
 {% if sport == 'run' %}
-<!-- Pace trend chart -->
+{# Pace trend chart #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Pace trend</h2>
   <p class="text-xs text-muted mb-5">Average pace per week (min/km) — lower is faster</p>
@@ -74,7 +75,7 @@ function drawStackedBarChart(containerId, data) {
 
   const hasData = data.some(d => d.run_hours + d.strength_hours + d.climbing_hours > 0);
   if (!hasData) {
-    container.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm">No data yet</p>';
+    container.innerHTML = '<p class="text-center text-muted py-10 text-sm">No data yet</p>';
     return;
   }
 
@@ -125,19 +126,18 @@ function drawStackedBarChart(containerId, data) {
     .style('fill', 'var(--color-chart-empty-bar)')
     .attr('rx', 2);
 
-  // Tooltip — fixed positioning to avoid clipping
+  // Tooltip
   const tooltip = d3.select('body')
     .append('div')
-    .attr('class', 'chart-tooltip')
     .style('position', 'fixed')
     .style('background', 'var(--color-tooltip-bg)')
     .style('border', '1px solid var(--color-tooltip-border)')
-    .style('border-radius', '8px')
-    .style('padding', '8px 12px')
+    .style('border-radius', '10px')
+    .style('padding', '10px 14px')
     .style('font-size', '12px')
     .style('pointer-events', 'none')
     .style('opacity', 0)
-    .style('line-height', '1.6')
+    .style('line-height', '1.7')
     .style('z-index', '50');
 
   svg.selectAll('.hover-zone')
@@ -152,41 +152,22 @@ function drawStackedBarChart(containerId, data) {
     .on('mousemove', function(event, d) {
       const total = d.run_hours + d.strength_hours + d.climbing_hours;
       const lines = [
-        d.run_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-mint)">Running:</span> ${d.run_hours}h</div>` : '',
-        d.strength_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-sky)">Strength:</span> ${d.strength_hours}h</div>` : '',
-        d.climbing_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-amber)">Climbing:</span> ${d.climbing_hours}h</div>` : '',
+        d.run_hours > 0 ? `<div><span style="color:var(--color-mint);font-weight:600">Running:</span> <span style="color:var(--color-chart-axis)">${d.run_hours}h</span></div>` : '',
+        d.strength_hours > 0 ? `<div><span style="color:var(--color-sky);font-weight:600">Strength:</span> <span style="color:var(--color-chart-axis)">${d.strength_hours}h</span></div>` : '',
+        d.climbing_hours > 0 ? `<div><span style="color:var(--color-amber);font-weight:600">Climbing:</span> <span style="color:var(--color-chart-axis)">${d.climbing_hours}h</span></div>` : '',
       ].filter(Boolean).join('');
       tooltip
         .style('opacity', 1)
         .style('left', (event.clientX + 12) + 'px')
         .style('top', (event.clientY - 10) + 'px')
-        .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-text);font-weight:600;margin-top:2px">Total: ${total.toFixed(1)}h</div>`);
+        .html(`<div style="color:var(--color-tooltip-date);font-weight:600;margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-tooltip-text);font-weight:600;margin-top:4px">Total: ${total.toFixed(1)}h</div>`);
     })
-    .on('mouseleave', () => tooltip.style('opacity', 0))
-    .on('touchstart', function(event, d) {
-      event.preventDefault();
-      const touch = event.touches[0];
-      const total = d.run_hours + d.strength_hours + d.climbing_hours;
-      const lines = [
-        d.run_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-mint)">Running:</span> ${d.run_hours}h</div>` : '',
-        d.strength_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-sky)">Strength:</span> ${d.strength_hours}h</div>` : '',
-        d.climbing_hours > 0 ? `<div style="color:var(--color-tooltip-text)"><span style="color:var(--color-amber)">Climbing:</span> ${d.climbing_hours}h</div>` : '',
-      ].filter(Boolean).join('');
-      tooltip
-        .style('opacity', 1)
-        .style('left', (touch.clientX + 12) + 'px')
-        .style('top', (touch.clientY - 10) + 'px')
-        .html(`<div style="color:var(--color-tooltip-date);margin-bottom:4px">${fmtWeek(d.week_start)}</div>${lines}<div style="color:var(--color-text);font-weight:600;margin-top:2px">Total: ${total.toFixed(1)}h</div>`);
-      setTimeout(() => tooltip.style('opacity', 0), 3000);
-    }, {passive: false});
+    .on('mouseleave', () => tooltip.style('opacity', 0));
 
   const xTicks = data.length > 16 ? data.filter((_, i) => i % 4 === 0) : data;
   svg.append('g')
     .attr('transform', `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x)
-      .tickValues(xTicks.map(d => d.week_start))
-      .tickFormat(fmtWeek)
-      .tickSize(0))
+    .call(d3.axisBottom(x).tickValues(xTicks.map(d => d.week_start)).tickFormat(fmtWeek).tickSize(0))
     .call(g => g.select('.domain').remove())
     .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
@@ -241,7 +222,7 @@ function drawBarChart(containerId, data, yKey, yFormat) {
   if (!container) return;
   container.classList.remove('chart-loading');
   if (!data.length) {
-    container.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm">No data yet</p>';
+    container.innerHTML = '<p class="text-center text-muted py-10 text-sm">No data yet</p>';
     return;
   }
   const width = container.clientWidth || 700;
@@ -251,9 +232,7 @@ function drawBarChart(containerId, data, yKey, yFormat) {
   const svg = d3.select(container)
     .append('svg')
     .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet')
-    .attr('role', 'img')
-    .attr('aria-label', `Weekly ${SPORT} ${yKey === 'distance_km' ? 'distance' : 'duration'} chart`);
+    .attr('preserveAspectRatio', 'xMidYMid meet');
 
   const x = d3.scaleBand()
     .domain(data.map(d => d.week_start))
@@ -277,10 +256,7 @@ function drawBarChart(containerId, data, yKey, yFormat) {
   const xTicks = data.length > 16 ? data.filter((_, i) => i % 4 === 0) : data;
   svg.append('g')
     .attr('transform', `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x)
-      .tickValues(xTicks.map(d => d.week_start))
-      .tickFormat(fmtWeek)
-      .tickSize(0))
+    .call(d3.axisBottom(x).tickValues(xTicks.map(d => d.week_start)).tickFormat(fmtWeek).tickSize(0))
     .call(g => g.select('.domain').remove())
     .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
@@ -297,7 +273,7 @@ function drawLineChart(containerId, data, yKey) {
   if (!container) return;
   container.classList.remove('chart-loading');
   if (!data.length) {
-    container.innerHTML = '<p class="text-center text-gray-400 py-10 text-sm">No data yet</p>';
+    container.innerHTML = '<p class="text-center text-muted py-10 text-sm">No data yet</p>';
     return;
   }
   const width = container.clientWidth || 700;
@@ -313,9 +289,7 @@ function drawLineChart(containerId, data, yKey) {
   const svg = d3.select(container)
     .append('svg')
     .attr('viewBox', `0 0 ${width} ${height}`)
-    .attr('preserveAspectRatio', 'xMidYMid meet')
-    .attr('role', 'img')
-    .attr('aria-label', 'Pace trend over time showing average min/km per week');
+    .attr('preserveAspectRatio', 'xMidYMid meet');
 
   const x = d3.scaleTime()
     .domain(d3.extent(parsed, d => d.date))
@@ -329,42 +303,26 @@ function drawLineChart(containerId, data, yKey) {
   const GAP_MS = 10 * 86400 * 1000;
 
   const solidLine = d3.line()
-    .x(d => x(d.date))
-    .y(d => y(d.value))
-    .defined((d, i, arr) => {
-      if (i === 0) return true;
-      return (d.date - arr[i - 1].date) <= GAP_MS;
-    })
+    .x(d => x(d.date)).y(d => y(d.value))
+    .defined((d, i, arr) => i === 0 || (d.date - arr[i - 1].date) <= GAP_MS)
     .curve(d3.curveMonotoneX);
 
   const bridgeLine = d3.line()
-    .x(d => x(d.date))
-    .y(d => y(d.value))
+    .x(d => x(d.date)).y(d => y(d.value))
     .curve(d3.curveLinear);
 
-  svg.append('path')
-    .datum(parsed)
-    .attr('fill', 'none')
-    .style('stroke', color)
-    .attr('stroke-width', 1)
-    .attr('stroke-dasharray', '3 4')
-    .attr('stroke-opacity', 0.35)
+  svg.append('path').datum(parsed).attr('fill', 'none')
+    .style('stroke', color).attr('stroke-width', 1)
+    .attr('stroke-dasharray', '3 4').attr('stroke-opacity', 0.35)
     .attr('d', bridgeLine);
 
-  svg.append('path')
-    .datum(parsed)
-    .attr('fill', 'none')
-    .style('stroke', color)
-    .attr('stroke-width', 2)
+  svg.append('path').datum(parsed).attr('fill', 'none')
+    .style('stroke', color).attr('stroke-width', 2)
     .attr('d', solidLine);
 
-  svg.selectAll('circle')
-    .data(parsed)
-    .join('circle')
-    .attr('cx', d => x(d.date))
-    .attr('cy', d => y(d.value))
-    .attr('r', 3)
-    .style('fill', color);
+  svg.selectAll('circle').data(parsed).join('circle')
+    .attr('cx', d => x(d.date)).attr('cy', d => y(d.value))
+    .attr('r', 3).style('fill', color);
 
   svg.append('g')
     .attr('transform', `translate(0,${height - margin.bottom})`)

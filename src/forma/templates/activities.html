@@ -3,10 +3,11 @@
 
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold text-primary">Activities</h1>
+  <h1 class="text-3xl font-bold text-primary">Activities</h1>
+  <p class="text-xs text-muted mt-1">All recorded workouts</p>
 </div>
 
-<!-- Sport filter tabs -->
+{# Sport filter tabs #}
 <div class="flex gap-2 mb-6">
   {% for s in [('all', 'All'), ('run', 'Running'), ('strength', 'Strength'), ('climbing', 'Climbing')] %}
   <a href="/activities/{{ s[0] }}/1"
@@ -22,38 +23,46 @@
   <table class="w-full text-sm">
     <thead class="bg-surface-alt">
       <tr class="text-left text-xs text-muted uppercase tracking-wide">
-        <th class="px-5 py-3 font-medium">Date</th>
-        <th class="px-5 py-3 font-medium">Activity</th>
-        <th class="px-5 py-3 font-medium">Type</th>
-        <th class="px-5 py-3 font-medium">Duration</th>
-        <th class="px-5 py-3 font-medium">Distance</th>
-        <th class="px-5 py-3 font-medium">Pace</th>
-        <th class="px-5 py-3 font-medium">Avg HR</th>
+        <th class="w-0.5 p-0"></th>
+        <th class="px-4 py-3 font-medium">Date</th>
+        <th class="px-4 py-3 font-medium">Activity</th>
+        <th class="px-4 py-3 font-medium">Type</th>
+        <th class="px-4 py-3 font-medium">Duration</th>
+        <th class="px-4 py-3 font-medium">Distance</th>
+        <th class="px-4 py-3 font-medium">Pace</th>
+        <th class="px-4 py-3 font-medium">Avg HR</th>
       </tr>
     </thead>
     <tbody>
       {% for w in workouts %}
+      {% set sport_bg =
+        'var(--color-mint)' if w.workout_type.value == 'run' else
+        'var(--color-sky)' if w.workout_type.value == 'strength' else
+        'var(--color-amber)' if w.workout_type.value == 'climbing' else
+        'var(--color-edge)'
+      %}
       <tr class="border-t border-edge hover:bg-surface-alt transition-colors cursor-pointer" onclick="window.location='/activities/detail/{{ w.id }}'">
-        <td class="px-5 py-3 text-muted whitespace-nowrap">{{ w.start_time.strftime('%d %b %Y') }}</td>
-        <td class="px-5 py-3">
-          <a href="/activities/detail/{{ w.id }}" class="font-medium text-mint hover:opacity-75 transition-opacity" onclick="event.stopPropagation()">{{ w.name }}</a>
+        <td class="p-0" style="background:{{ sport_bg }};width:3px"></td>
+        <td class="px-4 py-3 text-muted whitespace-nowrap">{{ w.start_time.strftime('%d %b %Y') }}</td>
+        <td class="px-4 py-3">
+          <a href="/activities/detail/{{ w.id }}" class="font-medium text-primary hover:text-mint transition-colors" onclick="event.stopPropagation()">{{ w.name }}</a>
         </td>
-        <td class="px-5 py-3">
+        <td class="px-4 py-3">
           <span class="inline-flex items-center gap-1.5 text-xs font-medium text-secondary">
             {% if w.workout_type.value == 'run' %}<span class="w-1.5 h-1.5 rounded-full sport-run"></span>Running
             {% elif w.workout_type.value == 'strength' %}<span class="w-1.5 h-1.5 rounded-full sport-strength"></span>Strength
             {% elif w.workout_type.value == 'climbing' %}<span class="w-1.5 h-1.5 rounded-full sport-climbing"></span>Climbing
-            {% else %}<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>{{ w.workout_type.value|capitalize }}{% endif %}
+            {% else %}<span class="w-1.5 h-1.5 rounded-full bg-edge"></span>{{ w.workout_type.value | capitalize }}{% endif %}
           </span>
         </td>
-        <td class="px-5 py-3">{{ "%.0f"|format(w.duration_minutes) }} min</td>
-        <td class="px-5 py-3">
+        <td class="px-4 py-3 text-secondary">{{ "%.0f"|format(w.duration_minutes) }} min</td>
+        <td class="px-4 py-3 text-secondary">
           {% if w.distance_km %}{{ "%.1f"|format(w.distance_km) }} km{% else %}<span class="value-empty">—</span>{% endif %}
         </td>
-        <td class="px-5 py-3">
+        <td class="px-4 py-3 text-secondary">
           {% if w.pace_formatted() %}{{ w.pace_formatted() }}{% else %}<span class="value-empty">—</span>{% endif %}
         </td>
-        <td class="px-5 py-3">
+        <td class="px-4 py-3 text-secondary">
           {% if w.average_heartrate %}{{ "%.0f"|format(w.average_heartrate) }}{% else %}<span class="value-empty">—</span>{% endif %}
         </td>
       </tr>

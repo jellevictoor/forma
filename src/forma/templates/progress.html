@@ -2,19 +2,19 @@
 {% block title %}Progress — forma{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-  <h1 class="text-2xl font-semibold text-primary">Progress</h1>
-  <p class="text-muted text-sm mt-1">Personal records, strength consistency, climbing history</p>
+<div class="mb-6">
+  <h1 class="text-3xl font-bold text-primary">Progress</h1>
+  <p class="text-xs text-muted mt-1">Personal records, strength consistency, climbing history</p>
 </div>
 
-<!-- Monthly comparison -->
+{# Monthly comparison #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6" id="comparison-section">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Progress comparison</h2>
   <p class="text-xs text-muted mb-5" id="comparison-subtitle">Loading…</p>
   <div id="comparison-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
 </div>
 
-<!-- Fitness & Freshness -->
+{# Fitness & Freshness #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-start justify-between mb-1">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Fitness &amp; freshness</h2>
@@ -63,7 +63,7 @@
   </details>
 </div>
 
-<!-- Running PRs -->
+{# Running PRs #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Running personal records</h2>
   <table class="w-full text-sm" id="pr-table">
@@ -81,13 +81,13 @@
   </table>
 </div>
 
-<!-- Strength frequency -->
+{# Strength frequency #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Strength session frequency</h2>
   <div class="chart-container chart-loading" id="strength-chart" style="min-height:180px"></div>
 </div>
 
-<!-- Climbing history -->
+{# Climbing history #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Climbing history</h2>
   <div id="climbing-list" class="text-sm text-muted">Loading…</div>
@@ -108,7 +108,7 @@
     `${fmtMonth(data.current_month)} vs ${fmtMonth(data.previous_month)}`;
 
   if (!data.sports.length) {
-    grid.innerHTML = '<p class="text-sm text-gray-400 col-span-3">No data yet.</p>';
+    grid.innerHTML = '<p class="text-sm text-muted col-span-3">No data yet.</p>';
     return;
   }
 
@@ -146,34 +146,34 @@
 
     const rows = [
       `<div class="flex justify-between items-baseline py-2 border-b border-edge">
-        <span class="text-xs text-gray-400">Sessions</span>
-        <span class="text-sm font-medium text-gray-800">${c.sessions}
-          <span class="text-xs font-normal text-gray-400">vs ${p.sessions}</span>
+        <span class="text-xs text-muted">Sessions</span>
+        <span class="text-sm font-medium text-primary">${c.sessions}
+          <span class="text-xs font-normal text-muted">vs ${p.sessions}</span>
           ${deltaHtml(pctDelta(c.sessions, p.sessions))}</span>
       </div>`,
     ];
 
     if (c.distance_meters > 0 || p.distance_meters > 0) {
       rows.push(`<div class="flex justify-between items-baseline py-2 border-b border-edge">
-        <span class="text-xs text-gray-400">Volume</span>
-        <span class="text-sm font-medium text-gray-800">${(c.distance_meters / 1000).toFixed(1)}&nbsp;km
-          <span class="text-xs font-normal text-gray-400">vs ${(p.distance_meters / 1000).toFixed(1)}&nbsp;km</span>
+        <span class="text-xs text-muted">Volume</span>
+        <span class="text-sm font-medium text-primary">${(c.distance_meters / 1000).toFixed(1)}&nbsp;km
+          <span class="text-xs font-normal text-muted">vs ${(p.distance_meters / 1000).toFixed(1)}&nbsp;km</span>
           ${deltaHtml(pctDelta(c.distance_meters, p.distance_meters))}</span>
       </div>`);
     } else {
       rows.push(`<div class="flex justify-between items-baseline py-2 border-b border-edge">
-        <span class="text-xs text-gray-400">Time</span>
-        <span class="text-sm font-medium text-gray-800">${fmtDuration(c.duration_seconds)}
-          <span class="text-xs font-normal text-gray-400">vs ${fmtDuration(p.duration_seconds)}</span>
+        <span class="text-xs text-muted">Time</span>
+        <span class="text-sm font-medium text-primary">${fmtDuration(c.duration_seconds)}
+          <span class="text-xs font-normal text-muted">vs ${fmtDuration(p.duration_seconds)}</span>
           ${deltaHtml(pctDelta(c.duration_seconds, p.duration_seconds))}</span>
       </div>`);
     }
 
     if (c.avg_pace_min_per_km) {
       rows.push(`<div class="flex justify-between items-baseline py-2">
-        <span class="text-xs text-gray-400">Average pace</span>
-        <span class="text-sm font-medium text-gray-800">${fmtPace(c.avg_pace_min_per_km)}
-          <span class="text-xs font-normal text-gray-400">vs ${fmtPace(p.avg_pace_min_per_km)}</span>
+        <span class="text-xs text-muted">Average pace</span>
+        <span class="text-sm font-medium text-primary">${fmtPace(c.avg_pace_min_per_km)}
+          <span class="text-xs font-normal text-muted">vs ${fmtPace(p.avg_pace_min_per_km)}</span>
           ${deltaHtml(pctDelta(c.avg_pace_min_per_km, p.avg_pace_min_per_km), true)}</span>
       </div>`);
     }
@@ -182,8 +182,9 @@
     card.className = 'bg-surface-alt rounded-xl p-4';
     card.innerHTML = `
       <div class="flex items-center gap-2 mb-3">
+        <span class="w-1 h-full self-stretch rounded-full" style="background:${color}"></span>
         <span class="w-2 h-2 rounded-full" style="background:${color}"></span>
-        <span class="text-xs font-medium uppercase tracking-widest text-gray-500">${label}</span>
+        <span class="text-xs font-medium uppercase tracking-widest text-muted">${label}</span>
       </div>
       ${rows.join('')}
     `;
@@ -196,7 +197,7 @@
   const ffContainer = document.getElementById('ff-chart');
   ffContainer.classList.remove('chart-loading');
   if (!ffData.length) {
-    ffContainer.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">No training data yet</p>';
+    ffContainer.innerHTML = '<p class="text-center text-muted py-8 text-sm">No training data yet</p>';
     return;
   }
 
@@ -249,32 +250,22 @@
     .style('fill', 'var(--color-effort-bar)')
     .attr('rx', 1);
 
-  topG.append('path')
-    .datum(data)
-    .attr('fill', 'none')
-    .style('stroke', 'var(--color-mint)')
-    .attr('stroke-width', 2)
+  topG.append('path').datum(data).attr('fill', 'none')
+    .style('stroke', 'var(--color-mint)').attr('stroke-width', 2)
     .attr('d', d3.line().x(d => xTop(d.date)).y(d => yLoad(d.fitness)).curve(d3.curveMonotoneX));
 
-  topG.append('path')
-    .datum(data)
-    .attr('fill', 'none')
-    .style('stroke', 'var(--color-amber)')
-    .attr('stroke-width', 2)
-    .attr('stroke-dasharray', '4 2')
+  topG.append('path').datum(data).attr('fill', 'none')
+    .style('stroke', 'var(--color-amber)').attr('stroke-width', 2).attr('stroke-dasharray', '4 2')
     .attr('d', d3.line().x(d => xTop(d.date)).y(d => yLoad(d.fatigue)).curve(d3.curveMonotoneX));
 
-  topG.append('g')
-    .attr('transform', `translate(${margin.left},0)`)
+  topG.append('g').attr('transform', `translate(${margin.left},0)`)
     .call(d3.axisLeft(yLoad).ticks(4).tickSize(0))
     .call(g => g.select('.domain').remove())
     .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
-  topG.append('text')
-    .attr('x', margin.left + 4).attr('y', margin.top + 2)
+  topG.append('text').attr('x', margin.left + 4).attr('y', margin.top + 2)
     .style('fill', 'var(--color-chart-axis)').attr('font-size', '9px')
-    .attr('dominant-baseline', 'hanging')
-    .text('FITNESS & FATIGUE');
+    .attr('dominant-baseline', 'hanging').text('FITNESS & FATIGUE');
 
   const botOffsetY = topHeight + gap;
   const botG = svg.append('g').attr('transform', `translate(0,${botOffsetY})`);
@@ -282,9 +273,7 @@
 
   const formExtent = d3.extent(data, d => d.form);
   const formAbs = Math.max(Math.abs(formExtent[0]), Math.abs(formExtent[1]), 5);
-  const yForm = d3.scaleLinear()
-    .domain([-formAbs, formAbs])
-    .range([botInnerHeight, margin.top]);
+  const yForm = d3.scaleLinear().domain([-formAbs, formAbs]).range([botInnerHeight, margin.top]);
 
   const zeroY = yForm(0);
 
@@ -293,74 +282,41 @@
     .attr('y1', zeroY).attr('y2', zeroY)
     .style('stroke', 'var(--color-chart-grid)').attr('stroke-width', 1);
 
-  botG.append('path')
-    .datum(data)
-    .style('fill', 'var(--color-mint)')
-    .attr('fill-opacity', 0.2)
-    .attr('d', d3.area()
-      .x(d => xBot(d.date))
-      .y0(zeroY)
-      .y1(d => yForm(Math.max(0, d.form)))
-      .curve(d3.curveMonotoneX));
+  botG.append('path').datum(data).style('fill', 'var(--color-mint)').attr('fill-opacity', 0.2)
+    .attr('d', d3.area().x(d => xBot(d.date)).y0(zeroY).y1(d => yForm(Math.max(0, d.form))).curve(d3.curveMonotoneX));
 
-  botG.append('path')
-    .datum(data)
-    .style('fill', 'var(--color-amber)')
-    .attr('fill-opacity', 0.25)
-    .attr('d', d3.area()
-      .x(d => xBot(d.date))
-      .y0(zeroY)
-      .y1(d => yForm(Math.min(0, d.form)))
-      .curve(d3.curveMonotoneX));
+  botG.append('path').datum(data).style('fill', 'var(--color-amber)').attr('fill-opacity', 0.25)
+    .attr('d', d3.area().x(d => xBot(d.date)).y0(zeroY).y1(d => yForm(Math.min(0, d.form))).curve(d3.curveMonotoneX));
 
-  botG.append('path')
-    .datum(data)
-    .attr('fill', 'none')
-    .style('stroke', 'var(--color-sky)')
-    .attr('stroke-width', 2)
+  botG.append('path').datum(data).attr('fill', 'none')
+    .style('stroke', 'var(--color-sky)').attr('stroke-width', 2)
     .attr('d', d3.line().x(d => xBot(d.date)).y(d => yForm(d.form)).curve(d3.curveMonotoneX));
 
-  botG.append('g')
-    .attr('transform', `translate(${margin.left},0)`)
+  botG.append('g').attr('transform', `translate(${margin.left},0)`)
     .call(d3.axisLeft(yForm).tickValues([formExtent[0], 0, formExtent[1]]).tickSize(0).tickFormat(d => d > 0 ? `+${d}` : d))
     .call(g => g.select('.domain').remove())
     .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
-  botG.append('text')
-    .attr('x', margin.left + 4).attr('y', margin.top + 2)
+  botG.append('text').attr('x', margin.left + 4).attr('y', margin.top + 2)
     .style('fill', 'var(--color-chart-axis)').attr('font-size', '9px')
-    .attr('dominant-baseline', 'hanging')
-    .text('FORM');
+    .attr('dominant-baseline', 'hanging').text('FORM');
 
-  botG.append('text')
-    .attr('x', width - margin.right - 4).attr('y', zeroY - 4)
-    .attr('text-anchor', 'end').style('fill', 'var(--color-mint)').attr('font-size', '9px')
-    .text('fresh ▲');
-  botG.append('text')
-    .attr('x', width - margin.right - 4).attr('y', zeroY + 10)
-    .attr('text-anchor', 'end').style('fill', 'var(--color-amber)').attr('font-size', '9px')
-    .text('fatigued ▼');
+  botG.append('text').attr('x', width - margin.right - 4).attr('y', zeroY - 4)
+    .attr('text-anchor', 'end').style('fill', 'var(--color-mint)').attr('font-size', '9px').text('fresh ▲');
+  botG.append('text').attr('x', width - margin.right - 4).attr('y', zeroY + 10)
+    .attr('text-anchor', 'end').style('fill', 'var(--color-amber)').attr('font-size', '9px').text('fatigued ▼');
 
-  botG.append('g')
-    .attr('transform', `translate(0,${botInnerHeight})`)
+  botG.append('g').attr('transform', `translate(0,${botInnerHeight})`)
     .call(d3.axisBottom(xBot).ticks(6).tickSize(0).tickFormat(d3.timeFormat('%b %d')))
     .call(g => g.select('.domain').remove())
     .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
-  // Tooltip — fixed positioning to avoid clipping
-  const tooltip = d3.select('body')
-    .append('div')
-    .attr('class', 'chart-tooltip')
-    .style('position', 'fixed')
-    .style('background', 'var(--color-tooltip-bg)')
-    .style('border', '1px solid var(--color-tooltip-border)')
-    .style('border-radius', '8px')
-    .style('padding', '8px 12px')
-    .style('font-size', '12px')
-    .style('pointer-events', 'none')
-    .style('opacity', 0)
-    .style('line-height', '1.6')
-    .style('z-index', '50');
+  // Tooltip
+  const tooltip = d3.select('body').append('div')
+    .style('position', 'fixed').style('background', 'var(--color-tooltip-bg)')
+    .style('border', '1px solid var(--color-tooltip-border)').style('border-radius', '10px')
+    .style('padding', '10px 14px').style('font-size', '12px').style('pointer-events', 'none')
+    .style('opacity', 0).style('line-height', '1.7').style('z-index', '50');
 
   const bisect = d3.bisector(d => d.date).left;
 
@@ -370,12 +326,10 @@
     const i = bisect(data, x0, 1);
     const d = i < data.length ? data[i] : data[data.length - 1];
     const formColor = d.form >= 0 ? 'var(--color-mint)' : 'var(--color-amber)';
-    tooltip
-      .style('opacity', 1)
-      .style('left', (event.clientX + 12) + 'px')
-      .style('top', (event.clientY - 10) + 'px')
+    tooltip.style('opacity', 1)
+      .style('left', (event.clientX + 12) + 'px').style('top', (event.clientY - 10) + 'px')
       .html(`
-        <div style="color:var(--color-tooltip-date);margin-bottom:4px">${d3.timeFormat('%b %d')(d.date)}</div>
+        <div style="color:var(--color-tooltip-date);font-weight:600;margin-bottom:4px">${d3.timeFormat('%b %d')(d.date)}</div>
         <div style="color:var(--color-tooltip-text)">Effort: <b style="color:var(--color-text)">${d.effort}</b></div>
         <div style="color:var(--color-tooltip-text)">Fitness: <b style="color:var(--color-mint)">${d.fitness}</b></div>
         <div style="color:var(--color-tooltip-text)">Fatigue: <b style="color:var(--color-amber)">${d.fatigue}</b></div>
@@ -385,10 +339,8 @@
 
   svg.append('rect')
     .attr('x', margin.left).attr('y', 0)
-    .attr('width', width - margin.left - margin.right)
-    .attr('height', totalHeight)
-    .attr('fill', 'none')
-    .attr('pointer-events', 'all')
+    .attr('width', width - margin.left - margin.right).attr('height', totalHeight)
+    .attr('fill', 'none').attr('pointer-events', 'all')
     .on('mousemove', function(event) { showTooltip(event); })
     .on('mouseleave', () => tooltip.style('opacity', 0));
 })();
@@ -416,14 +368,14 @@ const DISTANCE_LABELS = {
   const prs = await fetch('/api/progress/personal-records').then(r => r.json());
   const prBody = document.getElementById('pr-body');
   if (!prs.length) {
-    prBody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-gray-400 text-sm">No running data yet</td></tr>';
+    prBody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-muted text-sm">No running data yet</td></tr>';
   } else {
     prBody.innerHTML = prs.map((pr, i) => `
       <tr class="border-b border-edge ${i % 2 === 1 ? 'bg-surface-alt' : ''}">
-        <td class="py-3 font-medium text-gray-800">${DISTANCE_LABELS[pr.distance_meters] || (pr.distance_meters/1000).toFixed(1) + ' km'}</td>
-        <td class="py-3 tabular-nums">${formatDuration(pr.duration_seconds)}</td>
-        <td class="py-3 tabular-nums text-gray-500">${formatPace(pr.pace_min_per_km)}</td>
-        <td class="py-3 text-gray-400">${pr.achieved_on}</td>
+        <td class="py-3 font-medium text-primary">${DISTANCE_LABELS[pr.distance_meters] || (pr.distance_meters/1000).toFixed(1) + ' km'}</td>
+        <td class="py-3 tabular-nums text-primary">${formatDuration(pr.duration_seconds)}</td>
+        <td class="py-3 tabular-nums text-secondary">${formatPace(pr.pace_min_per_km)}</td>
+        <td class="py-3 text-muted">${pr.achieved_on}</td>
       </tr>
     `).join('');
   }
@@ -432,29 +384,25 @@ const DISTANCE_LABELS = {
   const strengthContainer = document.getElementById('strength-chart');
   strengthContainer.classList.remove('chart-loading');
   if (!strengthData.length) {
-    strengthContainer.innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">No strength data yet</p>';
+    strengthContainer.innerHTML = '<p class="text-center text-muted py-6 text-sm">No strength data yet</p>';
   } else {
     const width = strengthContainer.clientWidth || 700;
     const height = 180;
     const margin = {top: 10, right: 16, bottom: 30, left: 36};
 
-    const svg = d3.select(strengthContainer)
-      .append('svg')
+    const svg = d3.select(strengthContainer).append('svg')
       .attr('viewBox', `0 0 ${width} ${height}`)
       .attr('preserveAspectRatio', 'xMidYMid meet');
 
     const x = d3.scaleBand()
       .domain(strengthData.map(d => d.week_start))
-      .range([margin.left, width - margin.right])
-      .padding(0.3);
+      .range([margin.left, width - margin.right]).padding(0.3);
 
     const y = d3.scaleLinear()
       .domain([0, d3.max(strengthData, d => d.count)]).nice()
       .range([height - margin.bottom, margin.top]);
 
-    svg.selectAll('rect')
-      .data(strengthData)
-      .join('rect')
+    svg.selectAll('rect').data(strengthData).join('rect')
       .attr('x', d => x(d.week_start))
       .attr('y', d => d.count === 0 ? y(0) - 2 : y(d.count))
       .attr('width', x.bandwidth())
@@ -464,14 +412,12 @@ const DISTANCE_LABELS = {
 
     const fmtWeek = d => { const p = d.split('-'); return d3.timeFormat('%b %-d')(new Date(+p[0], +p[1]-1, +p[2])); };
     const xTicks = strengthData.length > 12 ? strengthData.filter((_, i) => i % 4 === 0) : strengthData;
-    svg.append('g')
-      .attr('transform', `translate(0,${height - margin.bottom})`)
+    svg.append('g').attr('transform', `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(x).tickValues(xTicks.map(d => d.week_start)).tickFormat(fmtWeek).tickSize(0))
       .call(g => g.select('.domain').remove())
       .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
 
-    svg.append('g')
-      .attr('transform', `translate(${margin.left},0)`)
+    svg.append('g').attr('transform', `translate(${margin.left},0)`)
       .call(d3.axisLeft(y).ticks(4).tickFormat(d => d + 'x'))
       .call(g => g.select('.domain').remove())
       .selectAll('text').style('font-size', '10px').style('fill', 'var(--color-chart-axis)');
@@ -480,12 +426,12 @@ const DISTANCE_LABELS = {
   const climbingContainer = document.getElementById('climbing-list');
   const climbingData = await fetch('/api/analytics/climbing/volume').then(r => r.json());
   if (!climbingData.length) {
-    climbingContainer.innerHTML = '<p class="text-gray-400 text-sm">No climbing sessions yet</p>';
+    climbingContainer.innerHTML = '<p class="text-muted text-sm">No climbing sessions yet</p>';
   } else {
     climbingContainer.innerHTML = `
       <table class="w-full text-sm">
         <thead>
-          <tr class="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-edge">
+          <tr class="text-left text-xs text-muted uppercase tracking-wide border-b border-edge">
             <th class="pb-3 font-medium">Week</th>
             <th class="pb-3 font-medium">Sessions</th>
             <th class="pb-3 font-medium">Total time</th>
@@ -494,9 +440,9 @@ const DISTANCE_LABELS = {
         <tbody>
           ${climbingData.map((d, i) => `
             <tr class="border-b border-edge ${i % 2 === 1 ? 'bg-surface-alt' : ''}">
-              <td class="py-3 text-gray-600">${d.week_start}</td>
-              <td class="py-3 tabular-nums">${d.workout_count}</td>
-              <td class="py-3 tabular-nums text-gray-500">${(d.duration_hours * 60).toFixed(0)} min</td>
+              <td class="py-3 text-secondary">${d.week_start}</td>
+              <td class="py-3 tabular-nums text-primary">${d.workout_count}</td>
+              <td class="py-3 tabular-nums text-secondary">${(d.duration_hours * 60).toFixed(0)} min</td>
             </tr>
           `).join('')}
         </tbody>
