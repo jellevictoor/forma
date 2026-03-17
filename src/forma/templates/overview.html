@@ -69,24 +69,22 @@
     <div class="flex-1 min-w-0">
       <div class="flex items-baseline gap-3 mb-1">
         <span id="form-status-word" class="text-5xl font-black tracking-tight leading-none">—</span>
-        <span id="form-tsb" class="text-xl font-bold tabular-nums" class="text-muted">—</span>
+        <span id="form-tsb" class="text-xl font-bold tabular-nums text-muted">—</span>
       </div>
       <p id="form-interpretation" class="text-sm text-muted mb-5 leading-snug">Loading…</p>
 
       <div class="space-y-2">
         <div class="flex items-center gap-3">
           <span class="text-xs text-muted w-12 shrink-0">Fitness</span>
-          <div class="flex-1 h-1.5 rounded-full overflow-hidden" class="bg-surface-alt">
-            <div id="form-fitness-bar" class="h-full rounded-full transition-all duration-700"
-                 style="background:var(--color-mint);width:0%"></div>
+          <div class="flex-1 h-1.5 rounded-full overflow-hidden bg-surface-alt">
+            <div id="form-fitness-bar" class="h-full rounded-full bg-mint transition-all duration-700" style="width:0%"></div>
           </div>
           <span id="form-fitness" class="text-xs font-semibold tabular-nums text-secondary w-8 text-right">—</span>
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-muted w-12 shrink-0">Fatigue</span>
-          <div class="flex-1 h-1.5 rounded-full overflow-hidden" class="bg-surface-alt">
-            <div id="form-fatigue-bar" class="h-full rounded-full transition-all duration-700"
-                 style="background:var(--color-sky);width:0%"></div>
+          <div class="flex-1 h-1.5 rounded-full overflow-hidden bg-surface-alt">
+            <div id="form-fatigue-bar" class="h-full rounded-full bg-sky transition-all duration-700" style="width:0%"></div>
           </div>
           <span id="form-fatigue" class="text-xs font-semibold tabular-nums text-secondary w-8 text-right">—</span>
         </div>
@@ -131,7 +129,7 @@
 
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Streak</p>
-    <p class="text-4xl font-bold tabular-nums" id="kpi-streak" class="text-primary">—</p>
+    <p class="text-4xl font-bold tabular-nums text-primary" id="kpi-streak">—</p>
     <p class="text-xs text-muted mt-1">consecutive days</p>
     <p class="text-xs mt-1.5 font-medium text-muted" id="kpi-streak-sub"></p>
   </div>
@@ -204,7 +202,7 @@
       <p class="text-xs font-medium uppercase tracking-widest text-muted">This week's focus</p>
       <button id="recap-stale-badge"
               class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-opacity hover:opacity-75 flex items-center gap-1.5"
-              style="background:var(--color-amber-subtle);color:var(--color-amber-subtle-text)">
+              class="bg-amber/10 border border-amber/30 text-amber"
         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
         Refresh
       </button>

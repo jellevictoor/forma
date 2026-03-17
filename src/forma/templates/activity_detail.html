@@ -138,7 +138,10 @@
 <div id="charts-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm px-6 pt-5 pb-6 mb-6">
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Pace &amp; heart rate</h2>
-    <div id="chart-crosshair-label" class="text-xs text-muted font-mono hidden"></div>
+    <div class="flex items-center gap-4">
+      <span class="text-xs text-muted">max HR: <span class="font-medium text-secondary">{% if athlete and athlete.max_heartrate %}{{ athlete.max_heartrate }} bpm{% elif athlete and athlete.age %}{{ 220 - athlete.age }} bpm <span class="font-normal">(est.)</span>{% else %}185 bpm <span class="font-normal">(default — <a href="/profile" class="text-mint hover:underline">set yours</a>)</span>{% endif %}</span></span>
+      <div id="chart-crosshair-label" class="text-xs text-muted font-mono hidden"></div>
+    </div>
   </div>
   <svg id="activity-svg" class="w-full" style="overflow:visible"></svg>
   <!-- zone legend strips -->
@@ -522,55 +525,58 @@ function _drawCharts(data) {
     svg.append('defs').append('clipPath').attr('id','hr-clip')
       .append('rect').attr('x',mL).attr('y',hrY1).attr('width',W-mL-mR).attr('height',hrH);
 
-    // zone bands
+    // subtle zone bands + right-side labels
     for (const z of HR_ZONES) {
-      const yTop = hrScale(Math.min(z.hi * MAX_HR, hrMax));
-      const yBot = hrScale(Math.max(z.lo * MAX_HR, hrMin));
-      if (yBot <= hrY1 || yTop >= hrY2) continue;
+      const yTop = Math.max(hrScale(Math.min(z.hi * MAX_HR, hrMax)), hrY1);
+      const yBot = Math.min(hrScale(Math.max(z.lo * MAX_HR, hrMin)), hrY2);
+      if (yBot <= yTop) continue;
+      const bandH = yBot - yTop;
       svg.append('rect')
-        .attr('x',mL).attr('y',Math.max(yTop,hrY1))
-        .attr('width',W-mL-mR)
-        .attr('height',Math.min(yBot,hrY2)-Math.max(yTop,hrY1))
-        .attr('fill',z.color).attr('fill-opacity',0.08);
-      // zone label on right
-      const labelY = (Math.max(yTop,hrY1)+Math.min(yBot,hrY2))/2;
-      if (Math.min(yBot,hrY2)-Math.max(yTop,hrY1) > 12) {
+        .attr('x', mL).attr('y', yTop)
+        .attr('width', W - mL - mR).attr('height', bandH)
+        .attr('fill', z.color).attr('fill-opacity', 0.07);
+      // dashed boundary at top of zone
+      svg.append('line')
+        .attr('x1', mL).attr('x2', W - mR)
+        .attr('y1', yTop).attr('y2', yTop)
+        .attr('stroke', z.color).attr('stroke-opacity', 0.4)
+        .attr('stroke-width', 0.75).attr('stroke-dasharray', '3,3');
+      // label on right
+      if (bandH > 12) {
         svg.append('text')
-          .attr('x',W-mR+4).attr('y',labelY+4)
-          .attr('fill',z.color).style('font-size','9px').style('font-weight','600')
+          .attr('x', W - mR + 4).attr('y', yTop + bandH / 2 + 4)
+          .attr('fill', z.color).style('font-size', '9px').style('font-weight', '700')
           .text(z.name);
       }
     }
 
-    // HR line
-    const hrLine = d3.line()
+    // HR line colored per zone — one path per zone using defined()
+    for (const z of HR_ZONES) {
+      const zoneLine = d3.line()
+        .x(d => xScale(d.t))
+        .y(d => hrScale(d.hr))
+        .defined(d => d.hr != null && d.hr / MAX_HR >= z.lo && d.hr / MAX_HR < z.hi)
+        .curve(d3.curveMonotoneX);
+      svg.append('path')
+        .datum(pts)
+        .attr('clip-path', 'url(#hr-clip)')
+        .attr('fill', 'none')
+        .attr('stroke', z.color)
+        .attr('stroke-width', 2.5)
+        .attr('stroke-linecap', 'round')
+        .attr('d', zoneLine);
+    }
+    // fallback line for HR below Z1 (<50% max)
+    const belowZoneLine = d3.line()
       .x(d => xScale(d.t))
-      .y(d => d.hr ? hrScale(d.hr) : null)
-      .defined(d => d.hr != null)
-      .curve(d3.curveBasis);
-
+      .y(d => hrScale(d.hr))
+      .defined(d => d.hr != null && d.hr / MAX_HR < 0.50)
+      .curve(d3.curveMonotoneX);
     svg.append('path')
       .datum(pts)
-      .attr('clip-path','url(#hr-clip)')
-      .attr('fill','none')
-      .attr('stroke','#F97316')
-      .attr('stroke-width',1.5)
-      .attr('d', hrLine);
-
-    // HR area
-    const hrArea = d3.area()
-      .x(d => xScale(d.t))
-      .y0(hrY2)
-      .y1(d => d.hr ? hrScale(d.hr) : hrY2)
-      .defined(d => d.hr != null)
-      .curve(d3.curveBasis);
-
-    svg.append('path')
-      .datum(pts)
-      .attr('clip-path','url(#hr-clip)')
-      .attr('fill','#F97316')
-      .attr('fill-opacity',0.10)
-      .attr('d', hrArea);
+      .attr('clip-path', 'url(#hr-clip)')
+      .attr('fill', 'none').attr('stroke', '#CBD5E1')
+      .attr('stroke-width', 2.5).attr('d', belowZoneLine);
 
     // HR y-axis
     const hrAxis = d3.axisLeft(hrScale).ticks(4).tickFormat(d=>`${d}`);
@@ -627,7 +633,8 @@ function _drawCharts(data) {
         dotPace.attr('cx',xScale(p.t)).attr('cy',paceScale(1000/p.v)).style('display',null);
       }
       if (p.hr) {
-        dotHr.attr('cx',xScale(p.t)).attr('cy',hrScale(p.hr)).style('display',null);
+        dotHr.attr('cx',xScale(p.t)).attr('cy',hrScale(p.hr))
+          .attr('fill', _zoneColor(p.hr)).style('display',null);
       }
       let txt = _formatTime(p.t);
       if (p.v > 0.3) txt += `  ${_formatPace(1000/p.v)}`;

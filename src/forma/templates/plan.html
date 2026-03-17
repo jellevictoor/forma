@@ -124,9 +124,8 @@ const SPORT_CLASS = {
 };
 
 function sportDot(type) {
-  const cls = SPORT_CLASS[type] || '';
-  const style = cls ? '' : 'background:var(--color-text-muted)';
-  return `<span class="w-2 h-2 rounded-full inline-block ${cls}" style="${style}"></span>`;
+  const cls = SPORT_CLASS[type] || 'bg-edge';
+  return `<span class="w-2 h-2 rounded-full inline-block ${cls}"></span>`;
 }
 
 const SECTION_LABELS = { warmup: 'Warm-up', main: 'Main', cooldown: 'Cool-down' };

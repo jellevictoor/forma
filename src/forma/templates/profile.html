@@ -83,6 +83,17 @@
           class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 resize-none bg-surface text-primary"
         >{{ athlete.notes if athlete else '' }}</textarea>
       </div>
+      <div>
+        <label class="block text-xs text-secondary mb-1" for="equipment">Equipment <span class="text-muted font-normal">(one item per line)</span></label>
+        <textarea
+          id="equipment"
+          name="equipment"
+          rows="4"
+          placeholder="Resistance band 5 kg&#10;Resistance band 10 kg&#10;Resistance band 15 kg&#10;Pull-up bar"
+          class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 resize-none bg-surface text-primary"
+        >{{ (athlete.equipment | join('\n')) if athlete and athlete.equipment else '' }}</textarea>
+        <p class="text-xs text-muted mt-1">The coach uses this to tailor exercises to what you actually have available.</p>
+      </div>
       <div class="flex items-center gap-3">
         <button
           type="submit"
