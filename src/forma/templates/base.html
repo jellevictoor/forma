@@ -44,16 +44,17 @@
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center gap-10">
       <a href="/" class="font-semibold text-xl tracking-tight text-mint">forma</a>
       <div class="flex gap-7 text-sm" style="color:var(--color-text-muted)">
-        <a href="/" class="hover:text-white transition-colors">Overview</a>
-        <a href="/activities/all/1" class="hover:text-white transition-colors">Activities</a>
-        <a href="/analytics/run" class="hover:text-white transition-colors">Analytics</a>
-        <a href="/progress" class="hover:text-white transition-colors">Progress</a>
-        <a href="/insights" class="hover:text-white transition-colors">Insights</a>
-        <a href="/plan" class="hover:text-white transition-colors">Plan</a>
-        <a href="/profile" class="hover:text-white transition-colors">Profile</a>
+        <a href="/" data-nav-href="/" class="hover:text-white transition-colors">Overview</a>
+        <a href="/activities/all/1" data-nav-href="/activities" class="hover:text-white transition-colors">Activities</a>
+        <a href="/analytics/run" data-nav-href="/analytics" class="hover:text-white transition-colors">Analytics</a>
+        <a href="/progress" data-nav-href="/progress" class="hover:text-white transition-colors">Progress</a>
+        <a href="/insights" data-nav-href="/insights" class="hover:text-white transition-colors">Insights</a>
+        <span class="opacity-20 select-none">|</span>
+        <a href="/plan" data-nav-href="/plan" class="hover:text-white transition-colors">Plan</a>
+        <a href="/profile" data-nav-href="/profile" class="hover:text-white transition-colors">Profile</a>
       </div>
       <div class="ml-auto flex items-center gap-4">
-        <span class="text-xs font-medium tracking-widest" style="color:var(--color-text-muted)">2026</span>
+        <span id="nav-year" class="text-xs font-medium tracking-widest" style="color:var(--color-text-muted)" title="Showing current year data"></span>
         <!-- Strava sync button -->
         <div class="flex items-center gap-2">
           <span id="sync-result" class="hidden text-xs font-medium" style="color:var(--color-text-muted)"></span>
@@ -87,6 +88,20 @@
   <main class="max-w-6xl mx-auto px-6 py-10">
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    // Active nav state
+    (function() {
+      const path = window.location.pathname;
+      document.querySelectorAll('[data-nav-href]').forEach(link => {
+        const href = link.dataset.navHref;
+        const isActive = href === '/' ? path === '/' : path.startsWith(href);
+        if (isActive) link.style.color = 'white';
+      });
+      const yearEl = document.getElementById('nav-year');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+    })();
+  </script>
 
   <script>
     async function triggerSync() {
