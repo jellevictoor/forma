@@ -1,75 +1,91 @@
 /* ── Color tokens ──────────────────────────────────────────── */
 :root {
   /* Sport / brand — identical in both modes */
-  --color-mint:  #2DD4AA;
-  --color-sky:   #5BA8D4;
-  --color-amber: #E8A84A;
+  --color-mint:  #00DC9E;
+  --color-sky:   #3AAFE8;
+  --color-amber: #F5A623;
 
   /* Nav */
-  --color-nav: #111D2C;
+  --color-nav: #0F1B2D;
 
   /* Page & surfaces */
-  --color-bg:          #F0F5FA;
+  --color-bg:          #F5F6F8;
   --color-surface:     #FFFFFF;
-  --color-surface-alt: #EAF0F7;
-  --color-edge:        #D8E4EF;
+  --color-surface-alt: #EDEEF1;
+  --color-edge:        #DDE0E8;
 
   /* Text */
-  --color-text:           #0F172A;
-  --color-text-secondary: #475569;
-  --color-text-muted:     #94A3B8;
+  --color-text:           #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-muted:     #9CA3AF;
 
   /* Semantic */
-  --color-negative: #DC2626;
-  --color-empty:    #94A3B8;
+  --color-negative: #EF4444;
+  --color-empty:    #9CA3AF;
   --color-amber-subtle: #FEF3C7;
   --color-amber-subtle-text: #92400E;
 
   /* Chart helpers */
-  --color-chart-axis:   #94A3B8;
-  --color-chart-grid:   #E2E8F0;
-  --color-effort-bar:   rgba(17, 29, 44, 0.07);
-  --color-chart-empty-bar: rgba(148, 163, 184, 0.12);
+  --color-chart-axis:      #9CA3AF;
+  --color-chart-grid:      #E5E7EB;
+  --color-effort-bar:      rgba(15, 27, 45, 0.06);
+  --color-chart-empty-bar: rgba(156, 163, 175, 0.12);
 
   /* Tooltip */
   --color-tooltip-bg:     #FFFFFF;
-  --color-tooltip-border: #D8E4EF;
-  --color-tooltip-text:   #475569;
-  --color-tooltip-date:   #94A3B8;
+  --color-tooltip-border: #DDE0E8;
+  --color-tooltip-text:   #4B5563;
+  --color-tooltip-date:   #9CA3AF;
 }
 
 .dark {
-  --color-nav: #07101C;
+  --color-nav: #080F1A;
 
-  --color-bg:          #0B1622;
-  --color-surface:     #122030;
-  --color-surface-alt: #1A2C3E;
-  --color-edge:        #213349;
+  --color-bg:          #090F1A;
+  --color-surface:     #111C2C;
+  --color-surface-alt: #182538;
+  --color-edge:        #1F3050;
 
   --color-text:           #EDF2F9;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted:     #6B8FAF;
+  --color-text-secondary: #8BAEC8;
+  --color-text-muted:     #5C7A96;
 
   --color-negative: #F87171;
   --color-empty:    #3A5272;
-  --color-amber-subtle: rgba(232, 168, 74, 0.15);
-  --color-amber-subtle-text: #E8A84A;
+  --color-amber-subtle: rgba(245, 166, 35, 0.15);
+  --color-amber-subtle-text: #F5A623;
 
-  --color-chart-axis:   #6B8FAF;
-  --color-chart-grid:   #213349;
-  --color-effort-bar:   rgba(255, 255, 255, 0.05);
-  --color-chart-empty-bar: rgba(78, 106, 134, 0.12);
+  --color-chart-axis:      #5C7A96;
+  --color-chart-grid:      #1F3050;
+  --color-effort-bar:      rgba(255, 255, 255, 0.04);
+  --color-chart-empty-bar: rgba(60, 90, 130, 0.15);
 
-  --color-tooltip-bg:     #1A2C3E;
-  --color-tooltip-border: #213349;
-  --color-tooltip-text:   #94A3B8;
-  --color-tooltip-date:   #94A3B8;
+  --color-tooltip-bg:     #182538;
+  --color-tooltip-border: #1F3050;
+  --color-tooltip-text:   #8BAEC8;
+  --color-tooltip-date:   #5C7A96;
 }
 
 /* ── Base ──────────────────────────────────────────────────── */
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+}
+
+/* ── Text selection ─────────────────────────────────────────── */
+::selection {
+  background: rgba(0, 220, 158, 0.18);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-edge);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }
 
 /* ── Text — dark mode overrides for Tailwind gray classes ───── */
@@ -127,6 +143,11 @@ tbody tr:nth-child(even) {
   color: var(--color-empty);
 }
 
+/* ── Card depth — subtle inner highlight in dark mode ──────── */
+.dark .card-depth {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 /* ── Chart containers ───────────────────────────────────────── */
 .chart-container {
   width: 100%;
@@ -155,8 +176,6 @@ tbody tr:nth-child(even) {
   100% { background-position: -100% 0; }
 }
 
-/* ── Tab transitions ────────────────────────────────────────── */
-
 /* ── Sidebar nav links ──────────────────────────────────────── */
 .nav-link {
   display: flex;
@@ -165,24 +184,25 @@ tbody tr:nth-child(even) {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   font-size: 0.875rem;
+  font-weight: 500;
   color: var(--color-text-muted);
   transition: background-color 150ms ease, color 150ms ease;
   text-decoration: none;
 }
 
 .nav-icon {
-  width: 1rem;
-  height: 1rem;
+  width: 1.125rem;
+  height: 1.125rem;
   flex-shrink: 0;
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .nav-link-active {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(0, 220, 158, 0.12);
   color: rgba(255, 255, 255, 0.95);
 }
 
@@ -194,4 +214,5 @@ tbody tr:nth-child(even) {
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse { animation: none; }
   .animate-spin  { animation: none; }
+  .chart-loading { animation: none; }
 }

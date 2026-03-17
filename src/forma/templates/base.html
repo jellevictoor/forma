@@ -17,6 +17,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="stylesheet" href="/static/css/theme.css" />
+  {% block extra_head %}{% endblock %}
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -24,9 +25,9 @@
         extend: {
           colors: {
             /* Brand — same in both modes */
-            mint:  '#2DD4AA',
-            sky:   '#5BA8D4',
-            amber: '#E8A84A',
+            mint:  '#00DC9E',
+            sky:   '#3AAFE8',
+            amber: '#F5A623',
             /* Semantic — CSS-variable-backed, auto-adapt to theme */
             'nav-bg':      'var(--color-nav)',
             'surface':     'var(--color-surface)',
