@@ -108,22 +108,17 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         self,
         athlete_id: str,
         distances_meters: list[float],
-        year: int,
     ) -> list[PersonalRecord]:
-        year_start, year_end = self._year_range(year)
         rows = await self._pool.fetch(
             f"""
             SELECT id, start_time, data
             FROM workouts
             WHERE athlete_id = $1 AND workout_type = 'run'
-              AND start_time >= $2 AND start_time <= $3
               AND {_DISTANCE} IS NOT NULL
               AND {_MOVING_TIME} IS NOT NULL
             ORDER BY start_time
             """,
             athlete_id,
-            year_start,
-            year_end,
         )
         workouts = [
             (row["id"], date.fromisoformat(row["start_time"][:10]), Workout.model_validate_json(row["data"]))
@@ -261,14 +256,20 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         workout_type: str | None,
         page: int,
         page_size: int,
-        year: int,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> tuple[list[Workout], int]:
-        year_start, year_end = self._year_range(year)
         offset = (page - 1) * page_size
 
-        params: list = [athlete_id, year_start, year_end]
-        clauses = ["athlete_id = $1", "start_time >= $2", "start_time <= $3"]
+        params: list = [athlete_id]
+        clauses = ["athlete_id = $1"]
 
+        if date_from:
+            params.append(date_from.isoformat())
+            clauses.append(f"start_time::date >= ${len(params)}")
+        if date_to:
+            params.append(date_to.isoformat())
+            clauses.append(f"start_time::date <= ${len(params)}")
         if workout_type and workout_type != "all":
             params.append(workout_type)
             clauses.append(f"workout_type = ${len(params)}")

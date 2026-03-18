@@ -82,6 +82,13 @@ async def migrate(sqlite_path: str, database_url: str) -> None:
         await pg.executemany(query, values)
         print(f"  copied {len(values):>5} rows → {table}")
 
+        # Reset SERIAL sequences so new inserts don't collide with migrated IDs
+        seq = await pg.fetchval(
+            "SELECT pg_get_serial_sequence($1, 'id')", table
+        )
+        if seq:
+            await pg.execute(f"SELECT setval('{seq}', COALESCE((SELECT MAX(id) FROM {table}), 1))")
+
     src.close()
     await pg.close()
     print("\nDone.")
