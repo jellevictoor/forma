@@ -9,11 +9,14 @@
   --color-accent: #4DA3BD;
 
   /* Nav */
-  --color-nav:          #F5F4F1;
-  --color-nav-text:     #928E87;
-  --color-nav-hover:    rgba(0, 0, 0, 0.04);
-  --color-nav-active:   rgba(77, 163, 189, 0.10);
-  --color-nav-divider:  #E0DDD7;
+  --color-nav:               #4DA3BD;
+  --color-nav-text:          rgba(255, 255, 255, 0.65);
+  --color-nav-text-bold:     #ffffff;
+  --color-nav-hover:         rgba(0, 0, 0, 0.12);
+  --color-nav-active:        rgba(0, 0, 0, 0.18);
+  --color-nav-divider:       rgba(255, 255, 255, 0.18);
+  --color-nav-logo-body:     rgba(255, 255, 255, 0.95);
+  --color-nav-logo-mark:     rgba(0, 0, 0, 0.55);
 
   /* Page & surfaces */
   --color-bg:          #EDECEA;
@@ -46,11 +49,14 @@
 }
 
 .dark {
-  --color-nav:         #1A1916;
-  --color-nav-text:    #68635D;
-  --color-nav-hover:   rgba(255, 255, 255, 0.06);
-  --color-nav-active:  rgba(77, 163, 189, 0.12);
-  --color-nav-divider: rgba(255, 255, 255, 0.06);
+  --color-nav:               #1A1916;
+  --color-nav-text:          #68635D;
+  --color-nav-text-bold:     #F0EDE6;
+  --color-nav-hover:         rgba(255, 255, 255, 0.06);
+  --color-nav-active:        rgba(77, 163, 189, 0.12);
+  --color-nav-divider:       rgba(255, 255, 255, 0.06);
+  --color-nav-logo-body:     #4DA3BD;
+  --color-nav-logo-mark:     #F0EDE6;
 
   --color-bg:          #111009;
   --color-surface:     #1A1916;
@@ -209,16 +215,16 @@ tbody tr:nth-child(even) {
 
 .nav-link:hover {
   background-color: var(--color-nav-hover);
-  color: var(--color-text);
+  color: var(--color-nav-text-bold);
 }
 
 .nav-link-active {
   background-color: var(--color-nav-active);
-  color: var(--color-text);
+  color: var(--color-nav-text-bold);
 }
 
 .nav-link-active .nav-icon {
-  color: var(--color-accent);
+  color: var(--color-nav-text-bold);
 }
 
 /* ── Nav icon buttons (sync, theme) ─────────────────────────── */
