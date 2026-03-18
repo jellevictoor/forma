@@ -331,10 +331,10 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         ]
 
     async def sport_stats_for_month(self, athlete_id: str, year: int, month: int) -> list[dict]:
-        start = date(year, month, 1)
+        start = date(year, month, 1).isoformat()
         next_month = month + 1 if month < 12 else 1
         next_year = year if month < 12 else year + 1
-        end = date(next_year, next_month, 1)
+        end = date(next_year, next_month, 1).isoformat()
 
         rows = await self._pool.fetch(
             f"""
@@ -350,7 +350,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
                 ) AS avg_pace
             FROM workouts
             WHERE athlete_id = $1
-              AND start_time::date >= $2 AND start_time::date < $3
+              AND start_time >= $2 AND start_time < $3
               AND workout_type IS NOT NULL
             GROUP BY workout_type
             ORDER BY workout_type
@@ -413,12 +413,12 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
                     END
                 ) AS effort
             FROM workouts
-            WHERE athlete_id = $1 AND start_time::date >= $2
+            WHERE athlete_id = $1 AND start_time >= $2
             GROUP BY day
             ORDER BY day
             """,
             athlete_id,
-            since,
+            since.isoformat(),
         )
         return [{"date": str(row["day"]), "effort": row["effort"]} for row in rows]
 
