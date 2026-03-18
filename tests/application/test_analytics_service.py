@@ -1,6 +1,6 @@
 """Tests for AnalyticsService."""
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -236,15 +236,16 @@ async def test_fitness_freshness_returns_list_of_dicts():
 
 
 async def test_fitness_freshness_contains_expected_keys():
+    target_date = (date.today() - timedelta(days=15)).isoformat()
     analytics_repo = make_analytics_repo()
     analytics_repo.daily_effort = AsyncMock(
-        return_value=[{"date": "2026-02-16", "effort": 80.0}]
+        return_value=[{"date": target_date, "effort": 80.0}]
     )
     workout_repo = make_workout_repo()
     service = AnalyticsService(analytics_repo, workout_repo)
 
     result = await service.fitness_freshness_chart_data("athlete1", days=30)
-    day = next(d for d in result if d["date"] == "2026-02-16")
+    day = next(d for d in result if d["date"] == target_date)
 
     assert "fitness" in day
     assert "fatigue" in day
@@ -252,15 +253,16 @@ async def test_fitness_freshness_contains_expected_keys():
 
 
 async def test_fitness_freshness_form_equals_fitness_minus_fatigue():
+    target_date = (date.today() - timedelta(days=15)).isoformat()
     analytics_repo = make_analytics_repo()
     analytics_repo.daily_effort = AsyncMock(
-        return_value=[{"date": "2026-02-16", "effort": 80.0}]
+        return_value=[{"date": target_date, "effort": 80.0}]
     )
     workout_repo = make_workout_repo()
     service = AnalyticsService(analytics_repo, workout_repo)
 
     result = await service.fitness_freshness_chart_data("athlete1", days=30)
-    day = next(d for d in result if d["date"] == "2026-02-16")
+    day = next(d for d in result if d["date"] == target_date)
 
     assert day["form"] == pytest.approx(day["fitness"] - day["fatigue"], abs=0.2)
 
