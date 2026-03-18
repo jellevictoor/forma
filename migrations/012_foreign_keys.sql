@@ -1,4 +1,16 @@
 -- Add foreign key constraints to enforce referential integrity across all tables.
+-- Purge orphaned rows first so the constraints can be applied cleanly.
+
+DELETE FROM recap_cache          WHERE athlete_id NOT IN (SELECT id FROM athletes);
+DELETE FROM insights_cache       WHERE athlete_id NOT IN (SELECT id FROM athletes);
+DELETE FROM plan_cache           WHERE athlete_id NOT IN (SELECT id FROM athletes);
+DELETE FROM execution_sessions   WHERE athlete_id NOT IN (SELECT id FROM athletes);
+DELETE FROM weight_entries       WHERE athlete_id NOT IN (SELECT id FROM athletes);
+DELETE FROM workouts             WHERE athlete_id NOT IN (SELECT id FROM athletes);
+DELETE FROM activity_analysis_cache WHERE workout_id NOT IN (SELECT id FROM workouts);
+DELETE FROM activity_chat           WHERE workout_id NOT IN (SELECT id FROM workouts);
+DELETE FROM activity_streams        WHERE workout_id NOT IN (SELECT id FROM workouts);
+
 
 ALTER TABLE workouts
     ADD CONSTRAINT fk_workouts_athlete
