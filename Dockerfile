@@ -19,7 +19,6 @@ RUN mkdir -p data
 
 # Set environment variables
 ENV PYTHONPATH=/app/src
-ENV DATABASE_PATH=/app/data/forma.db
 
 # Run the web server
 ENTRYPOINT ["uv", "run", "uvicorn", "forma.__main__:app", "--host", "0.0.0.0", "--port", "8080"]
