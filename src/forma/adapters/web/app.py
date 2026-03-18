@@ -116,13 +116,17 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(ClientError)
     async def gemini_client_error_handler(request: Request, exc: ClientError):
-        if exc.status == 429:
+        if exc.code == 429:
             logger.warning("Gemini quota exceeded: %s", exc)
             return JSONResponse(
                 status_code=429,
                 content={"error": "quota_exceeded", "message": "Gemini API quota exceeded. Please try again later."},
             )
-        raise exc
+        logger.error("Gemini client error: %s", exc)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "gemini_error", "message": str(exc.message or exc)},
+        )
 
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

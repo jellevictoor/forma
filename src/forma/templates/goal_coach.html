@@ -454,6 +454,7 @@ async function startCoaching() {
   try {
     const res = await fetch('/profile/goal/coach/start', { method: 'POST' });
     const data = await res.json();
+    if (!res.ok) throw new Error(res.status === 429 ? 'Gemini API quota exceeded — try again later.' : (data.message || 'Request failed'));
 
     document.getElementById('coach-thinking').remove();
     const msgRow = appendMessage('model', data.message);
@@ -466,15 +467,15 @@ async function startCoaching() {
     document.getElementById('chat-input').disabled = false;
     document.getElementById('send-btn').disabled = false;
     document.getElementById('chat-input').focus();
-  } catch {
+  } catch (err) {
     document.getElementById('coach-thinking').querySelector('div').innerHTML =
-      '<p class="text-sm text-muted">Could not connect to coach. Reload to try again.</p>';
+      `<p class="text-sm text-muted">${err.message || 'Could not connect to coach. Reload to try again.'}</p>`;
     document.getElementById('coach-status').innerHTML = `
       <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
       Offline
     `;
   }
-})();
+}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 {% endblock %}
