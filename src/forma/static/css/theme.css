@@ -20,8 +20,8 @@
 
   /* Page & surfaces */
   --color-bg:          #F0E9DA;
-  --color-surface:     #FAFAF6;
-  --color-surface-alt: #F0E9DA;
+  --color-surface:     #FAF7F0;
+  --color-surface-alt: #EFE8D8;
   --color-edge:        #DDD6C8;
 
   /* Text */
@@ -221,6 +221,8 @@ tbody tr:nth-child(even) {
 .nav-link-active {
   background-color: var(--color-nav-active);
   color: var(--color-nav-text-bold);
+  border-left: 3px solid #DE6845;
+  padding-left: calc(0.75rem - 3px);
 }
 
 .nav-link-active .nav-icon {
