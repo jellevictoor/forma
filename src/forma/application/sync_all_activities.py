@@ -1,9 +1,12 @@
 """Full Strava sync use case — paginates all activity history with cursor support."""
 
+import logging
 from datetime import datetime
+
 
 from forma.ports.strava import StravaClient
 from forma.ports.workout_repository import WorkoutRepository
+logger = logging.getLogger(__name__)
 
 STRAVA_PAGE_SIZE = 200
 
@@ -13,15 +16,21 @@ class FullStravaSync:
 
     Uses a cursor (latest stored activity start_time) so re-runs only
     fetch new activities. Pass full=True to ignore the cursor and
-    re-fetch from the beginning.
+    re-fetch from the beginning. Pass force_update=True to overwrite
+    already-stored activities with fresh data from Strava.
     """
 
     def __init__(self, strava_client: StravaClient, workout_repo: WorkoutRepository) -> None:
         self._strava = strava_client
         self._workouts = workout_repo
 
-    async def execute(self, athlete_id: str, full: bool = False) -> int:
-        after = None if full else await self._latest_stored_start_time(athlete_id)
+    async def execute(
+        self, athlete_id: str, full: bool = False, force_update: bool = False
+    ) -> int:
+        mode = "force-full" if force_update else ("full" if full else "incremental")
+        logger.info("starting %s sync for athlete %s", mode, athlete_id)
+
+        after = None if full or force_update else await self._latest_stored_start_time(athlete_id)
         synced = 0
         page = 1
 
@@ -32,12 +41,14 @@ class FullStravaSync:
             if not activities:
                 break
 
+            logger.debug("page %d: got %d activities", page, len(activities))
             for activity in activities:
-                count = await self._sync_activity(activity, athlete_id)
+                count = await self._sync_activity(activity, athlete_id, force_update)
                 synced += count
 
             page += 1
 
+        logger.info("sync complete: %d activities saved", synced)
         return synced
 
     async def _latest_stored_start_time(self, athlete_id: str) -> datetime | None:
@@ -46,12 +57,28 @@ class FullStravaSync:
             return None
         return recent[0].start_time
 
-    async def _sync_activity(self, activity: dict, athlete_id: str) -> int:
+    async def _sync_activity(
+        self, activity: dict, athlete_id: str, force_update: bool = False
+    ) -> int:
         existing = await self._workouts.get_workout_by_strava_id(activity["id"])
-        if existing:
+
+        if existing and not force_update:
+            logger.debug("skipping existing activity %s (%s)", activity["id"], activity.get("name", ""))
             return 0
 
         full_activity = await self._strava.get_activity(activity["id"])
         workout = self._strava.activity_to_workout(full_activity, athlete_id)
+
+        if existing:
+            workout = workout.model_copy(update={
+                "id": existing.id,
+                "perceived_effort": existing.perceived_effort,
+                "mood": existing.mood,
+                "sleep_quality": existing.sleep_quality,
+            })
+            logger.debug("updated activity %s (%s)", activity["id"], workout.name)
+        else:
+            logger.debug("saved new activity %s (%s)", activity["id"], workout.name)
+
         await self._workouts.save_workout(workout)
         return 1

@@ -1,13 +1,16 @@
 """Training insights service — analyses private workout notes with Gemini."""
 
 import json
+import logging
 from dataclasses import dataclass
 
 from google import genai
 
+
 from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
+logger = logging.getLogger(__name__)
 
 INSIGHT_MODEL = "models/gemini-2.5-flash"
 
@@ -40,8 +43,10 @@ class TrainingInsightsService:
         return await self._cache.get(athlete_id, year)
 
     async def generate_and_cache(self, athlete_id: str, year: int) -> CachedInsights:
+        logger.info("generating training insights for athlete %s year %d", athlete_id, year)
         insights = await self._generate(athlete_id, year)
         await self._cache.save(athlete_id, year, insights)
+        logger.info("insights saved (%d notes analysed)", insights.note_count)
         return await self._cache.get(athlete_id, year)
 
     async def _generate(self, athlete_id: str, year: int) -> TrainingInsights:
@@ -49,6 +54,7 @@ class TrainingInsightsService:
         all_recent = await self._workouts.get_recent(athlete_id, count=50)
 
         if not noted_workouts:
+            logger.info("no workout notes found for athlete %s year %d", athlete_id, year)
             return TrainingInsights(
                 summary="No private notes found for this year.",
                 patterns=[],
@@ -57,6 +63,7 @@ class TrainingInsightsService:
                 note_count=0,
             )
 
+        logger.info("calling Gemini for insights (%d noted workouts)", len(noted_workouts))
         prompt = self._build_prompt(noted_workouts, all_recent)
         response = self._client.models.generate_content(model=INSIGHT_MODEL, contents=prompt)
         return self._parse_response(response.text, len(noted_workouts))

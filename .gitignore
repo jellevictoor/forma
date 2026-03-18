@@ -14,3 +14,4 @@ wheels/
 .idea
 .env
 *.db
+.playwright-mcp

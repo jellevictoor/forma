@@ -1,9 +1,11 @@
 """Weekly training recap — AI summary of the past 7 days."""
 
 import json
+import logging
 from datetime import date, datetime, timedelta, timezone
 
 from google import genai
+
 
 from forma.application.analytics_service import compute_fitness_freshness
 from forma.ports.recap_cache_repository import (
@@ -13,6 +15,7 @@ from forma.ports.recap_cache_repository import (
 )
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
+logger = logging.getLogger(__name__)
 
 RECAP_MODEL = "models/gemini-2.5-flash"
 
@@ -38,6 +41,7 @@ class WeeklyRecapService:
 
     async def generate_and_cache(self, athlete_id: str) -> CachedRecap:
         """Call the LLM, persist the result, and return a CachedRecap."""
+        logger.info("generating weekly recap for athlete %s", athlete_id)
         recap = await self._generate(athlete_id)
         recent = await self._workouts.get_recent(athlete_id, count=1)
         latest_activity_at = recent[0].start_time if recent else None
@@ -60,6 +64,7 @@ class WeeklyRecapService:
         this_week = [w for w in recent if w.start_time.date() >= week_start]
 
         if not this_week:
+            logger.info("no workouts this week for athlete %s, skipping LLM call", athlete_id)
             return WeeklyRecap(
                 summary="No workouts recorded this week.",
                 highlight="",
@@ -70,6 +75,7 @@ class WeeklyRecapService:
         prev_week = [w for w in recent if prev_week_start <= w.start_time.date() < week_start]
         current_ff = await self._current_fitness_freshness(athlete_id)
 
+        logger.info("calling Gemini for weekly recap (%d workouts this week)", len(this_week))
         prompt = self._build_prompt(this_week, prev_week, current_ff)
         return self._call_gemini(prompt)
 

@@ -1,9 +1,11 @@
 """Activity analysis service — AI-powered per-workout analysis using Gemini."""
 
 import json
+import logging
 from datetime import date, datetime, timedelta, timezone
 
 from google import genai
+
 
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.domain.workout import Workout
@@ -16,6 +18,7 @@ from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.chat_repository import ChatMessage, ChatRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
+logger = logging.getLogger(__name__)
 
 ANALYSIS_MODEL = "models/gemini-2.5-flash"
 
@@ -49,6 +52,7 @@ class ActivityAnalysisService:
         if workout is None:
             raise ValueError(f"Workout {workout_id} not found")
 
+        logger.info("generating analysis for workout %s (%s)", workout_id, workout.name)
         athlete = await self._athletes.get_default()
         recent_similar = await self._recent_similar_workouts(athlete_id, workout)
         ff = await self._fitness_freshness_at(athlete_id, workout.start_time.date())
@@ -57,6 +61,7 @@ class ActivityAnalysisService:
         analysis = self._call_gemini(prompt)
 
         await self._cache.save(workout_id, analysis)
+        logger.info("analysis saved for workout %s", workout_id)
         return CachedActivityAnalysis(
             workout_id=workout_id,
             analysis=analysis,
@@ -192,6 +197,7 @@ Keep the tone direct, coaching, and grounded in the data. Respond with only the 
         if workout is None:
             raise ValueError(f"Workout {workout_id} not found")
 
+        logger.info("chat message for workout %s (history len=%d)", workout_id, len(await self._chat.list_messages(workout_id)))
         athlete = await self._athletes.get_default()
         history = await self._chat.list_messages(workout_id)
         context = self._build_chat_context(workout, athlete)
@@ -252,6 +258,7 @@ Answer their questions about this workout: how it went, what it means for their 
                 takeaway=data.get("takeaway", ""),
             )
         except json.JSONDecodeError:
+            logger.warning("failed to parse Gemini JSON response, using raw text as fallback")
             return ActivityAnalysis(
                 performance_assessment=text,
                 training_load_context="",
