@@ -59,18 +59,26 @@ async def migrate(sqlite_path: str, database_url: str) -> None:
             print(f"  skip  {table} (empty)")
             continue
 
-        columns = rows[0].keys()
+        # Skip TIMESTAMP audit columns (no DEFAULT needed; skip avoids type coercion)
+        # activity_chat.created_at is TEXT NOT NULL — keep it but coerce NULLs
+        timestamp_audit_cols = {"created_at", "updated_at"} if table != "activity_chat" else set()
+        columns = [c for c in rows[0].keys() if c not in timestamp_audit_cols]
         placeholders = ", ".join(f"${i+1}" for i in range(len(columns)))
         col_list = ", ".join(columns)
 
-        # Build conflict clause per table
-        conflict = _conflict_clause(table, list(columns))
+        conflict = _conflict_clause(table, columns)
+        query = f"INSERT INTO {table} ({col_list}) VALUES ({placeholders}) {conflict}"
 
-        query = (
-            f"INSERT INTO {table} ({col_list}) VALUES ({placeholders}) {conflict}"
-        )
-
-        values = [tuple(row[c] for c in columns) for row in rows]
+        bool_cols = {c for c in columns if c == "is_default"}
+        null_text_fallback = {"created_at": "1970-01-01T00:00:00+00:00"}
+        values = [
+            tuple(
+                bool(row[c]) if c in bool_cols
+                else (null_text_fallback[c] if row[c] is None and c in null_text_fallback else row[c])
+                for c in columns
+            )
+            for row in rows
+        ]
         await pg.executemany(query, values)
         print(f"  copied {len(values):>5} rows → {table}")
 
