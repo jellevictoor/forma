@@ -108,31 +108,13 @@
   </div>
   {% endif %}
 
-  {% if workout.max_heartrate %}
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Max heart rate</p>
-    <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.max_heartrate) }}</p>
-    {% if _mhr %}
-    <p class="text-xs text-muted mt-1">{{ ((workout.max_heartrate / _mhr * 100) | int) }}% of max</p>
-    {% else %}
-    <p class="text-xs text-muted mt-1">bpm</p>
-    {% endif %}
-  </div>
-  {% endif %}
-
   {% if workout.elevation_gain_meters %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Elevation gain</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Elevation</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.elevation_gain_meters) }}</p>
-    <p class="text-xs text-muted mt-1">m</p>
+    <p class="text-xs text-muted mt-1">m gain</p>
   </div>
   {% endif %}
-  <!-- Calories card — populated async -->
-  <div id="cal-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Calories</p>
-    <p class="text-3xl font-bold text-primary" id="cal-value"></p>
-    <p class="text-xs text-muted mt-1" id="cal-note"></p>
-  </div>
 </div>
 
 <!-- Plan linkage card — populated by JS if workout date matches a planned day -->
@@ -380,9 +362,7 @@ async function sendChatMessage(event, workoutId) {
   input.focus();
 }
 
-{% if workout.workout_type.value == 'run' %}
-// ── Route map + charts ─────────────────────────────────────
-// Max HR: athlete-set → age formula (220 - age) → 185 default
+// ── Shared HR setup (all workout types) ────────────────────────────────────
 {% if athlete and athlete.max_heartrate %}
 const MAX_HR = {{ athlete.max_heartrate }};
 const MAX_HR_IS_ESTIMATED = false;
@@ -394,25 +374,20 @@ const MAX_HR = 185;
 const MAX_HR_IS_ESTIMATED = true;
 {% endif %}
 
-// VT1: talk-test calibrated Zone 2 ceiling (athlete-set)
 const VT1_BPM = {{ athlete.aerobic_threshold_bpm if athlete and athlete.aerobic_threshold_bpm else 'null' }};
 
-// Compute HR zones from physiological anchors when available,
-// otherwise fall back to standard % of max HR system.
 function _computeZones(maxHr, vt1) {
   if (vt1 && maxHr && vt1 < maxHr) {
-    // VT1-anchored: physiologically calibrated from talk test
-    const z2Floor = Math.round(vt1 - 15);  // ~15 bpm window below VT1 for Z2
+    const z2Floor = Math.round(vt1 - 15);
     const above   = maxHr - vt1;
     return [
-      { name:'Z1', label:'Recovery',  lo:0,                              hi:z2Floor,                         color:'#60A5FA' },
-      { name:'Z2', label:'Endurance', lo:z2Floor,                        hi:vt1,                             color:'#34D399' },
-      { name:'Z3', label:'Aerobic',   lo:vt1,                            hi:Math.round(vt1 + above * 0.48),  color:'#FBBF24' },
-      { name:'Z4', label:'Threshold', lo:Math.round(vt1 + above * 0.48), hi:Math.round(vt1 + above * 0.82),  color:'#F97316' },
-      { name:'Z5', label:'VO\u2082max', lo:Math.round(vt1 + above * 0.82), hi:maxHr,                         color:'#EF4444' },
+      { name:'Z1', label:'Recovery',    lo:0,                               hi:z2Floor,                         color:'#60A5FA' },
+      { name:'Z2', label:'Endurance',   lo:z2Floor,                         hi:vt1,                             color:'#34D399' },
+      { name:'Z3', label:'Aerobic',     lo:vt1,                             hi:Math.round(vt1 + above * 0.48),  color:'#FBBF24' },
+      { name:'Z4', label:'Threshold',   lo:Math.round(vt1 + above * 0.48),  hi:Math.round(vt1 + above * 0.82),  color:'#F97316' },
+      { name:'Z5', label:'VO\u2082max', lo:Math.round(vt1 + above * 0.82),  hi:maxHr,                           color:'#EF4444' },
     ];
   }
-  // Fallback: standard 5-zone % of max HR (Garmin/Polar system)
   return [
     { name:'Z1', label:'Recovery',    lo:Math.round(maxHr*0.50), hi:Math.round(maxHr*0.60), color:'#60A5FA' },
     { name:'Z2', label:'Endurance',   lo:Math.round(maxHr*0.60), hi:Math.round(maxHr*0.70), color:'#34D399' },
@@ -425,6 +400,13 @@ function _computeZones(maxHr, vt1) {
 const HR_ZONES = _computeZones(MAX_HR, VT1_BPM);
 const ZONE_CALIBRATED = !!(VT1_BPM && VT1_BPM < MAX_HR);
 
+function _hrZoneFor(hr) {
+  return HR_ZONES.find(z => hr >= z.lo && hr < z.hi) || HR_ZONES[HR_ZONES.length - 1];
+}
+function _hrZoneColor(hr) {
+  for (const z of HR_ZONES) { if (hr >= z.lo && hr < z.hi) return z.color; }
+  return HR_ZONES[HR_ZONES.length - 1].color;
+}
 function _buildZoneLegend(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -438,6 +420,114 @@ function _buildZoneLegend(containerId) {
   ).join('');
 }
 
+function _sessionLoadLabel(score) {
+  if (score < 20) return { text: 'Light recovery', color: '#60A5FA' };
+  if (score < 40) return { text: 'Easy aerobic', color: '#34D399' };
+  if (score < 60) return { text: 'Moderate', color: '#FBBF24' };
+  if (score < 80) return { text: 'Hard', color: '#F97316' };
+  return { text: 'Very hard', color: '#EF4444' };
+}
+
+function _effortDescription(avgHr, maxHr) {
+  const avgZ   = _hrZoneFor(avgHr);
+  const maxZ   = maxHr ? _hrZoneFor(maxHr) : null;
+  const avgIdx = HR_ZONES.indexOf(avgZ);
+  const maxIdx = maxZ ? HR_ZONES.indexOf(maxZ) : avgIdx;
+  const spread = maxIdx - avgIdx;
+  if (avgIdx <= 1 && maxIdx <= 2) return 'Light aerobic conditioning';
+  if (avgIdx <= 1 && spread >= 2) return 'Aerobic base with anaerobic spikes — typical for strength circuits';
+  if (avgIdx === 2 && spread <= 1) return 'Solid aerobic session';
+  if (avgIdx === 2 && spread >= 2) return 'Aerobic session with threshold bursts — monitor recovery';
+  if (avgIdx >= 3) return 'High-intensity session — allow 48 h before next hard effort';
+  return 'Moderate effort';
+}
+
+function _drawHrZoneGauge(avgHr, maxHr, durationMin) {
+  const gauge = document.getElementById('hr-zone-gauge');
+  if (!gauge) return;
+  const lo = Math.round(MAX_HR * 0.45);
+  const totalRange = MAX_HR - lo;
+  const avgZone = _hrZoneFor(avgHr);
+  const bandHtml = HR_ZONES.map(z => {
+    const w = Math.max(0, Math.min(z.hi, MAX_HR) - Math.max(z.lo, lo)) / totalRange * 100;
+    return `<div style="width:${w.toFixed(1)}%;background:${z.color};height:100%;opacity:0.4;border-radius:2px"></div>`;
+  }).join('');
+  const avgPct = Math.max(0, Math.min(100, ((avgHr - lo) / totalRange) * 100));
+  const maxPct = maxHr ? Math.max(0, Math.min(100, ((maxHr - lo) / totalRange) * 100)) : null;
+  const load = durationMin > 0
+    ? Math.min(100, Math.round((durationMin / 60) * (avgHr / MAX_HR) * 100))
+    : null;
+  const loadLabel = load !== null ? _sessionLoadLabel(load) : null;
+  const effort = _effortDescription(avgHr, maxHr || avgHr);
+  gauge.innerHTML = `
+    <div class="relative mb-5">
+      <div class="flex gap-0.5 h-4 rounded-full overflow-hidden">${bandHtml}</div>
+      <div class="absolute top-0 h-4 w-0.5 -ml-px bg-white opacity-90 rounded-full"
+           style="left:${avgPct.toFixed(1)}%" title="${Math.round(avgHr)} bpm avg"></div>
+      ${maxPct !== null ? `<div class="absolute top-0 h-4 w-0.5 -ml-px rounded-full opacity-60"
+           style="left:${maxPct.toFixed(1)}%;background:${_hrZoneFor(maxHr).color}"
+           title="${Math.round(maxHr)} bpm max"></div>` : ''}
+    </div>
+    <div class="flex items-end justify-between mb-4">
+      <div>
+        <p class="text-3xl font-bold text-primary tabular-nums leading-none">${Math.round(avgHr)}<span class="text-base font-normal text-muted ml-1">bpm</span></p>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold" style="background:${avgZone.color}20;color:${avgZone.color}">${avgZone.name} · ${avgZone.label}</span>
+          <span class="text-xs text-muted">${Math.round(avgHr / MAX_HR * 100)}% max HR</span>
+        </div>
+      </div>
+      ${maxHr ? `<div class="text-right">
+        <p class="text-xl font-semibold text-primary tabular-nums leading-none">${Math.round(maxHr)}<span class="text-sm font-normal text-muted ml-1">bpm max</span></p>
+        <p class="text-xs text-muted mt-1">${Math.round(maxHr / MAX_HR * 100)}% max HR</p>
+      </div>` : ''}
+    </div>
+    <div class="flex items-center justify-between pt-3 border-t border-edge">
+      <p class="text-xs text-muted leading-relaxed">${effort}</p>
+      ${loadLabel ? `<span class="ml-4 shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style="background:${loadLabel.color}15;color:${loadLabel.color};border:1px solid ${loadLabel.color}30">Load ${load} · ${loadLabel.text}</span>` : ''}
+    </div>`;
+}
+
+function _drawZoneDistribution(hrs, times) {
+  const dist = document.getElementById('hr-zone-distribution');
+  if (!dist) return;
+  const zoneSecs = HR_ZONES.map(() => 0);
+  for (let i = 0; i < hrs.length - 1; i++) {
+    const dt = times[i + 1] - times[i];
+    const zi = HR_ZONES.findIndex(z => hrs[i] >= z.lo && hrs[i] < z.hi);
+    if (zi >= 0) zoneSecs[zi] += dt;
+  }
+  const totalSecs = zoneSecs.reduce((a, b) => a + b, 0);
+  if (totalSecs === 0) return;
+  const fmt = s => s >= 60 ? `${Math.floor(s/60)}m${s%60>0?String(s%60).padStart(2,'0')+'s':''}` : `${s}s`;
+  const aerobicSecs = zoneSecs[0] + zoneSecs[1];
+  const aerobicPct  = Math.round(aerobicSecs / totalSecs * 100);
+  const barSegs = HR_ZONES.map((z, i) => {
+    const w = (zoneSecs[i] / totalSecs * 100).toFixed(1);
+    return parseFloat(w) > 0 ? `<div style="width:${w}%;background:${z.color};height:100%"></div>` : '';
+  }).join('');
+  const pills = HR_ZONES.map((z, i) => {
+    if (zoneSecs[i] < 10) return '';
+    return `<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                  style="background:${z.color}15;color:${z.color};border:1px solid ${z.color}30">
+              <span class="font-semibold">${z.name}</span>
+              <span>${fmt(zoneSecs[i])}</span>
+            </span>`;
+  }).filter(Boolean).join('');
+  const aerobicNote = aerobicPct >= 60
+    ? `<span class="text-mint text-xs">${aerobicPct}% aerobic — good for conditioning</span>`
+    : aerobicPct >= 40
+    ? `<span class="text-amber text-xs">${aerobicPct}% aerobic — high intensity, prioritise recovery</span>`
+    : `<span class="text-coral text-xs">${aerobicPct}% aerobic — very intense session</span>`;
+  dist.innerHTML = `
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Time in zone</p>
+    <div class="flex rounded-full overflow-hidden h-3 mb-4">${barSegs}</div>
+    <div class="flex flex-wrap gap-2 mb-3">${pills}</div>
+    <div class="pt-2 border-t border-edge">${aerobicNote}</div>`;
+  dist.classList.remove('hidden');
+}
+
+{% if workout.workout_type.value == 'run' %}
+// ── Route map + charts ─────────────────────────────────────
 const MAP_LOW  = '#B2F0E4';
 const MAP_MID  = '#2DD4AA';
 const MAP_HIGH = '#0A6A50';
@@ -461,11 +551,7 @@ function _lerp(c1,c2,t) {
 function _heatColor(t) {
   return t<0.5 ? _lerp(MAP_LOW,MAP_MID,t*2) : _lerp(MAP_MID,MAP_HIGH,(t-0.5)*2);
 }
-function _zoneColor(hr) {
-  if (!hr) return '#CBD5E1';
-  for (const z of HR_ZONES) { if (hr >= z.lo && hr < z.hi) return z.color; }
-  return HR_ZONES[HR_ZONES.length - 1].color;
-}
+function _zoneColor(hr) { return hr ? _hrZoneColor(hr) : '#CBD5E1'; }
 function _formatPace(secPerKm) {
   const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
   return `${m}:${String(s).padStart(2,'0')}/km`;
@@ -549,8 +635,9 @@ function _drawCharts(data) {
     pts.push({ t: data.time[i] || i, v, hr, ll: data.latlng[i], idx: i });
   }
 
-  const container = document.getElementById('activity-svg').parentElement;
-  const W  = container.clientWidth - 48; // account for px-6 padding
+  // Use actual rendered SVG width for pixel-accurate coordinate mapping
+  const svgNode = document.getElementById('activity-svg');
+  const W  = Math.round(svgNode.getBoundingClientRect().width) || svgNode.parentElement.clientWidth - 48;
   const mL = 52, mR = hasHr ? 48 : 20, mTop = 12, mBot = 28;
   const paceH = hasHr ? 110 : 180;
   const gap   = hasHr ? 24  : 0;
@@ -667,33 +754,31 @@ function _drawCharts(data) {
         .text(`Z2 ceiling ${VT1_BPM} bpm`);
     }
 
-    // HR line colored per zone using calibrated absolute BPM boundaries
-    for (const z of HR_ZONES) {
-      const zoneLine = d3.line()
-        .x(d => xScale(d.t))
-        .y(d => hrScale(d.hr))
-        .defined(d => d.hr != null && d.hr >= z.lo && d.hr < z.hi)
-        .curve(d3.curveMonotoneX);
-      svg.append('path')
-        .datum(pts)
-        .attr('clip-path', 'url(#hr-clip)')
-        .attr('fill', 'none')
-        .attr('stroke', z.color)
-        .attr('stroke-width', 2.5)
-        .attr('stroke-linecap', 'round')
-        .attr('d', zoneLine);
-    }
-    // fallback: HR below Z1 floor
-    const belowZoneLine = d3.line()
+    // HR fill area + single mint line (matches workout chart style)
+    const hrArea = d3.area()
       .x(d => xScale(d.t))
-      .y(d => hrScale(d.hr))
-      .defined(d => d.hr != null && d.hr < HR_ZONES[0].lo)
-      .curve(d3.curveMonotoneX);
+      .y0(hrY2)
+      .y1(d => hrScale(d.hr))
+      .defined(d => d.hr != null)
+      .curve(d3.curveBasis);
     svg.append('path')
       .datum(pts)
       .attr('clip-path', 'url(#hr-clip)')
-      .attr('fill', 'none').attr('stroke', '#CBD5E1')
-      .attr('stroke-width', 2.5).attr('d', belowZoneLine);
+      .attr('fill', 'var(--color-mint)')
+      .attr('opacity', 0.15)
+      .attr('d', hrArea);
+    const hrLine = d3.line()
+      .x(d => xScale(d.t))
+      .y(d => hrScale(d.hr))
+      .defined(d => d.hr != null)
+      .curve(d3.curveBasis);
+    svg.append('path')
+      .datum(pts)
+      .attr('clip-path', 'url(#hr-clip)')
+      .attr('fill', 'none')
+      .attr('stroke', 'var(--color-mint)')
+      .attr('stroke-width', 1.5)
+      .attr('d', hrLine);
 
     // HR drift annotation — compare first 25% of run to last 25%
     const hrPts = pts.filter(p => p.hr != null);
@@ -780,7 +865,7 @@ function _drawCharts(data) {
 
     overlay.on('mousemove', function(event) {
       const [mx] = d3.pointer(event, this);
-      const t0   = xScale.invert(mx + mL);
+      const t0   = xScale.invert(mx); // mx is already in SVG space (includes mL offset)
       const i    = Math.max(0, Math.min(pts.length-1, bisect(pts, t0)));
       const p    = pts[i];
       vLine.attr('x1',xScale(p.t)).attr('x2',xScale(p.t)).style('display',null);
@@ -838,6 +923,18 @@ async function loadActivityMap(workoutId) {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
       subdomains:'abcd', maxZoom:19,
     }).addTo(_mapInstance);
+    // Warm dark-mode invert: transforms clean light tiles into a dark style
+    // matching the app's earthy palette. Watches theme changes via MutationObserver.
+    const _mapFilterStyle = document.createElement('style');
+    _mapFilterStyle.id = 'map-dark-filter';
+    _mapFilterStyle.textContent = '#run-map .leaflet-tile { filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(88%) saturate(75%) !important; }';
+    const _applyMapTheme = () => {
+      const dark = document.documentElement.classList.contains('dark');
+      if (dark && !document.getElementById('map-dark-filter')) document.head.appendChild(_mapFilterStyle);
+      if (!dark && document.getElementById('map-dark-filter')) _mapFilterStyle.remove();
+    };
+    _applyMapTheme();
+    new MutationObserver(_applyMapTheme).observe(document.documentElement, { attributeFilter: ['class'] });
     _mapInstance.fitBounds(L.latLngBounds(_streamsData.latlng), { padding:[20,20] });
 
     if (_streamsData.has_hr) {
@@ -846,7 +943,7 @@ async function loadActivityMap(workoutId) {
     }
     _drawRoute(_streamsData.latlng, _streamsData.velocity_smooth, false);
 
-    // charts
+    // charts — detailed pace + HR shown here for runs; zone gauge is in hr-chart-card
     document.getElementById('charts-card').classList.remove('hidden');
     _drawCharts(_streamsData);
   } catch (err) {
@@ -866,21 +963,24 @@ async function loadActivityContext(workoutId) {
     if (!res.ok) return;
     const data = await res.json();
 
-    // Calories
-    if (data.calories) {
-      const card  = document.getElementById('cal-card');
-      const val   = document.getElementById('cal-value');
-      const note  = document.getElementById('cal-note');
-      if (card && val && note) {
-        val.textContent  = Math.round(data.calories);
-        note.textContent = data.calories_estimated ? 'kcal (rough estimate)' : 'kcal';
-        card.classList.remove('hidden');
-      }
-    }
+    const calStr = data.calories
+      ? `~${Math.round(data.calories)} kcal${data.calories_estimated ? ' (est.)' : ''}`
+      : null;
 
     // Cross-session comparison
     const recent = data.recent;
-    if (!recent?.length) return;
+    if (!recent?.length) {
+      // No comparison data — still show calories if available
+      if (calStr) {
+        const card = document.getElementById('comparison-card');
+        const body = document.getElementById('comparison-body');
+        if (card && body) {
+          body.innerHTML = `<p class="text-xs text-muted">${calStr} burned this session</p>`;
+          card.classList.remove('hidden');
+        }
+      }
+      return;
+    }
     const card = document.getElementById('comparison-card');
     const body = document.getElementById('comparison-body');
     if (!card || !body) return;
@@ -935,7 +1035,7 @@ async function loadActivityContext(workoutId) {
       <p class="text-xs text-muted mt-3">Based on last ${recent.length} ${recent.length === 1 ? 'session' : 'sessions'}: ${reversed.map(r => {
         const d = new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         return `${d} ${fmtDur(r.duration_minutes)}${r.avg_hr ? ` · ${r.avg_hr} bpm` : ''}`;
-      }).join(' &nbsp;·&nbsp; ')}</p>`;
+      }).join(' &nbsp;·&nbsp; ')}${calStr ? ` &nbsp;·&nbsp; <span class="text-muted">${calStr}</span>` : ''}</p>`;
     card.classList.remove('hidden');
   } catch { /* silent */ }
 }
@@ -990,162 +1090,19 @@ async function loadPlanCard(workoutDate, workoutType, durationMin) {
   } catch { /* silent */ }
 }
 
-// ── HR chart for non-run workouts ─────────────────────────────────────────────
-{% if workout and workout.workout_type.value != 'run' %}
-{% if athlete and athlete.max_heartrate %}
-const _MAX_HR = {{ athlete.max_heartrate }};
-{% elif athlete and athlete.age %}
-const _MAX_HR = {{ 220 - athlete.age }};
-{% else %}
-const _MAX_HR = 185;
-{% endif %}
-
-const _HR_ZONES = [
-  { name:'Z1', label:'Recovery',    lo:Math.round(_MAX_HR*0.50), hi:Math.round(_MAX_HR*0.60), color:'#60A5FA' },
-  { name:'Z2', label:'Endurance',   lo:Math.round(_MAX_HR*0.60), hi:Math.round(_MAX_HR*0.70), color:'#34D399' },
-  { name:'Z3', label:'Aerobic',     lo:Math.round(_MAX_HR*0.70), hi:Math.round(_MAX_HR*0.80), color:'#FBBF24' },
-  { name:'Z4', label:'Threshold',   lo:Math.round(_MAX_HR*0.80), hi:Math.round(_MAX_HR*0.90), color:'#F97316' },
-  { name:'Z5', label:'VO\u2082max', lo:Math.round(_MAX_HR*0.90), hi:_MAX_HR,                  color:'#EF4444' },
-];
-function _hrZoneColor(hr) {
-  for (const z of _HR_ZONES) { if (hr >= z.lo && hr < z.hi) return z.color; }
-  return _HR_ZONES[_HR_ZONES.length - 1].color;
-}
-function _hrZoneFor(hr) {
-  return _HR_ZONES.find(z => hr >= z.lo && hr < z.hi) || _HR_ZONES[_HR_ZONES.length - 1];
-}
-
-function _sessionLoadLabel(score) {
-  if (score < 20) return { text: 'Light recovery', color: '#60A5FA' };
-  if (score < 40) return { text: 'Easy aerobic', color: '#34D399' };
-  if (score < 60) return { text: 'Moderate', color: '#FBBF24' };
-  if (score < 80) return { text: 'Hard', color: '#F97316' };
-  return { text: 'Very hard', color: '#EF4444' };
-}
-
-function _effortDescription(avgHr, maxHr) {
-  const avgZ = _hrZoneFor(avgHr);
-  const maxZ = maxHr ? _hrZoneFor(maxHr) : null;
-  const avgIdx = _HR_ZONES.indexOf(avgZ);
-  const maxIdx = maxZ ? _HR_ZONES.indexOf(maxZ) : avgIdx;
-  const spread = maxIdx - avgIdx;
-
-  if (avgIdx <= 1 && maxIdx <= 2) return 'Light aerobic conditioning';
-  if (avgIdx <= 1 && spread >= 2) return 'Aerobic base with anaerobic spikes — typical for strength circuits';
-  if (avgIdx === 2 && spread <= 1) return 'Solid aerobic session';
-  if (avgIdx === 2 && spread >= 2) return 'Aerobic session with threshold bursts — monitor recovery';
-  if (avgIdx >= 3) return 'High-intensity session — allow 48 h before next hard effort';
-  return 'Moderate effort';
-}
-
-function _drawHrZoneGauge(avgHr, maxHr, durationMin) {
-  const gauge = document.getElementById('hr-zone-gauge');
-  if (!gauge) return;
-
-  const lo = Math.round(_MAX_HR * 0.45);
-  const totalRange = _MAX_HR - lo;
-  const avgZone = _hrZoneFor(avgHr);
-
-  const bandHtml = _HR_ZONES.map(z => {
-    const w = Math.max(0, Math.min(z.hi, _MAX_HR) - Math.max(z.lo, lo)) / totalRange * 100;
-    return `<div style="width:${w.toFixed(1)}%;background:${z.color};height:100%;opacity:0.4;border-radius:2px"></div>`;
-  }).join('');
-
-  const avgPct = Math.max(0, Math.min(100, ((avgHr - lo) / totalRange) * 100));
-  const maxPct = maxHr ? Math.max(0, Math.min(100, ((maxHr - lo) / totalRange) * 100)) : null;
-
-  const load = durationMin > 0
-    ? Math.min(100, Math.round((durationMin / 60) * (avgHr / _MAX_HR) * 100))
-    : null;
-  const loadLabel = load !== null ? _sessionLoadLabel(load) : null;
-  const effort = _effortDescription(avgHr, maxHr || avgHr);
-
-  gauge.innerHTML = `
-    <!-- Zone bar -->
-    <div class="relative mb-5">
-      <div class="flex gap-0.5 h-4 rounded-full overflow-hidden">${bandHtml}</div>
-      <div class="absolute top-0 h-4 w-0.5 -ml-px bg-white opacity-90 rounded-full"
-           style="left:${avgPct.toFixed(1)}%" title="${Math.round(avgHr)} bpm avg"></div>
-      ${maxPct !== null ? `<div class="absolute top-0 h-4 w-0.5 -ml-px rounded-full opacity-60"
-           style="left:${maxPct.toFixed(1)}%;background:${_hrZoneFor(maxHr).color}"
-           title="${Math.round(maxHr)} bpm max"></div>` : ''}
-    </div>
-    <!-- HR numbers -->
-    <div class="flex items-end justify-between mb-4">
-      <div>
-        <p class="text-3xl font-bold text-primary tabular-nums leading-none">${Math.round(avgHr)}<span class="text-base font-normal text-muted ml-1">bpm</span></p>
-        <div class="flex items-center gap-2 mt-1.5">
-          <span class="px-2 py-0.5 rounded-full text-xs font-semibold" style="background:${avgZone.color}20;color:${avgZone.color}">${avgZone.name} · ${avgZone.label}</span>
-          <span class="text-xs text-muted">${Math.round(avgHr / _MAX_HR * 100)}% max HR</span>
-        </div>
-      </div>
-      ${maxHr ? `<div class="text-right">
-        <p class="text-xl font-semibold text-primary tabular-nums leading-none">${Math.round(maxHr)}<span class="text-sm font-normal text-muted ml-1">bpm max</span></p>
-        <p class="text-xs text-muted mt-1">${Math.round(maxHr / _MAX_HR * 100)}% max HR</p>
-      </div>` : ''}
-    </div>
-    <!-- Context row -->
-    <div class="flex items-center justify-between pt-3 border-t border-edge">
-      <p class="text-xs text-muted leading-relaxed">${effort}</p>
-      ${loadLabel ? `<span class="ml-4 shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style="background:${loadLabel.color}15;color:${loadLabel.color};border:1px solid ${loadLabel.color}30">Load ${load} · ${loadLabel.text}</span>` : ''}
-    </div>`;
-}
-
-function _drawZoneDistribution(hrs, times) {
-  const dist = document.getElementById('hr-zone-distribution');
-  if (!dist) return;
-
-  // Accumulate seconds per zone
-  const zoneSecs = _HR_ZONES.map(() => 0);
-  for (let i = 0; i < hrs.length - 1; i++) {
-    const dt = times[i + 1] - times[i];
-    const zi = _HR_ZONES.findIndex(z => hrs[i] >= z.lo && hrs[i] < z.hi);
-    if (zi >= 0) zoneSecs[zi] += dt;
-  }
-
-  const totalSecs = zoneSecs.reduce((a, b) => a + b, 0);
-  if (totalSecs === 0) return;
-
-  const fmt = s => s >= 60 ? `${Math.floor(s/60)}m${s%60>0?String(s%60).padStart(2,'0')+'s':''}` : `${s}s`;
-  const aerobicSecs = zoneSecs[0] + zoneSecs[1];
-  const aerobicPct  = Math.round(aerobicSecs / totalSecs * 100);
-
-  const barSegs = _HR_ZONES.map((z, i) => {
-    const w = (zoneSecs[i] / totalSecs * 100).toFixed(1);
-    return parseFloat(w) > 0 ? `<div style="width:${w}%;background:${z.color};height:100%"></div>` : '';
-  }).join('');
-
-  const pills = _HR_ZONES.map((z, i) => {
-    if (zoneSecs[i] < 10) return '';
-    return `<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
-                  style="background:${z.color}15;color:${z.color};border:1px solid ${z.color}30">
-              <span class="font-semibold">${z.name}</span>
-              <span>${fmt(zoneSecs[i])}</span>
-            </span>`;
-  }).filter(Boolean).join('');
-
-  const aerobicNote = aerobicPct >= 60
-    ? `<span class="text-mint text-xs">${aerobicPct}% aerobic — good for strength conditioning</span>`
-    : aerobicPct >= 40
-    ? `<span class="text-amber text-xs">${aerobicPct}% aerobic — high intensity, prioritise recovery</span>`
-    : `<span class="text-coral text-xs">${aerobicPct}% aerobic — very intense session</span>`;
-
-  dist.innerHTML = `
-    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Time in zone</p>
-    <div class="flex rounded-full overflow-hidden h-3 mb-4">${barSegs}</div>
-    <div class="flex flex-wrap gap-2 mb-3">${pills}</div>
-    <div class="pt-2 border-t border-edge">${aerobicNote}</div>`;
-  dist.classList.remove('hidden');
-}
-
+// ── HR chart (zone gauge + optional time-series) ──────────────────────────
 async function loadHrChart(workoutId) {
-  // Always render zone gauge from summary HR data
   const avgHr      = {{ workout.average_heartrate | int if workout.average_heartrate else 0 }};
   const maxHr      = {{ workout.max_heartrate | int if workout.max_heartrate else 0 }};
   const durationMin = {{ workout.duration_minutes | int }};
   if (avgHr > 0) _drawHrZoneGauge(avgHr, maxHr || null, durationMin);
 
-  // Try to load time-series from streams
+  {% if workout.workout_type.value == 'run' %}
+  // For runs: zone distribution + drift badge populated by loadActivityMap after streams load
+  return;
+  {% endif %}
+
+  // Non-run: fetch streams for zone distribution + time-series
   try {
     const res = await fetch(`/activities/detail/${workoutId}/streams`);
     if (!res.ok) return;
@@ -1192,7 +1149,7 @@ async function loadHrChart(workoutId) {
     svg.append('defs').append('clipPath').attr('id', clipId)
       .append('rect').attr('x', mL).attr('y', mTop).attr('width', W - mL - mR).attr('height', H - mTop - mBot);
 
-    _HR_ZONES.forEach(z => {
+    HR_ZONES.forEach(z => {
       const y1 = yScale(Math.min(z.hi, maxHr2));
       const y2 = yScale(Math.max(z.lo, minHr2));
       if (y2 > y1) {
@@ -1227,7 +1184,7 @@ async function loadHrChart(workoutId) {
 
     const legendEl = document.getElementById('hr-zone-legend');
     if (legendEl) {
-      const usedZones = _HR_ZONES.filter(z => hr.some(h => h >= z.lo && h < z.hi));
+      const usedZones = HR_ZONES.filter(z => hr.some(h => h >= z.lo && h < z.hi));
       legendEl.innerHTML = usedZones.map(z =>
         `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg" style="background:${z.color}12;border:1px solid ${z.color}30;color:${z.color}">
           <span class="inline-block w-1.5 h-1.5 rounded-full" style="background:${z.color}"></span>
@@ -1241,7 +1198,6 @@ async function loadHrChart(workoutId) {
     console.warn('HR stream error:', err);
   }
 }
-{% endif %}
 
 async function runAnalysis(workoutId) {
   const btn = document.getElementById('analyse-btn');

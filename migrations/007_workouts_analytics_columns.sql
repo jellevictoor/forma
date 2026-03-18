@@ -4,14 +4,14 @@
 
 ALTER TABLE workouts
     ADD COLUMN IF NOT EXISTS distance_meters     DOUBLE PRECISION,
-    ADD COLUMN IF NOT EXISTS duration_seconds    INTEGER,
-    ADD COLUMN IF NOT EXISTS moving_time_seconds INTEGER,
+    ADD COLUMN IF NOT EXISTS duration_seconds    DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS moving_time_seconds DOUBLE PRECISION,
     ADD COLUMN IF NOT EXISTS average_heartrate   DOUBLE PRECISION;
 
 -- Backfill from the existing JSON blob.
 UPDATE workouts SET
     distance_meters     = (data::jsonb->>'distance_meters')::float,
-    duration_seconds    = (data::jsonb->>'duration_seconds')::integer,
+    duration_seconds    = (data::jsonb->>'duration_seconds')::float,
     moving_time_seconds = (data::jsonb->>'moving_time_seconds')::float,
     average_heartrate   = (data::jsonb->>'average_heartrate')::float;
 

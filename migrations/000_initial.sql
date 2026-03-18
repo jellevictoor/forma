@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS workouts (
     start_time TIMESTAMPTZ NOT NULL,
     workout_type TEXT,
     distance_meters     DOUBLE PRECISION,
-    duration_seconds    INTEGER,
-    moving_time_seconds INTEGER,
+    duration_seconds    DOUBLE PRECISION,
+    moving_time_seconds DOUBLE PRECISION,
     average_heartrate   DOUBLE PRECISION,
     data TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
