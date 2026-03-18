@@ -69,13 +69,13 @@ class _SuperadminMiddleware(BaseHTTPMiddleware):
             try:
                 from forma.adapters.postgres_pool import get_pool as _get_pool
                 from forma.adapters.postgres_session_repository import PostgresSessionRepository
-                from forma.adapters.postgres_storage import PostgresStorage
-                from forma.domain.athlete import Role
                 pool = _get_pool()
                 session = await PostgresSessionRepository(pool).get_by_token(token)
                 if session:
-                    athlete = await PostgresStorage(pool).get(session.athlete_id)
-                    if athlete and athlete.role == Role.SUPERADMIN:
+                    row = await pool.fetchrow(
+                        "SELECT role FROM athletes WHERE id = $1", session.athlete_id
+                    )
+                    if row and row["role"] == "superadmin":
                         request.state.is_superadmin = True
             except Exception:  # noqa: BLE001
                 pass

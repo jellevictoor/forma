@@ -22,8 +22,8 @@ templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
 async def _require_admin(athlete_id: str = Depends(get_athlete_id)) -> str:
     pool = get_pool()
-    athlete = await PostgresStorage(pool).get(athlete_id)
-    if not athlete or athlete.role != Role.SUPERADMIN:
+    row = await pool.fetchrow("SELECT role FROM athletes WHERE id = $1", athlete_id)
+    if not row or row["role"] != Role.SUPERADMIN.value:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Admin only")
     return athlete_id
@@ -38,10 +38,15 @@ async def admin_page(
 
     # All users
     athlete_rows = await pool.fetch(
-        "SELECT id, data, created_at FROM athletes ORDER BY created_at ASC"
+        """
+        SELECT id, data, role, is_blocked, ai_enabled, token_limit_30d,
+               strava_athlete_id, strava_access_token, strava_refresh_token,
+               strava_token_expires_at, created_at
+        FROM athletes ORDER BY created_at ASC
+        """
     )
-    from forma.domain.athlete import Athlete
-    athletes = [(Athlete.model_validate_json(r["data"]), r["created_at"]) for r in athlete_rows]
+    from forma.adapters.postgres_storage import _athlete_from_row
+    athletes = [(_athlete_from_row(r), r["created_at"]) for r in athlete_rows]
 
     # Token usage — 30-day totals per athlete
     usage_rows = await pool.fetch(

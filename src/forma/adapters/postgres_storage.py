@@ -1,5 +1,6 @@
 """PostgreSQL storage adapter for athletes, workouts, and weight entries."""
 
+import json
 from datetime import date
 
 from asyncpg import Pool
@@ -10,6 +11,33 @@ from forma.domain.workout import Workout
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.weight_repository import WeightRepository
 from forma.ports.workout_repository import WorkoutRepository
+
+# Fields stored as proper columns — excluded from the JSON profile blob.
+_ATHLETE_COLUMN_FIELDS = frozenset({
+    "role", "is_blocked", "ai_enabled", "token_limit_30d",
+    "strava_athlete_id", "strava_access_token", "strava_refresh_token", "strava_token_expires_at",
+})
+
+_ATHLETE_SELECT = """
+    id, data, role, is_blocked, ai_enabled, token_limit_30d,
+    strava_athlete_id, strava_access_token, strava_refresh_token, strava_token_expires_at
+"""
+
+
+def _athlete_from_row(row) -> Athlete:
+    """Reconstruct an Athlete by merging the profile blob with the column fields."""
+    data = json.loads(row["data"])
+    data.update({
+        "role": row["role"],
+        "is_blocked": row["is_blocked"],
+        "ai_enabled": row["ai_enabled"],
+        "token_limit_30d": row["token_limit_30d"],
+        "strava_athlete_id": row["strava_athlete_id"],
+        "strava_access_token": row["strava_access_token"],
+        "strava_refresh_token": row["strava_refresh_token"],
+        "strava_token_expires_at": row["strava_token_expires_at"],
+    })
+    return Athlete.model_validate(data)
 
 
 class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
@@ -22,23 +50,44 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
 
     async def get(self, athlete_id: str) -> Athlete | None:
         row = await self._pool.fetchrow(
-            "SELECT data FROM athletes WHERE id = $1", athlete_id
+            f"SELECT {_ATHLETE_SELECT} FROM athletes WHERE id = $1", athlete_id
         )
-        if row:
-            return Athlete.model_validate_json(row["data"])
-        return None
+        return _athlete_from_row(row) if row else None
 
     async def save(self, athlete: Athlete) -> None:
+        profile_json = athlete.model_dump_json(exclude=_ATHLETE_COLUMN_FIELDS)
         await self._pool.execute(
             """
-            INSERT INTO athletes (id, data, updated_at)
-            VALUES ($1, $2, CURRENT_TIMESTAMP)
+            INSERT INTO athletes (
+                id, data,
+                role, is_blocked, ai_enabled, token_limit_30d,
+                strava_athlete_id, strava_access_token, strava_refresh_token,
+                strava_token_expires_at,
+                updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
             ON CONFLICT (id) DO UPDATE SET
-                data = EXCLUDED.data,
-                updated_at = CURRENT_TIMESTAMP
+                data                    = EXCLUDED.data,
+                role                    = EXCLUDED.role,
+                is_blocked              = EXCLUDED.is_blocked,
+                ai_enabled              = EXCLUDED.ai_enabled,
+                token_limit_30d         = EXCLUDED.token_limit_30d,
+                strava_athlete_id       = EXCLUDED.strava_athlete_id,
+                strava_access_token     = EXCLUDED.strava_access_token,
+                strava_refresh_token    = EXCLUDED.strava_refresh_token,
+                strava_token_expires_at = EXCLUDED.strava_token_expires_at,
+                updated_at              = CURRENT_TIMESTAMP
             """,
             athlete.id,
-            athlete.model_dump_json(),
+            profile_json,
+            athlete.role.value,
+            athlete.is_blocked,
+            athlete.ai_enabled,
+            athlete.token_limit_30d,
+            athlete.strava_athlete_id,
+            athlete.strava_access_token,
+            athlete.strava_refresh_token,
+            athlete.strava_token_expires_at,
         )
 
     async def delete(self, athlete_id: str) -> None:
@@ -46,12 +95,10 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
 
     async def get_by_strava_id(self, strava_id: int) -> Athlete | None:
         row = await self._pool.fetchrow(
-            "SELECT data FROM athletes WHERE (data::jsonb->>'strava_athlete_id')::bigint = $1",
+            f"SELECT {_ATHLETE_SELECT} FROM athletes WHERE strava_athlete_id = $1",
             strava_id,
         )
-        if row:
-            return Athlete.model_validate_json(row["data"])
-        return None
+        return _athlete_from_row(row) if row else None
 
     # WorkoutRepository
 

@@ -17,15 +17,17 @@ async def check_ai_access(athlete_id: str) -> None:
     """Raise AIQuotaExceeded if the athlete has AI disabled or is over their 30-day token cap."""
     try:
         from forma.adapters.postgres_pool import get_pool
-        from forma.adapters.postgres_storage import PostgresStorage
         pool = get_pool()
-        athlete = await PostgresStorage(pool).get(athlete_id)
-        if athlete is None:
+        row = await pool.fetchrow(
+            "SELECT ai_enabled, token_limit_30d FROM athletes WHERE id = $1",
+            athlete_id,
+        )
+        if row is None:
             return
-        if not athlete.ai_enabled:
+        if not row["ai_enabled"]:
             raise AIQuotaExceeded("AI access disabled for this account")
-        if athlete.token_limit_30d is not None:
-            row = await pool.fetchrow(
+        if row["token_limit_30d"] is not None:
+            usage = await pool.fetchrow(
                 """
                 SELECT COALESCE(SUM(input_tokens + output_tokens), 0) AS total
                 FROM llm_usage
@@ -34,10 +36,10 @@ async def check_ai_access(athlete_id: str) -> None:
                 """,
                 athlete_id,
             )
-            used = int(row["total"])
-            if used >= athlete.token_limit_30d:
+            used = int(usage["total"])
+            if used >= row["token_limit_30d"]:
                 raise AIQuotaExceeded(
-                    f"Token limit reached ({used:,} / {athlete.token_limit_30d:,} tokens in 30 days)"
+                    f"Token limit reached ({used:,} / {row['token_limit_30d']:,} tokens in 30 days)"
                 )
     except AIQuotaExceeded:
         raise
