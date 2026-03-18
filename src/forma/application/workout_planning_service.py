@@ -41,6 +41,10 @@ class WorkoutPlanningService:
         self._client = genai.Client(api_key=gemini_api_key)
         self._cache = plan_cache_repo
 
+    async def get_fitness_state(self, athlete_id: str) -> dict:
+        """Return current CTL/ATL/form for display."""
+        return await self._current_fitness_freshness(athlete_id)
+
     async def get_cached(self, athlete_id: str) -> CachedWeeklyPlan | None:
         """Return cached plan with staleness flag set."""
         cached = await self._cache.get(athlete_id)

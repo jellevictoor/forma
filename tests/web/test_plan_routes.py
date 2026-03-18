@@ -35,10 +35,14 @@ def make_cached_plan() -> CachedWeeklyPlan:
     )
 
 
+_MOCK_FITNESS = {"fitness": 42.0, "fatigue": 38.0, "form": 4.0}
+
+
 def make_mock_planning_service(cached: CachedWeeklyPlan | None = None) -> WorkoutPlanningService:
     service = AsyncMock(spec=WorkoutPlanningService)
     service.get_cached = AsyncMock(return_value=cached)
     service.generate_and_cache = AsyncMock(return_value=make_cached_plan())
+    service.get_fitness_state = AsyncMock(return_value=_MOCK_FITNESS)
     sections = {"warmup": ["5 min jog"], "main": ["3x10 squats"], "cooldown": ["stretch"]}
     service.get_exercises_for_day = AsyncMock(return_value=sections)
     service.refresh_exercises_for_day = AsyncMock(return_value=sections)

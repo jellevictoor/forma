@@ -1,5 +1,6 @@
 """Workout planning routes."""
 
+import asyncio
 from datetime import date
 from typing import Annotated
 
@@ -51,6 +52,7 @@ async def plan_page(
             "workout_types": workout_types,
             "day_names": _DAY_NAMES,
             "day_names_enumerated": list(enumerate(_DAY_NAMES)),
+            "today": date.today(),
         },
     )
 
@@ -82,14 +84,18 @@ async def get_plan(
     planning_service: Annotated[WorkoutPlanningService, Depends(get_workout_planning_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    cached = await planning_service.get_cached(athlete_id)
+    cached, fitness = await asyncio.gather(
+        planning_service.get_cached(athlete_id),
+        planning_service.get_fitness_state(athlete_id),
+    )
     if not cached:
-        return JSONResponse({"cached": False})
+        return JSONResponse({"cached": False, "fitness": fitness})
     return JSONResponse({
         "cached": True,
         "stale": cached.is_stale,
         "rationale": cached.rationale,
         "days": [_day_dict(d) for d in cached.days],
+        "fitness": fitness,
     })
 
 
@@ -99,11 +105,13 @@ async def refresh_plan(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     cached = await planning_service.generate_and_cache(athlete_id)
+    fitness = await planning_service.get_fitness_state(athlete_id)
     return JSONResponse({
         "cached": True,
         "stale": False,
         "rationale": cached.rationale,
         "days": [_day_dict(d) for d in cached.days],
+        "fitness": fitness,
     })
 
 
