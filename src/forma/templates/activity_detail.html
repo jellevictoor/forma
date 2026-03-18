@@ -509,8 +509,8 @@ function _drawCharts(data) {
   const paces  = pts.filter(d => d.v > 0.3).map(d => 1000/d.v);
   const paceMin = d3.min(paces) * 0.92;
   const paceMax = d3.max(paces) * 1.08;
-  // inverted: lower sec/km = faster = higher on chart
-  const paceScale = d3.scaleLinear().domain([paceMax, paceMin]).range([paceY1, paceY2]);
+  // fast pace (low sec/km) → top of chart; slow (high sec/km) → bottom; bars grow upward
+  const paceScale = d3.scaleLinear().domain([paceMin, paceMax]).range([paceY1, paceY2]);
 
   // clip
   svg.append('defs').append('clipPath').attr('id','pace-clip')

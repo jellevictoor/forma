@@ -59,9 +59,8 @@ class WorkoutAnalyticsRepository(ABC):
         self,
         athlete_id: str,
         distances_meters: list[float],
-        year: int,
     ) -> list[PersonalRecord]:
-        """Return the best (fastest) effort for each distance bucket in the given year."""
+        """Return the best (fastest) effort for each distance bucket, all time."""
 
     @abstractmethod
     async def pace_trend(
@@ -93,9 +92,10 @@ class WorkoutAnalyticsRepository(ABC):
         workout_type: str | None,
         page: int,
         page_size: int,
-        year: int,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> tuple[list, int]:
-        """Return (workouts, total_count) for the given page and year."""
+        """Return (workouts, total_count) for the given page, optionally filtered by date range."""
 
     @abstractmethod
     async def strength_frequency(

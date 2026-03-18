@@ -193,7 +193,7 @@ async def test_personal_records_for_run_finds_best_effort(storage, analytics):
         )
     )
 
-    result = await analytics.personal_records_for_run(athlete_id, [10000.0], 2026)
+    result = await analytics.personal_records_for_run(athlete_id, [10000.0])
 
     assert result[0].workout_id == "w2"
     assert result[0].duration_seconds == 3000
@@ -211,7 +211,7 @@ async def test_list_workouts_paginated_returns_correct_page(storage, analytics):
             )
         )
 
-    workouts, total = await analytics.list_workouts_paginated(athlete_id, "run", page=1, page_size=3, year=2026)
+    workouts, total = await analytics.list_workouts_paginated(athlete_id, "run", page=1, page_size=3)
 
     assert total == 5
     assert len(workouts) == 3
@@ -229,7 +229,7 @@ async def test_list_workouts_paginated_second_page(storage, analytics):
             )
         )
 
-    workouts, total = await analytics.list_workouts_paginated(athlete_id, "run", page=2, page_size=3, year=2026)
+    workouts, total = await analytics.list_workouts_paginated(athlete_id, "run", page=2, page_size=3)
 
     assert len(workouts) == 2
 

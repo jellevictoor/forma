@@ -118,9 +118,7 @@ class SQLiteAnalyticsRepository(WorkoutAnalyticsRepository):
         self,
         athlete_id: str,
         distances_meters: list[float],
-        year: int,
     ) -> list[PersonalRecord]:
-        year_start, year_end = self._year_range(year)
         records: list[PersonalRecord] = []
 
         with self._connection() as conn:
@@ -129,12 +127,11 @@ class SQLiteAnalyticsRepository(WorkoutAnalyticsRepository):
                 SELECT id, start_time, data
                 FROM workouts
                 WHERE athlete_id = ? AND workout_type = 'run'
-                  AND start_time >= ? AND start_time <= ?
                   AND json_extract(data, '$.distance_meters') IS NOT NULL
                   AND json_extract(data, '$.moving_time_seconds') IS NOT NULL
                 ORDER BY start_time
                 """,
-                (athlete_id, year_start, year_end),
+                (athlete_id,),
             ).fetchall()
 
         workouts = [
@@ -281,14 +278,20 @@ class SQLiteAnalyticsRepository(WorkoutAnalyticsRepository):
         workout_type: str | None,
         page: int,
         page_size: int,
-        year: int,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> tuple[list[Workout], int]:
-        year_start, year_end = self._year_range(year)
         offset = (page - 1) * page_size
 
-        where = "athlete_id = ? AND start_time >= ? AND start_time <= ?"
-        params: list = [athlete_id, year_start, year_end]
+        where = "athlete_id = ?"
+        params: list = [athlete_id]
 
+        if date_from:
+            where += " AND date(start_time) >= ?"
+            params.append(date_from.isoformat())
+        if date_to:
+            where += " AND date(start_time) <= ?"
+            params.append(date_to.isoformat())
         if workout_type and workout_type != "all":
             where += " AND workout_type = ?"
             params.append(workout_type)

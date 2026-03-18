@@ -141,5 +141,45 @@ async def activities_page(
             "total": total,
             "total_pages": total_pages,
             "today": date.today(),
+            "date_from_str": "",
+            "date_to_str": "",
+        },
+    )
+
+
+@router.get("/activities/{sport}/{from_date}/{to_date}/{page}", response_class=HTMLResponse)
+async def activities_page_filtered(
+    request: Request,
+    sport: str,
+    from_date: str,
+    to_date: str,
+    page: int,
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    if sport not in VALID_SPORTS:
+        return RedirectResponse(url="/activities/all/1")
+
+    try:
+        date_from = date.fromisoformat(from_date)
+        date_to = date.fromisoformat(to_date)
+    except ValueError:
+        return RedirectResponse(url=f"/activities/{sport}/1")
+
+    workouts, total = await service.activities_page(athlete_id, sport, page, date_from, date_to)
+    total_pages = max(1, (total + 19) // 20)
+
+    return templates.TemplateResponse(
+        request,
+        "activities.html",
+        {
+            "workouts": workouts,
+            "sport": sport,
+            "page": page,
+            "total": total,
+            "total_pages": total_pages,
+            "today": date.today(),
+            "date_from_str": from_date,
+            "date_to_str": to_date,
         },
     )

@@ -414,7 +414,7 @@ const DISTANCE_LABELS = {
       .attr('width', x.bandwidth())
       .attr('height', d => d.count === 0 ? 2 : y(0) - y(d.count))
       .style('fill', d => d.count === 0 ? 'var(--color-chart-empty-bar)' : 'var(--color-sky)')
-      .attr('rx', 3);
+      .attr('rx', 0);
 
     const fmtWeek = d => { const p = d.split('-'); return d3.timeFormat('%b %-d')(new Date(+p[0], +p[1]-1, +p[2])); };
     const xTicks = strengthData.length > 12 ? strengthData.filter((_, i) => i % 4 === 0) : strengthData;

@@ -127,7 +127,7 @@
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Streak</p>
     <p class="text-4xl font-bold tabular-nums text-primary" id="kpi-streak">—</p>
-    <p class="text-xs text-muted mt-1">consecutive days</p>
+    <p class="text-xs text-muted mt-1">consecutive weeks</p>
     <p class="text-xs mt-1.5 font-medium text-muted" id="kpi-streak-sub"></p>
   </div>
 
@@ -286,7 +286,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="text-sm text-muted py-4">No running records yet this year.</p>
+    <p class="text-sm text-muted py-4">No running records yet.</p>
     {% endif %}
   </div>
 
@@ -541,35 +541,46 @@ function renderSparkline(containerId, values, color) {
   renderSparkline('spark-hours', hVals, 'var(--color-sky)');
 })();
 
-// ── Streak ───────────────────────────────────────────────────────
+// ── Streak (week-based) ───────────────────────────────────────────
 (async function() {
   const workouts = await fetchCached('/api/overview/training-log');
   const el = document.getElementById('kpi-streak');
   const sub = document.getElementById('kpi-streak-sub');
   if (!workouts.length) { el.textContent = '0'; sub.textContent = 'start training!'; return; }
 
-  const dates = new Set(workouts.map(w => w.date));
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const toStr = localDateStr;
-  const yday = new Date(today); yday.setDate(yday.getDate() - 1);
+  // Get Monday of the week containing a given date
+  const weekStart = d => {
+    const dt = new Date(d + 'T00:00:00');
+    const dow = (dt.getDay() + 6) % 7;
+    dt.setDate(dt.getDate() - dow);
+    return localDateStr(dt);
+  };
 
-  if (!dates.has(toStr(today)) && !dates.has(toStr(yday))) {
-    el.textContent = '0'; sub.textContent = 'rest day today'; return;
+  const weekStarts = new Set(workouts.map(w => weekStart(w.date)));
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dow = (today.getDay() + 6) % 7;
+  const thisWeekMon = new Date(today); thisWeekMon.setDate(today.getDate() - dow);
+  const lastWeekMon = new Date(thisWeekMon); lastWeekMon.setDate(thisWeekMon.getDate() - 7);
+
+  const cursor = weekStarts.has(localDateStr(thisWeekMon)) ? new Date(thisWeekMon) : new Date(lastWeekMon);
+  if (!weekStarts.has(localDateStr(cursor))) {
+    el.textContent = '0'; sub.textContent = 'start training!'; return;
   }
 
-  const cursor = dates.has(toStr(today)) ? new Date(today) : new Date(yday);
   let streak = 0;
-  while (dates.has(toStr(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1); }
+  const cur = new Date(cursor);
+  while (weekStarts.has(localDateStr(cur))) { streak++; cur.setDate(cur.getDate() - 7); }
 
   countUp(el, streak);
-  if (streak >= 14) {
+  if (streak >= 12) {
     el.style.color = 'var(--color-mint)'; sub.textContent = 'outstanding consistency!';
-  } else if (streak >= 7) {
+  } else if (streak >= 4) {
     el.style.color = 'var(--color-mint)'; sub.textContent = 'great consistency!';
-  } else if (streak >= 3) {
-    el.style.color = 'var(--color-amber)'; sub.textContent = `${7 - streak} days to a 7-day streak`;
+  } else if (streak >= 2) {
+    el.style.color = 'var(--color-amber)'; sub.textContent = `${4 - streak} week${4 - streak === 1 ? '' : 's'} to a 4-week streak`;
   } else {
-    sub.textContent = `${7 - streak} days to a 7-day streak`;
+    sub.textContent = '3 weeks to a 4-week streak';
   }
 })();
 
@@ -746,7 +757,7 @@ function renderSparkline(containerId, values, color) {
       .attr('y', d => y(d[1]))
       .attr('height', d => Math.max(0, y(d[0]) - y(d[1])))
       .attr('width', x.bandwidth())
-      .attr('rx', si === 0 ? 3 : 0)
+      .attr('rx', 3)
       .style('fill', COLOR[SPORTS[si]])
       .style('pointer-events', 'none');
   });

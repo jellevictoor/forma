@@ -280,7 +280,7 @@ function drawBarChart(containerId, data, yKey, yFormat) {
     .attr('width', x.bandwidth())
     .attr('height', d => d[yKey] === 0 ? 2 : y(0) - y(d[yKey]))
     .style('fill', d => d[yKey] === 0 ? 'var(--color-chart-empty-bar)' : color)
-    .attr('rx', 3);
+    .attr('rx', 0);
 
   const xTicks = data.length > 16 ? data.filter((_, i) => i % 4 === 0) : data;
   svg.append('g')

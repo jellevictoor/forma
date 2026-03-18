@@ -73,7 +73,7 @@ class AnalyticsService:
         sport_summaries = await self._analytics.sport_summaries(athlete_id, year)
         recent_workouts = await self._workouts.get_recent(athlete_id, count=5)
         weekly_volumes = await self._analytics.weekly_volume(athlete_id, None, year)
-        personal_records = await self._analytics.personal_records_for_run(athlete_id, PR_DISTANCES_METERS, year)
+        personal_records = await self._analytics.personal_records_for_run(athlete_id, PR_DISTANCES_METERS)
         return OverviewStats(
             sport_summaries=sport_summaries,
             recent_workouts=recent_workouts,
@@ -188,21 +188,20 @@ class AnalyticsService:
         year = year or current_year()
         return await self._analytics.pace_trend(athlete_id, sport, year)
 
-    async def personal_records(self, athlete_id: str, year: int | None = None) -> list[PersonalRecord]:
-        year = year or current_year()
-        return await self._analytics.personal_records_for_run(athlete_id, PR_DISTANCES_METERS, year)
+    async def personal_records(self, athlete_id: str) -> list[PersonalRecord]:
+        return await self._analytics.personal_records_for_run(athlete_id, PR_DISTANCES_METERS)
 
     async def activities_page(
         self,
         athlete_id: str,
         sport_filter: str | None,
         page: int,
-        year: int | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> tuple[list, int]:
-        year = year or current_year()
         workout_type = None if sport_filter == "all" else sport_filter
         return await self._analytics.list_workouts_paginated(
-            athlete_id, workout_type, page, PAGE_SIZE, year
+            athlete_id, workout_type, page, PAGE_SIZE, date_from, date_to
         )
 
     async def strength_frequency_chart_data(
