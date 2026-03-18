@@ -423,7 +423,7 @@ async function sendMessage(event) {
       body: JSON.stringify({ message, history: _history }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) throw new Error(res.status === 429 ? 'quota' : (data.message || 'Request failed'));
 
     _history.push({ role: 'user', text: message });
     _history.push({ role: 'model', text: data.response });
@@ -435,7 +435,8 @@ async function sendMessage(event) {
     }
   } catch (err) {
     thinkingRow.remove();
-    errorEl.textContent = err.message || 'Something went wrong. Try again.';
+    const isQuota = err.message === 'quota';
+    errorEl.textContent = isQuota ? 'Coach is unavailable — quota reached. Try again in a few minutes.' : (err.message || 'Something went wrong. Try again.');
     errorEl.classList.remove('hidden');
   } finally {
     sendBtn.disabled = false;
@@ -468,11 +469,19 @@ async function startCoaching() {
     document.getElementById('send-btn').disabled = false;
     document.getElementById('chat-input').focus();
   } catch (err) {
-    document.getElementById('coach-thinking').querySelector('div').innerHTML =
-      `<p class="text-sm text-muted">${err.message || 'Could not connect to coach. Reload to try again.'}</p>`;
+    const isQuota = err.message && err.message.toLowerCase().includes('quota');
+    document.getElementById('coach-thinking').remove();
+    const messages = document.getElementById('chat-messages');
+    const banner = document.createElement('div');
+    banner.className = 'px-4 py-3 rounded-xl text-sm flex flex-col gap-2';
+    banner.style.cssText = 'background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);color:var(--color-amber)';
+    banner.innerHTML = isQuota
+      ? `<p class="font-medium">Coach is temporarily unavailable</p><p class="text-xs opacity-80">The AI quota has been reached. Please try again in a few minutes.</p><button onclick="location.reload()" class="self-start text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-opacity hover:opacity-80" style="background:rgba(251,146,60,0.15);color:var(--color-amber)">Retry</button>`
+      : `<p class="font-medium">Could not connect to coach</p><p class="text-xs opacity-80">${err.message || 'An unexpected error occurred.'}</p><button onclick="location.reload()" class="self-start text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-opacity hover:opacity-80" style="background:rgba(251,146,60,0.15);color:var(--color-amber)">Reload</button>`;
+    messages.appendChild(banner);
     document.getElementById('coach-status').innerHTML = `
-      <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-      Offline
+      <span class="w-1.5 h-1.5 rounded-full bg-amber"></span>
+      Unavailable
     `;
   }
 }
