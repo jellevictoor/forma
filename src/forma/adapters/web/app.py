@@ -116,7 +116,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(ClientError)
     async def gemini_client_error_handler(request: Request, exc: ClientError):
-        if exc.status_code == 429:
+        if exc.status == 429:
             logger.warning("Gemini quota exceeded: %s", exc)
             return JSONResponse(
                 status_code=429,
