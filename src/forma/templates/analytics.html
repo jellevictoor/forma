@@ -11,11 +11,7 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Weekly volume</h2>
-    <div class="flex items-center gap-4 text-xs text-muted">
-      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-run"></span>Running</span>
-      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-strength"></span>Strength</span>
-      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full sport-climbing"></span>Climbing</span>
-    </div>
+    <div id="unified-volume-legend" class="flex items-center gap-4 text-xs text-muted"></div>
     <div class="flex gap-1" id="range-toggle">
       <button data-months="3" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-active cursor-pointer">3m</button>
       <button data-months="6" class="px-3 py-2.5 min-w-[44px] rounded-full text-xs font-medium transition-all duration-150 tab-inactive cursor-pointer">6m</button>
@@ -25,16 +21,8 @@
   <div class="chart-container chart-loading" id="unified-volume-chart" style="min-height:220px; position:relative"></div>
 </div>
 
-{# Sport tabs #}
-<div class="flex gap-2 mb-6">
-  {% for s in [('run', 'Running'), ('strength', 'Strength'), ('climbing', 'Climbing')] %}
-  <a href="/analytics/{{ s[0] }}"
-     class="px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer
-            {% if sport == s[0] %}tab-active{% else %}tab-inactive{% endif %}">
-    {{ s[1] }}
-  </a>
-  {% endfor %}
-</div>
+{# Sport tabs — populated by JS after data loads #}
+<div id="sport-tabs" class="flex gap-2 mb-6 flex-wrap"></div>
 
 {# Sport-specific volume chart #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
@@ -55,25 +43,44 @@
 
 <script>
 const SPORT = {{ sport | tojson }};
-const SPORT_COLORS = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
+const SPORT_COLORS = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)'};
 const color = SPORT_COLORS[SPORT] || 'var(--color-surface-alt)';
 const fmtWeek = d => { const p = d.split('-'); return d3.timeFormat('%b %-d')(new Date(+p[0], +p[1]-1, +p[2])); };
 
-/* ── Unified stacked bar chart ──────────────────────────── */
-const STACK_KEYS = ['run_hours', 'strength_hours', 'climbing_hours'];
-const STACK_COLORS = {
-  run_hours: 'var(--color-mint)',
-  strength_hours: 'var(--color-sky)',
-  climbing_hours: 'var(--color-amber)',
+/* ── Sport color + label maps ────────────────────────────── */
+const SPORT_COLOR_MAP = {
+  run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+  yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+  swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+};
+const SPORT_CSS_MAP = {
+  run: 'sport-run', strength: 'sport-strength', climbing: 'sport-climbing',
+  yoga: 'sport-yoga', hike: 'sport-hike', walk: 'sport-walk',
+  swim: 'sport-swim', bike: 'sport-bike', cross_training: 'sport-cross_training',
+};
+const SPORT_LABEL_MAP = {
+  run: 'Running', strength: 'Strength', climbing: 'Climbing',
+  yoga: 'Yoga', hike: 'Hike', walk: 'Walk',
+  swim: 'Swim', bike: 'Bike', cross_training: 'Cross training',
 };
 
+function activeSports(data) {
+  const allKeys = Object.keys(SPORT_COLOR_MAP);
+  return allKeys.filter(s => data.some(d => (d[`${s}_hours`] || 0) > 0));
+}
+
+/* ── Unified stacked bar chart ──────────────────────────── */
 function drawStackedBarChart(containerId, data) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
   container.classList.remove('chart-loading');
 
-  const hasData = data.some(d => d.run_hours + d.strength_hours + d.climbing_hours > 0);
+  const sports = activeSports(data);
+  const STACK_KEYS = sports.map(s => `${s}_hours`);
+  const STACK_COLORS = Object.fromEntries(sports.map(s => [`${s}_hours`, SPORT_COLOR_MAP[s]]));
+
+  const hasData = STACK_KEYS.some(k => data.some(d => (d[k] || 0) > 0));
   if (!hasData) {
     container.innerHTML = '<p class="text-center text-muted py-10 text-sm">No data yet</p>';
     return;
@@ -95,7 +102,7 @@ function drawStackedBarChart(containerId, data) {
     .range([margin.left, width - margin.right])
     .padding(0.25);
 
-  const maxTotal = d3.max(data, d => d.run_hours + d.strength_hours + d.climbing_hours);
+  const maxTotal = d3.max(data, d => STACK_KEYS.reduce((s, k) => s + (d[k] || 0), 0));
   const y = d3.scaleLinear()
     .domain([0, maxTotal]).nice()
     .range([height - margin.bottom, margin.top]);
@@ -117,7 +124,7 @@ function drawStackedBarChart(containerId, data) {
 
   // Empty week stubs
   svg.selectAll(null)
-    .data(data.filter(d => d.run_hours + d.strength_hours + d.climbing_hours === 0))
+    .data(data.filter(d => STACK_KEYS.reduce((s, k) => s + (d[k] || 0), 0) === 0))
     .join('rect')
     .attr('x', d => x(d.week_start))
     .attr('y', y(0) - 2)
@@ -150,12 +157,11 @@ function drawStackedBarChart(containerId, data) {
     .attr('height', height - margin.top - margin.bottom)
     .attr('fill', 'transparent')
     .on('mousemove', function(event, d) {
-      const total = d.run_hours + d.strength_hours + d.climbing_hours;
-      const lines = [
-        d.run_hours > 0 ? `<div><span style="color:var(--color-mint);font-weight:600">Running:</span> <span style="color:var(--color-chart-axis)">${d.run_hours}h</span></div>` : '',
-        d.strength_hours > 0 ? `<div><span style="color:var(--color-sky);font-weight:600">Strength:</span> <span style="color:var(--color-chart-axis)">${d.strength_hours}h</span></div>` : '',
-        d.climbing_hours > 0 ? `<div><span style="color:var(--color-amber);font-weight:600">Climbing:</span> <span style="color:var(--color-chart-axis)">${d.climbing_hours}h</span></div>` : '',
-      ].filter(Boolean).join('');
+      const total = STACK_KEYS.reduce((s, k) => s + (d[k] || 0), 0);
+      const lines = sports
+        .filter(s => (d[`${s}_hours`] || 0) > 0)
+        .map(s => `<div><span style="color:${SPORT_COLOR_MAP[s]};font-weight:600">${SPORT_LABEL_MAP[s] || s}:</span> <span style="color:var(--color-chart-axis)">${d[`${s}_hours`]}h</span></div>`)
+        .join('');
       tooltip
         .style('opacity', 1)
         .style('left', (event.clientX + 12) + 'px')
@@ -180,12 +186,35 @@ function drawStackedBarChart(containerId, data) {
 
 let currentMonths = 3;
 
+function renderSportTabsAndLegend(unifiedData) {
+  const sports = activeSports(unifiedData);
+  const tabsEl = document.getElementById('sport-tabs');
+  const legendEl = document.getElementById('unified-volume-legend');
+  if (tabsEl) {
+    tabsEl.innerHTML = sports.map(s =>
+      `<a href="/analytics/${s}"
+          class="px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer ${s === SPORT ? 'tab-active' : 'tab-inactive'}">
+        ${SPORT_LABEL_MAP[s] || s}
+      </a>`
+    ).join('');
+  }
+  if (legendEl) {
+    legendEl.innerHTML = sports.map(s =>
+      `<span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full ${SPORT_CSS_MAP[s] || 'bg-edge'}"></span>
+        ${SPORT_LABEL_MAP[s] || s}
+      </span>`
+    ).join('');
+  }
+}
+
 async function loadAllCharts(months) {
   const [unifiedData, volumeData] = await Promise.all([
     fetch(`/api/analytics/volume/${months}m`).then(r => r.json()),
     fetch(`/api/analytics/${SPORT}/volume/${months}m`).then(r => r.json()),
   ]);
 
+  renderSportTabsAndLegend(unifiedData);
   document.getElementById('unified-volume-chart').innerHTML = '';
   drawStackedBarChart('unified-volume-chart', unifiedData);
 

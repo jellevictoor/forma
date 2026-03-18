@@ -1,12 +1,18 @@
 /* ── Color tokens ──────────────────────────────────────────── */
 :root {
-  /* Sport colors — identical in both modes */
-  --color-mint:  #599DA4;  /* running */
-  --color-sky:   #60A5FA;  /* strength */
-  --color-amber: #DE6845;  /* climbing / secondary marker */
+  /* Brand palette */
+  --color-accent:    #599DA4;  /* primary   — teal */
+  --color-secondary: #EFB74C;  /* secondary — amber gold */
+  --color-tertiary:  #E46B47;  /* tertiary  — red-orange */
 
-  /* Brand accent */
-  --color-accent: #599DA4;
+  /* Sport colors — identical in both modes */
+  --color-mint:   #599DA4;  /* running */
+  --color-sky:    #60A5FA;  /* strength */
+  --color-amber:  #EFB74C;  /* secondary marker */
+  --color-coral:  #E46B47;  /* climbing */
+  --color-violet: #9B8EC4;  /* yoga */
+  --color-sage:   #7BAF8E;  /* hike / walk */
+  --color-azure:  #4FA8D5;  /* swim / bike */
 
   /* Nav */
   --color-nav:               #599DA4;
@@ -119,9 +125,15 @@ body {
 .dark .hover\:text-gray-800:hover { color: var(--color-text); }
 
 /* ── Sport dot helpers ──────────────────────────────────────── */
-.sport-run      { background-color: var(--color-mint); }
-.sport-strength { background-color: var(--color-sky); }
-.sport-climbing { background-color: var(--color-amber); }
+.sport-run           { background-color: var(--color-mint); }
+.sport-strength      { background-color: var(--color-sky); }
+.sport-climbing      { background-color: var(--color-coral); }
+.sport-yoga          { background-color: var(--color-violet); }
+.sport-hike          { background-color: var(--color-sage); }
+.sport-walk          { background-color: var(--color-sage); }
+.sport-swim          { background-color: var(--color-azure); }
+.sport-bike          { background-color: var(--color-azure); }
+.sport-cross_training{ background-color: var(--color-sky); }
 
 /* ── Active tab ─────────────────────────────────────────────── */
 .tab-active {
@@ -221,7 +233,7 @@ tbody tr:nth-child(even) {
 .nav-link-active {
   background-color: var(--color-nav-active);
   color: var(--color-nav-text-bold);
-  border-left: 3px solid #DE6845;
+  border-left: 3px solid var(--color-tertiary);
   padding-left: calc(0.75rem - 3px);
 }
 

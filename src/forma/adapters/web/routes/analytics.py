@@ -12,7 +12,7 @@ from forma.application.analytics_service import AnalyticsService
 router = APIRouter()
 templates = Jinja2Templates(directory="src/forma/templates")
 
-VALID_SPORTS = {"run", "strength", "climbing"}
+VALID_SPORTS = {"run", "strength", "climbing", "yoga", "hike", "walk", "swim", "bike", "cross_training"}
 
 
 @router.get("/analytics/{sport}", response_class=HTMLResponse)

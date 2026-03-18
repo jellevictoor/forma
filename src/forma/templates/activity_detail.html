@@ -36,12 +36,12 @@
 {% if not workout %}
 <div class="text-center text-muted py-16 text-sm">Activity not found.</div>
 {% else %}
-{% set sport_color =
-  'var(--color-mint)' if workout.workout_type.value == 'run' else
-  'var(--color-sky)' if workout.workout_type.value == 'strength' else
-  'var(--color-amber)' if workout.workout_type.value == 'climbing' else
-  'var(--color-edge)'
-%}
+{% set _sport_colors = {
+  'run': 'var(--color-mint)', 'strength': 'var(--color-sky)', 'climbing': 'var(--color-coral)',
+  'yoga': 'var(--color-violet)', 'hike': 'var(--color-sage)', 'walk': 'var(--color-sage)',
+  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'cross_training': 'var(--color-sky)',
+} %}
+{% set sport_color = _sport_colors.get(workout.workout_type.value, 'var(--color-edge)') %}
 <div class="mb-6">
   <a href="/activities/all/1" class="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5 mb-4">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -64,7 +64,7 @@
 </div>
 
 <!-- Stats grid -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
     <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Duration</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.duration_minutes) }}</p>
@@ -88,8 +88,16 @@
 
   {% if workout.average_heartrate %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Average heart rate</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Avg heart rate</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.average_heartrate) }}</p>
+    <p class="text-xs text-muted mt-1">bpm</p>
+  </div>
+  {% endif %}
+
+  {% if workout.max_heartrate %}
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Max heart rate</p>
+    <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.max_heartrate) }}</p>
     <p class="text-xs text-muted mt-1">bpm</p>
   </div>
   {% endif %}
@@ -148,6 +156,13 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Description</h2>
   <p class="text-secondary text-sm whitespace-pre-wrap">{{ workout.description }}</p>
+</div>
+{% endif %}
+
+{% if workout.private_note %}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Notes &amp; exercises</h2>
+  <p class="text-secondary text-sm whitespace-pre-wrap">{{ workout.private_note }}</p>
 </div>
 {% endif %}
 

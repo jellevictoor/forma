@@ -2,26 +2,23 @@
 {% block title %}forma{% endblock %}
 
 {# ── Macros ─────────────────────────────────────────────────── #}
-{% macro sport_color(t) -%}
-  {%- if t == 'run' %}var(--color-mint)
-  {%- elif t == 'strength' %}var(--color-sky)
-  {%- elif t == 'climbing' %}var(--color-amber)
-  {%- else %}var(--color-edge){% endif -%}
-{%- endmacro %}
+{% set _sport_colors = {
+  'run': 'var(--color-mint)', 'strength': 'var(--color-sky)', 'climbing': 'var(--color-coral)',
+  'yoga': 'var(--color-violet)', 'hike': 'var(--color-sage)', 'walk': 'var(--color-sage)',
+  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'cross_training': 'var(--color-sky)',
+} %}
+{% set _sport_labels = {
+  'run': 'Running', 'strength': 'Strength', 'climbing': 'Climbing',
+  'yoga': 'Yoga', 'hike': 'Hike', 'walk': 'Walk',
+  'swim': 'Swim', 'bike': 'Bike', 'cross_training': 'Cross training',
+} %}
 
-{% macro sport_label(t) -%}
-  {%- if t == 'run' %}Running
-  {%- elif t == 'strength' %}Strength
-  {%- elif t == 'climbing' %}Climbing
-  {%- else %}{{ t | capitalize }}{% endif -%}
-{%- endmacro %}
+{% macro sport_color(t) -%}{{ _sport_colors.get(t, 'var(--color-edge)') }}{%- endmacro %}
+
+{% macro sport_label(t) -%}{{ _sport_labels.get(t, t | capitalize) }}{%- endmacro %}
 
 {% macro sport_dot(t, size='w-2 h-2') -%}
-<span class="{{ size }} rounded-full inline-block shrink-0
-  {%- if t == 'run' %} sport-run
-  {%- elif t == 'strength' %} sport-strength
-  {%- elif t == 'climbing' %} sport-climbing
-  {%- else %} bg-edge{% endif %}"></span>
+<span class="{{ size }} rounded-full inline-block shrink-0 sport-{{ t }}"></span>
 {%- endmacro %}
 
 {% macro fmt_pace(pace) -%}
@@ -140,11 +137,7 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-center justify-between mb-5">
     <h2 class="text-sm font-medium uppercase tracking-widest text-muted">Training log · {{ stats.year }}</h2>
-    <div class="flex gap-4 text-xs text-muted">
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-run"></span>Run</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-strength"></span>Strength</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm sport-climbing"></span>Climbing</span>
-    </div>
+    <div id="training-log-legend" class="flex gap-4 text-xs text-muted"></div>
   </div>
   <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
@@ -229,11 +222,7 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <div class="flex items-center justify-between mb-5">
     <h2 class="text-sm font-medium uppercase tracking-widest text-muted">12-week volume</h2>
-    <div class="flex gap-4 text-xs text-muted">
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full sport-run"></span>Running</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full sport-strength"></span>Strength</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full sport-climbing"></span>Climbing</span>
-    </div>
+    <div id="volume-chart-legend" class="flex gap-4 text-xs text-muted"></div>
   </div>
   <div class="chart-container chart-loading" id="volume-chart" style="min-height:180px"></div>
 </div>
@@ -311,6 +300,11 @@ function fetchCached(url) {
   return _cache[url];
 }
 
+// ── Local date string (avoids UTC-offset day shift from toISOString) ─
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 // ── Count-up animation ───────────────────────────────────────────
 function countUp(el, target, decimals = 0, duration = 700) {
   const start = performance.now();
@@ -344,11 +338,15 @@ function countUp(el, target, decimals = 0, duration = 700) {
 // ── Week strip ───────────────────────────────────────────────────
 (async function() {
   const workouts = await fetchCached('/api/overview/training-log');
-  const COLOR = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
+  const COLOR = {
+    run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+    yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+  };
   const now = new Date();
   const dow = (now.getDay() + 6) % 7;
   const mon = new Date(now); mon.setDate(now.getDate() - dow);
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = localDateStr(now);
 
   const byDate = {};
   for (const w of workouts) {
@@ -360,7 +358,7 @@ function countUp(el, target, decimals = 0, duration = 700) {
   const container = document.getElementById('week-strip');
   container.innerHTML = DAY_LABELS.map((lbl, i) => {
     const d = new Date(mon); d.setDate(mon.getDate() + i);
-    const ds = d.toISOString().slice(0, 10);
+    const ds = localDateStr(d);
     const entries = byDate[ds] || [];
     const isToday = ds === todayStr;
     const isFuture = d > now && ds !== todayStr;
@@ -506,8 +504,8 @@ function renderSparkline(containerId, values, color) {
   const dow = (now.getDay() + 6) % 7;
   const thisMon = new Date(now); thisMon.setDate(now.getDate() - dow);
   const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
-  const thisW = thisMon.toISOString().slice(0, 10);
-  const lastW = lastMon.toISOString().slice(0, 10);
+  const thisW = localDateStr(thisMon);
+  const lastW = localDateStr(lastMon);
 
   const tw = data.filter(d => d.week_start === thisW);
   const lw = data.filter(d => d.week_start === lastW);
@@ -531,7 +529,7 @@ function renderSparkline(containerId, values, color) {
   // 8-week sparklines from weekly-volume data
   const weeks8 = Array.from({length: 8}, (_, i) => {
     const d = new Date(thisMon); d.setDate(thisMon.getDate() - (7 - i) * 7);
-    return d.toISOString().slice(0, 10);
+    return localDateStr(d);
   });
 
   const sessVals = weeks8.map(w => sum(data.filter(d => d.week_start === w), 'workout_count'));
@@ -552,7 +550,7 @@ function renderSparkline(containerId, values, color) {
 
   const dates = new Set(workouts.map(w => w.date));
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const toStr = d => d.toISOString().slice(0, 10);
+  const toStr = localDateStr;
   const yday = new Date(today); yday.setDate(yday.getDate() - 1);
 
   if (!dates.has(toStr(today)) && !dates.has(toStr(yday))) {
@@ -641,18 +639,45 @@ function renderSparkline(containerId, values, color) {
 
   const weekKeys = Array.from({length: 12}, (_, i) => {
     const d = new Date(thisMon); d.setDate(thisMon.getDate() - (11 - i) * 7);
-    return d.toISOString().slice(0, 10);
+    return localDateStr(d);
   });
 
-  const SPORTS = ['run', 'strength', 'climbing'];
-  const COLOR  = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
-  const SPORT_LABEL = {run: 'Running', strength: 'Strength', climbing: 'Climbing'};
+  const ALL_SPORTS = ['run', 'strength', 'climbing', 'yoga', 'hike', 'walk', 'swim', 'bike', 'cross_training'];
+  const COLOR = {
+    run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+    yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+  };
+  const SPORT_LABEL = {
+    run: 'Running', strength: 'Strength', climbing: 'Climbing',
+    yoga: 'Yoga', hike: 'Hike', walk: 'Walk',
+    swim: 'Swim', bike: 'Bike', cross_training: 'Cross training',
+  };
+  const SPORT_CSS = {
+    run: 'sport-run', strength: 'sport-strength', climbing: 'sport-climbing',
+    yoga: 'sport-yoga', hike: 'sport-hike', walk: 'sport-walk',
+    swim: 'sport-swim', bike: 'sport-bike', cross_training: 'sport-cross_training',
+  };
 
   const byWS = {};
+  const seenSports = new Set();
   for (const d of allData) {
     if (!weekKeys.includes(d.week_start)) continue;
     if (!byWS[d.week_start]) byWS[d.week_start] = {};
     byWS[d.week_start][d.workout_type] = {hours: d.duration_hours, km: d.distance_km, sessions: d.workout_count};
+    seenSports.add(d.workout_type);
+  }
+
+  const SPORTS = ALL_SPORTS.filter(s => seenSports.has(s));
+
+  const volLegendEl = document.getElementById('volume-chart-legend');
+  if (volLegendEl) {
+    volLegendEl.innerHTML = SPORTS.map(s =>
+      `<span class="flex items-center gap-1.5">
+        <span class="inline-block w-2 h-2 rounded-full ${SPORT_CSS[s] || 'bg-edge'}"></span>
+        ${SPORT_LABEL[s] || s}
+      </span>`
+    ).join('');
   }
 
   const stackData = weekKeys.map(w => {
@@ -752,13 +777,41 @@ function renderSparkline(containerId, values, color) {
 
   const YEAR = {{ stats.year }};
   const CELL = 13, GAP = 2, STEP = CELL + GAP;
-  const COLOR = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
+  const COLOR = {
+    run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+    yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+  };
+  const SPORT_LABEL = {
+    run: 'Run', strength: 'Strength', climbing: 'Climbing',
+    yoga: 'Yoga', hike: 'Hike', walk: 'Walk',
+    swim: 'Swim', bike: 'Bike', cross_training: 'Cross training',
+  };
+  const SPORT_CSS = {
+    run: 'sport-run', strength: 'sport-strength', climbing: 'sport-climbing',
+    yoga: 'sport-yoga', hike: 'sport-hike', walk: 'sport-walk',
+    swim: 'sport-swim', bike: 'sport-bike', cross_training: 'sport-cross_training',
+  };
   const DAY_LABELS = ['M', '', 'W', '', 'F', '', ''];
 
   const byDate = {};
+  const seenTypes = new Set();
   for (const w of workouts) {
     if (!byDate[w.date]) byDate[w.date] = [];
     byDate[w.date].push(w);
+    seenTypes.add(w.workout_type);
+  }
+
+  const legendEl = document.getElementById('training-log-legend');
+  if (legendEl) {
+    const orderedTypes = ['run', 'strength', 'climbing'].filter(t => seenTypes.has(t));
+    const extras = [...seenTypes].filter(t => !orderedTypes.includes(t));
+    legendEl.innerHTML = [...orderedTypes, ...extras].map(t =>
+      `<span class="flex items-center gap-1.5">
+        <span class="inline-block w-2 h-2 rounded-sm ${SPORT_CSS[t] || 'bg-edge'}"></span>
+        ${SPORT_LABEL[t] || t}
+      </span>`
+    ).join('');
   }
 
   const jan1 = new Date(YEAR, 0, 1);
@@ -807,7 +860,7 @@ function renderSparkline(containerId, values, color) {
       if (di < 0 || di >= totalDays) continue;
       const d = new Date(YEAR, 0, di + 1);
       if (d.getFullYear() !== YEAR) continue;
-      const ds = d.toISOString().slice(0, 10);
+      const ds = localDateStr(d);
       const entries = byDate[ds];
 
       const cell = svg.append('rect')

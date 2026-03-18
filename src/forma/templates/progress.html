@@ -63,8 +63,8 @@
   </details>
 </div>
 
-{# Running PRs #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+{# Running PRs — hidden until data confirms runs exist #}
+<div id="running-pr-section" class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6 hidden">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Running personal records</h2>
   <table class="w-full text-sm" id="pr-table">
     <thead>
@@ -75,22 +75,20 @@
         <th class="pb-3 font-medium">Date</th>
       </tr>
     </thead>
-    <tbody id="pr-body">
-      <tr><td colspan="4" class="py-6 text-center text-muted text-sm">Loading…</td></tr>
-    </tbody>
+    <tbody id="pr-body"></tbody>
   </table>
 </div>
 
-{# Strength frequency #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+{# Strength frequency — hidden until data confirms strength sessions exist #}
+<div id="strength-section" class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6 hidden">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Strength session frequency</h2>
   <div class="chart-container chart-loading" id="strength-chart" style="min-height:180px"></div>
 </div>
 
-{# Climbing history #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+{# Climbing history — hidden until data confirms climbing sessions exist #}
+<div id="climbing-section" class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6 hidden">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Climbing history</h2>
-  <div id="climbing-list" class="text-sm text-muted">Loading…</div>
+  <div id="climbing-list" class="text-sm text-muted"></div>
 </div>
 
 <script>
@@ -112,8 +110,16 @@
     return;
   }
 
-  const COLORS = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-amber)'};
-  const SPORT_LABELS = {run: 'Running', strength: 'Strength', climbing: 'Climbing'};
+  const COLORS = {
+    run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+    yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+  };
+  const SPORT_LABELS = {
+    run: 'Running', strength: 'Strength', climbing: 'Climbing',
+    yoga: 'Yoga', hike: 'Hike', walk: 'Walk',
+    swim: 'Swim', bike: 'Bike', cross_training: 'Cross training',
+  };
 
   function pctDelta(curr, prev) {
     if (!prev || prev === 0) return null;
@@ -363,9 +369,8 @@ const DISTANCE_LABELS = {
 (async function() {
   const prs = await fetch('/api/progress/personal-records').then(r => r.json());
   const prBody = document.getElementById('pr-body');
-  if (!prs.length) {
-    prBody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-muted text-sm">No running data yet</td></tr>';
-  } else {
+  if (prs.length) {
+    document.getElementById('running-pr-section').classList.remove('hidden');
     prBody.innerHTML = prs.map((pr, i) => `
       <tr class="border-b border-edge ${i % 2 === 1 ? 'bg-surface-alt' : ''}">
         <td class="py-3 font-medium text-primary">${DISTANCE_LABELS[pr.distance_meters] || (pr.distance_meters/1000).toFixed(1) + ' km'}</td>
@@ -379,9 +384,8 @@ const DISTANCE_LABELS = {
   const strengthRaw = await fetch('/api/progress/strength-frequency').then(r => r.json());
   const strengthContainer = document.getElementById('strength-chart');
   strengthContainer.classList.remove('chart-loading');
-  if (!strengthRaw.length) {
-    strengthContainer.innerHTML = '<p class="text-center text-muted py-6 text-sm">No strength data yet</p>';
-  } else {
+  if (strengthRaw.length) {
+    document.getElementById('strength-section').classList.remove('hidden');
     // Trim to active date range: first → last session with some padding
     const active = strengthRaw.filter(d => d.count > 0);
     const firstActive = active[0]?.week_start;
@@ -428,9 +432,8 @@ const DISTANCE_LABELS = {
   const climbingContainer = document.getElementById('climbing-list');
   const climbingRaw = await fetch('/api/analytics/climbing/volume').then(r => r.json());
   const climbingData = climbingRaw.filter(d => d.workout_count > 0);
-  if (!climbingData.length) {
-    climbingContainer.innerHTML = '<p class="text-muted text-sm">No climbing sessions yet</p>';
-  } else {
+  if (climbingData.length) {
+    document.getElementById('climbing-section').classList.remove('hidden');
     climbingContainer.innerHTML = `
       <table class="w-full text-sm">
         <thead>

@@ -38,12 +38,12 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden">
 {% endif %}
 
-{% set sport_color =
-  'var(--color-mint)' if w.workout_type.value == 'run' else
-  'var(--color-sky)' if w.workout_type.value == 'strength' else
-  'var(--color-amber)' if w.workout_type.value == 'climbing' else
-  'var(--color-edge)'
-%}
+{% set _sport_colors = {
+  'run': 'var(--color-mint)', 'strength': 'var(--color-sky)', 'climbing': 'var(--color-coral)',
+  'yoga': 'var(--color-violet)', 'hike': 'var(--color-sage)', 'walk': 'var(--color-sage)',
+  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'cross_training': 'var(--color-sky)',
+} %}
+{% set sport_color = _sport_colors.get(w.workout_type.value, 'var(--color-edge)') %}
 <a href="/activities/detail/{{ w.id }}"
    class="flex items-center gap-4 px-5 py-4 hover:bg-surface-alt transition-colors cursor-pointer group border-b border-edge last:border-0">
   {# Sport accent #}
