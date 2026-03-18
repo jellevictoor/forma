@@ -1,15 +1,15 @@
 /* ── Color tokens ──────────────────────────────────────────── */
 :root {
   /* Sport colors — identical in both modes */
-  --color-mint:  #4DA3BD;  /* running */
+  --color-mint:  #599DA4;  /* running */
   --color-sky:   #60A5FA;  /* strength */
-  --color-amber: #FB923C;  /* climbing */
+  --color-amber: #DE6845;  /* climbing / secondary marker */
 
   /* Brand accent */
-  --color-accent: #4DA3BD;
+  --color-accent: #599DA4;
 
   /* Nav */
-  --color-nav:               #4DA3BD;
+  --color-nav:               #599DA4;
   --color-nav-text:          rgba(255, 255, 255, 0.65);
   --color-nav-text-bold:     #ffffff;
   --color-nav-hover:         rgba(0, 0, 0, 0.12);
@@ -19,10 +19,10 @@
   --color-nav-logo-mark:     rgba(0, 0, 0, 0.55);
 
   /* Page & surfaces */
-  --color-bg:          #EDECEA;
-  --color-surface:     #FAFAF8;
-  --color-surface-alt: #F2F0EB;
-  --color-edge:        #DCD9D1;
+  --color-bg:          #F0E9DA;
+  --color-surface:     #FAFAF6;
+  --color-surface-alt: #F0E9DA;
+  --color-edge:        #DDD6C8;
 
   /* Text */
   --color-text:           #1C1A15;
@@ -53,9 +53,9 @@
   --color-nav-text:          #68635D;
   --color-nav-text-bold:     #F0EDE6;
   --color-nav-hover:         rgba(255, 255, 255, 0.06);
-  --color-nav-active:        rgba(77, 163, 189, 0.12);
+  --color-nav-active:        rgba(89, 157, 164, 0.12);
   --color-nav-divider:       rgba(255, 255, 255, 0.06);
-  --color-nav-logo-body:     #4DA3BD;
+  --color-nav-logo-body:     #599DA4;
   --color-nav-logo-mark:     #F0EDE6;
 
   --color-bg:          #111009;
@@ -91,7 +91,7 @@ body {
 
 /* ── Text selection ─────────────────────────────────────────── */
 ::selection {
-  background: rgba(77, 163, 189, 0.18);
+  background: rgba(89, 157, 164, 0.18);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */
