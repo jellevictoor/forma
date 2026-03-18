@@ -188,7 +188,7 @@ All URLs must be externally linkable. Parameters go in the path: `/{param}`, nev
     amber:        var(--color-amber)       #FB923C  (climbing)
     page bg:      var(--color-bg)          light: #EDECEA  dark: #111009
     surface:      var(--color-surface)     light: #FAFAF8  dark: #1A1916
-    surface-alt:  var(--color-surface-alt) light: #EDECEA  dark: #231F1B
+    surface-alt:  var(--color-surface-alt) light: #F2F0EB  dark: #231F1B
     edge:         var(--color-edge)        light: #DCD9D1  dark: #312D28
 - Sport color mapping:
     running   → mint   var(--color-mint)   #2DD4AA
