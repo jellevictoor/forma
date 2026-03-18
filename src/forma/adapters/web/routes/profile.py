@@ -30,7 +30,6 @@ async def profile_page(
     weight_history = await weight_service.get_history(athlete_id, limit=10)
     chart_data = await weight_service.chart_data(athlete_id)
     is_stale = await weight_service.is_stale(athlete_id)
-    goal_types = [gt for gt in GoalType]
     return templates.TemplateResponse(
         request,
         "profile.html",
@@ -39,7 +38,6 @@ async def profile_page(
             "weight_history": weight_history,
             "chart_data": chart_data,
             "is_stale": is_stale,
-            "goal_types": goal_types,
         },
     )
 

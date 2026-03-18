@@ -217,148 +217,35 @@
     </div>
   </div>
 
-  <!-- Primary goal section -->
+  <!-- Goal summary (managed on /goal page) -->
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
-    <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Primary goal</h2>
-
-    {% if athlete and athlete.primary_goal %}
-    <div class="mb-5 p-4 bg-surface-alt rounded-xl flex items-start justify-between gap-4">
-      <div class="min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xs font-medium text-muted uppercase tracking-wider">{{ athlete.primary_goal.goal_type.value.replace('_', ' ') }}</span>
-          <span class="text-xs text-muted">· since {{ athlete.primary_goal.set_at.strftime('%d %b %Y') }}</span>
-        </div>
-        <p class="text-sm text-primary">{{ athlete.primary_goal.description }}</p>
-        {% if athlete.primary_goal.target_value %}
-        <p class="text-xs text-muted mt-1">Target: {{ athlete.primary_goal.target_value }}</p>
-        {% endif %}
-      </div>
-      <button
-        onclick="removeGoal()"
-        class="text-xs text-muted hover:text-red-500 transition-colors flex-shrink-0 cursor-pointer"
-        title="Remove goal"
-      >Remove</button>
-    </div>
-
-    {% if athlete.goal_history %}
-    <!-- Goal history timeline -->
-    <details class="mb-5 group">
-      <summary class="flex items-center gap-2 text-xs text-muted cursor-pointer hover:text-secondary transition-colors list-none">
-        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-        {{ athlete.goal_history | length }} previous goal{{ 's' if athlete.goal_history | length != 1 else '' }}
-      </summary>
-      <div class="mt-3 pl-4 border-l-2 border-edge space-y-3">
-        {% for entry in athlete.goal_history | sort(attribute='set_at') | reverse %}
-        <div class="relative">
-          <div class="absolute -left-[1.3rem] top-1.5 w-2 h-2 rounded-full bg-edge"></div>
-          <p class="text-xs text-muted tabular-nums mb-0.5">
-            {{ entry.set_at.strftime('%d %b %Y') }} → {{ entry.retired_at.strftime('%d %b %Y') }}
-          </p>
-          <p class="text-sm text-secondary">{{ entry.description }}</p>
-          {% if entry.target_value %}
-          <p class="text-xs text-muted">Target: {{ entry.target_value }}</p>
-          {% endif %}
-          <span class="text-xs text-muted">{{ entry.goal_type.value.replace('_', ' ') }}</span>
-        </div>
-        {% endfor %}
-      </div>
-    </details>
-    {% endif %}
-
-    <!-- Training advice -->
-    <button
-      onclick="getAdvice()"
-      id="advice-btn"
-      class="px-4 py-2 text-sm rounded-lg border border-mint text-mint hover:bg-mint/5 transition-colors mb-4 cursor-pointer"
-    >
-      Get training advice
-    </button>
-    <div id="advice-loading" class="hidden text-xs text-muted mb-4">Generating advice…</div>
-    <div id="advice-card" class="hidden bg-surface-alt rounded-xl p-5 space-y-4">
-      <p id="advice-summary" class="text-sm text-secondary leading-relaxed"></p>
-      <div>
-        <h3 class="text-xs font-medium uppercase tracking-widest text-muted mb-2">Training tips</h3>
-        <ul id="advice-tips" class="space-y-2"></ul>
-      </div>
-      <div>
-        <h3 class="text-xs font-medium uppercase tracking-widest text-muted mb-2">Weekly focus</h3>
-        <p id="advice-focus" class="text-sm text-secondary"></p>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Coach CTA -->
-    <a
-      href="/profile/goal/coach"
-      class="flex items-center gap-3 w-full p-4 mb-5 rounded-xl border border-mint/40 bg-mint/5 hover:bg-mint/10 hover:border-mint/70 transition-all duration-200 cursor-pointer {% if athlete and athlete.primary_goal %}mt-5{% endif %}"
-    >
-      <div class="w-9 h-9 rounded-full bg-mint/15 flex items-center justify-center shrink-0">
-        <svg class="w-4 h-4 text-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Primary goal</h2>
+      <a href="/goal" class="text-xs text-mint hover:underline flex items-center gap-1">
+        Manage
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
         </svg>
-      </div>
-      <div class="text-left min-w-0">
-        <p class="text-sm font-medium text-primary">{{ 'Refine goal with AI coach' if athlete and athlete.primary_goal else 'Set goal with AI coach' }}</p>
-        <p class="text-xs text-muted mt-0.5">Data-driven goal setting based on your last 90 days of training</p>
-      </div>
-      <svg class="w-4 h-4 text-muted shrink-0 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </a>
+    </div>
+    {% if athlete and athlete.primary_goal %}
+    <p class="text-sm text-primary">{{ athlete.primary_goal.description }}</p>
+    <div class="flex items-center gap-2 mt-2 flex-wrap">
+      <span class="text-xs text-muted capitalize">{{ athlete.primary_goal.goal_type.value.replace('_', ' ') }}</span>
+      {% if athlete.primary_goal.target_value %}
+      <span class="text-xs text-muted">· {{ athlete.primary_goal.target_value }}</span>
+      {% endif %}
+      <span class="text-xs text-muted">· since {{ athlete.primary_goal.set_at.strftime('%d %b %Y') }}</span>
+    </div>
+    {% else %}
+    <p class="text-sm text-muted mb-3">No goal set yet.</p>
+    <a href="/goal" class="inline-flex items-center gap-2 px-3 py-2 text-xs rounded-lg border border-mint/40 text-mint hover:bg-mint/5 transition-colors">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
       </svg>
+      Set goal with AI coach
     </a>
-
-    <details class="group">
-      <summary class="flex items-center gap-2 text-xs text-muted cursor-pointer hover:text-secondary transition-colors list-none mb-3">
-        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-        {{ 'Update goal manually' if athlete and athlete.primary_goal else 'Set goal manually' }}
-      </summary>
-    <form method="post" action="/profile/goal" class="space-y-3 pt-1">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs text-secondary mb-1" for="goal_type">Goal type</label>
-          <select
-            id="goal_type"
-            name="goal_type"
-            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
-          >
-            {% for gt in goal_types %}
-            <option value="{{ gt.value }}" {% if athlete and athlete.primary_goal and athlete.primary_goal.goal_type == gt %}selected{% endif %}>
-              {{ gt.value.replace('_', ' ').capitalize() }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-secondary mb-1" for="target_value">Target (optional)</label>
-          <input
-            type="text"
-            id="target_value"
-            name="target_value"
-            value="{{ athlete.primary_goal.target_value if athlete and athlete.primary_goal and athlete.primary_goal.target_value else '' }}"
-            placeholder="e.g. sub 4:00 marathon"
-            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
-          />
-        </div>
-      </div>
-      <div>
-        <label class="block text-xs text-secondary mb-1" for="description">Description</label>
-        <input
-          type="text"
-          id="description"
-          name="description"
-          value="{{ athlete.primary_goal.description if athlete and athlete.primary_goal else '' }}"
-          required
-          placeholder="Describe your goal…"
-          class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
-        />
-      </div>
-      <button
-        type="submit"
-        class="px-4 py-2 tab-active text-sm rounded-lg transition-all duration-150 cursor-pointer"
-      >
-        {{ 'Update goal' if athlete and athlete.primary_goal else 'Set goal' }}
-      </button>
-    </form>
-    </details>
+    {% endif %}
   </div>
 
   <!-- Weight tracking section -->
@@ -455,43 +342,10 @@ document.getElementById('profile-form')?.addEventListener('submit', function() {
   btn.disabled = true;
 });
 
-// Remove goal
-async function removeGoal() {
-  const res = await fetch('/profile/goal', { method: 'DELETE' });
-  if (res.ok) window.location.reload();
-}
-
 // Delete weight entry
 async function deleteWeight(entryId) {
   const res = await fetch(`/profile/weight/${entryId}`, { method: 'DELETE' });
   if (res.ok) window.location.reload();
-}
-
-// Training advice
-async function getAdvice() {
-  const btn = document.getElementById('advice-btn');
-  const loading = document.getElementById('advice-loading');
-  const card = document.getElementById('advice-card');
-  btn.classList.add('hidden');
-  loading.classList.remove('hidden');
-
-  try {
-    const res = await fetch('/profile/goal/advice', { method: 'POST' });
-    const data = await res.json();
-    document.getElementById('advice-summary').textContent = data.summary;
-    const tipsList = document.getElementById('advice-tips');
-    tipsList.innerHTML = '';
-    (data.training_tips || []).forEach(tip => {
-      const li = document.createElement('li');
-      li.className = 'flex gap-2.5 text-sm text-secondary';
-      li.innerHTML = `<span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 sport-run"></span>${tip}`;
-      tipsList.appendChild(li);
-    });
-    document.getElementById('advice-focus').textContent = data.weekly_focus;
-    card.classList.remove('hidden');
-  } catch {
-    loading.textContent = 'Could not load advice. Try again.';
-  }
 }
 
 // Weight chart

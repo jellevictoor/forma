@@ -1,5 +1,7 @@
-"""Goal coaching routes — conversational, data-grounded goal setting."""
+"""Goal page routes — top-level goal management and AI coaching."""
 
+import re
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -28,8 +30,8 @@ class ConfirmRequest(BaseModel):
     proposal: dict
 
 
-@router.get("/profile/goal/coach", response_class=HTMLResponse)
-async def goal_coach_page(
+@router.get("/goal", response_class=HTMLResponse)
+async def goal_page(
     request: Request,
     coaching_service: Annotated[GoalCoachingService, Depends(get_goal_coaching_service)],
     profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
@@ -39,16 +41,17 @@ async def goal_coach_page(
     athlete = await profile_service.get_profile(athlete_id)
     return templates.TemplateResponse(
         request,
-        "goal_coach.html",
+        "goal.html",
         {
             "athlete": athlete,
             "snapshot": snapshot,
+            "today": date.today(),
         },
     )
 
 
-@router.post("/profile/goal/coach/start")
-async def goal_coach_start(
+@router.post("/goal/start")
+async def goal_start(
     coaching_service: Annotated[GoalCoachingService, Depends(get_goal_coaching_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
@@ -56,8 +59,8 @@ async def goal_coach_start(
     return JSONResponse({"message": message})
 
 
-@router.post("/profile/goal/coach/message")
-async def goal_coach_message(
+@router.post("/goal/message")
+async def goal_message(
     body: ChatRequest,
     coaching_service: Annotated[GoalCoachingService, Depends(get_goal_coaching_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
@@ -66,16 +69,17 @@ async def goal_coach_message(
     proposal = coaching_service.extract_proposal(response)
     clean_response = response
     if proposal:
-        import re
-        clean_response = re.sub(r"<<GOAL_PROPOSAL>>.*?<<END_PROPOSAL>>", "", response, flags=re.DOTALL).strip()
+        clean_response = re.sub(
+            r"<<GOAL_PROPOSAL>>.*?<<END_PROPOSAL>>", "", response, flags=re.DOTALL
+        ).strip()
     return JSONResponse({
         "response": clean_response,
         "proposal": _proposal_to_dict(proposal) if proposal else None,
     })
 
 
-@router.post("/profile/goal/coach/confirm")
-async def goal_coach_confirm(
+@router.post("/goal/confirm")
+async def goal_confirm(
     body: ConfirmRequest,
     coaching_service: Annotated[GoalCoachingService, Depends(get_goal_coaching_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
@@ -90,11 +94,9 @@ async def goal_coach_confirm(
         rationale=p.get("rationale", ""),
     )
     if p.get("target_date"):
-        from datetime import date
         proposal.target_date = date.fromisoformat(p["target_date"])
-
     await coaching_service.save_proposal(athlete_id, proposal)
-    return RedirectResponse(url="/profile", status_code=303)
+    return RedirectResponse(url="/goal", status_code=303)
 
 
 def _proposal_to_dict(proposal: GoalProposal) -> dict:
