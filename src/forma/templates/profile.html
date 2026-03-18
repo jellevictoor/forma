@@ -31,7 +31,7 @@
             type="number"
             id="height_cm"
             name="height_cm"
-            value="{{ athlete.height_cm if athlete and athlete.height_cm else '' }}"
+            value="{{ '%.1f'|format(athlete.height_cm) if athlete and athlete.height_cm else '' }}"
             step="0.1"
             class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
           />
