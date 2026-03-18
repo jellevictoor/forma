@@ -3,6 +3,14 @@
 CREATE TABLE IF NOT EXISTS athletes (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL,
+    role                    TEXT      NOT NULL DEFAULT 'user',
+    is_blocked              BOOLEAN   NOT NULL DEFAULT FALSE,
+    ai_enabled              BOOLEAN   NOT NULL DEFAULT TRUE,
+    token_limit_30d         INTEGER,
+    strava_athlete_id       BIGINT,
+    strava_access_token     TEXT,
+    strava_refresh_token    TEXT,
+    strava_token_expires_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -13,9 +21,16 @@ CREATE TABLE IF NOT EXISTS workouts (
     strava_id BIGINT,
     start_time TIMESTAMP NOT NULL,
     workout_type TEXT,
+    distance_meters     DOUBLE PRECISION,
+    duration_seconds    INTEGER,
+    moving_time_seconds INTEGER,
+    average_heartrate   DOUBLE PRECISION,
     data TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_athletes_strava_athlete_id ON athletes(strava_athlete_id)
+    WHERE strava_athlete_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_workouts_athlete_id ON workouts(athlete_id);
 CREATE INDEX IF NOT EXISTS idx_workouts_strava_id ON workouts(strava_id);

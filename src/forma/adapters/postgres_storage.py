@@ -121,17 +121,29 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
     async def save_workout(self, workout: Workout) -> None:
         await self._pool.execute(
             """
-            INSERT INTO workouts (id, athlete_id, strava_id, start_time, workout_type, data)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO workouts (
+                id, athlete_id, strava_id, start_time, workout_type,
+                distance_meters, duration_seconds, moving_time_seconds, average_heartrate,
+                data
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (id) DO UPDATE SET
-                data = EXCLUDED.data,
-                workout_type = EXCLUDED.workout_type
+                data                = EXCLUDED.data,
+                workout_type        = EXCLUDED.workout_type,
+                distance_meters     = EXCLUDED.distance_meters,
+                duration_seconds    = EXCLUDED.duration_seconds,
+                moving_time_seconds = EXCLUDED.moving_time_seconds,
+                average_heartrate   = EXCLUDED.average_heartrate
             """,
             workout.id,
             workout.athlete_id,
             workout.strava_id,
             workout.start_time,
             workout.workout_type.value,
+            workout.distance_meters,
+            workout.duration_seconds,
+            workout.moving_time_seconds,
+            workout.average_heartrate,
             workout.model_dump_json(),
         )
 

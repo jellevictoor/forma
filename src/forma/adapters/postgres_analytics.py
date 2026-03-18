@@ -1,6 +1,5 @@
 """PostgreSQL read-side adapter for workout analytics queries."""
 
-import json
 from datetime import date
 
 from asyncpg import Pool
@@ -14,10 +13,10 @@ from forma.ports.workout_analytics_repository import (
 )
 
 _WEEK_START = "date_trunc('week', start_time::timestamp)::date"
-_DISTANCE = "(data::jsonb->>'distance_meters')::float"
-_DURATION = "(data::jsonb->>'duration_seconds')::integer"
-_MOVING_TIME = "(data::jsonb->>'moving_time_seconds')::float"
-_HEARTRATE = "(data::jsonb->>'average_heartrate')::float"
+_DISTANCE = "distance_meters"
+_DURATION = "duration_seconds"
+_MOVING_TIME = "moving_time_seconds"
+_HEARTRATE = "average_heartrate"
 
 
 class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
@@ -311,7 +310,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         year_start, year_end = self._year_range(year)
         rows = await self._pool.fetch(
             """
-            SELECT id, start_time, data
+            SELECT id, start_time, duration_seconds, data::jsonb->>'name' AS name
             FROM workouts
             WHERE athlete_id = $1 AND workout_type = 'climbing'
               AND start_time >= $2 AND start_time <= $3
@@ -325,8 +324,8 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             {
                 "id": row["id"],
                 "date": str(row["start_time"].date()),
-                "duration_seconds": json.loads(row["data"]).get("duration_seconds", 0),
-                "name": json.loads(row["data"]).get("name", ""),
+                "duration_seconds": row["duration_seconds"] or 0,
+                "name": row["name"] or "",
             }
             for row in rows
         ]
@@ -375,7 +374,9 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         year_start, year_end = self._year_range(year)
         rows = await self._pool.fetch(
             """
-            SELECT id, start_time, workout_type, data
+            SELECT id, start_time, workout_type,
+                   duration_seconds, distance_meters,
+                   data::jsonb->>'name' AS name
             FROM workouts
             WHERE athlete_id = $1
               AND start_time >= $2 AND start_time <= $3
@@ -391,9 +392,9 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
                 "id": row["id"],
                 "date": str(row["start_time"].date()),
                 "workout_type": row["workout_type"],
-                "duration_seconds": json.loads(row["data"]).get("duration_seconds", 0),
-                "distance_meters": json.loads(row["data"]).get("distance_meters") or 0,
-                "name": json.loads(row["data"]).get("name", ""),
+                "duration_seconds": row["duration_seconds"] or 0,
+                "distance_meters": row["distance_meters"] or 0,
+                "name": row["name"] or "",
             }
             for row in rows
         ]
@@ -461,7 +462,10 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         year_start, year_end = self._year_range(year)
         rows = await self._pool.fetch(
             """
-            SELECT id, start_time, workout_type, data
+            SELECT id, start_time, workout_type,
+                   duration_seconds, distance_meters, average_heartrate,
+                   data::jsonb->>'name'         AS name,
+                   data::jsonb->>'private_note' AS private_note
             FROM workouts
             WHERE athlete_id = $1
               AND start_time >= $2 AND start_time <= $3
@@ -473,17 +477,16 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             year_start,
             year_end,
         )
-        results = []
-        for row in rows:
-            d = json.loads(row["data"])
-            results.append({
+        return [
+            {
                 "id": row["id"],
                 "date": str(row["start_time"].date()),
                 "workout_type": row["workout_type"],
-                "name": d.get("name", ""),
-                "duration_seconds": d.get("duration_seconds", 0),
-                "distance_meters": d.get("distance_meters") or 0,
-                "average_heartrate": d.get("average_heartrate"),
-                "private_note": d.get("private_note", ""),
-            })
-        return results
+                "name": row["name"] or "",
+                "duration_seconds": row["duration_seconds"] or 0,
+                "distance_meters": row["distance_meters"] or 0,
+                "average_heartrate": row["average_heartrate"],
+                "private_note": row["private_note"] or "",
+            }
+            for row in rows
+        ]
