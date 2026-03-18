@@ -750,8 +750,14 @@ function renderSparkline(containerId, values, color) {
     try {
       const r = await fetch('/api/overview/weekly-recap').then(r => r.json());
       if (!r.cached) {
-        focusEl.innerHTML = '<p class="text-sm text-muted">Generate a recap to see your weekly focus.</p>';
-        genBtn.classList.remove('hidden'); return;
+        focusEl.innerHTML = `
+          <div class="flex flex-col items-center gap-3 py-4 text-center">
+            <p class="text-xs text-muted max-w-[18rem]">Generate a recap to see AI-powered focus points and a summary of your week.</p>
+            <button onclick="document.getElementById('recap-generate-btn').click()"
+                    class="text-xs px-3 py-1.5 rounded-lg font-medium text-white cursor-pointer transition-opacity hover:opacity-90"
+                    style="background:var(--color-nav)">Generate weekly recap</button>
+          </div>`;
+        genBtn.classList.add('hidden'); return;
       }
       renderFocus(r.focus); summaryEl.textContent = r.summary || '';
       if (r.stale) staleBadge.classList.remove('hidden');
