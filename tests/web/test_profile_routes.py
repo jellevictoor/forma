@@ -71,7 +71,7 @@ def test_get_profile_renders(client):
 def test_post_profile_updates(client):
     response = client.post(
         "/profile",
-        data={"name": "New Name", "notes": "", "experience_years": "2"},
+        data={"name": "New Name", "notes": ""},
     )
 
     assert response.status_code == 200

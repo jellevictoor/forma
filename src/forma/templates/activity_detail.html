@@ -56,7 +56,7 @@
         {% if workout.workout_type.value == 'run' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-run inline-block"></span>Running</span>
         {% elif workout.workout_type.value == 'strength' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-strength inline-block"></span>Strength</span>
         {% elif workout.workout_type.value == 'climbing' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-climbing inline-block"></span>Climbing</span>
-        {% else %}{{ workout.workout_type.value | capitalize }}{% endif %}
+        {% else %}{{ workout.workout_type.value | replace('_', ' ') | title }}{% endif %}
       </p>
       <h1 class="text-3xl font-bold text-primary">{{ workout.name }}</h1>
     </div>
@@ -145,7 +145,7 @@
 
 <!-- Cross-session comparison card — populated async -->
 <div id="comparison-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Compared to recent {{ workout.workout_type.value }} sessions</h2>
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Compared to recent {{ workout.workout_type.value | replace('_', ' ') }} sessions</h2>
   <div id="comparison-body"></div>
 </div>
 

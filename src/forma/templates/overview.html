@@ -15,7 +15,7 @@
 
 {% macro sport_color(t) -%}{{ _sport_colors.get(t, 'var(--color-edge)') }}{%- endmacro %}
 
-{% macro sport_label(t) -%}{{ _sport_labels.get(t, t | capitalize) }}{%- endmacro %}
+{% macro sport_label(t) -%}{{ _sport_labels.get(t, t | replace('_', ' ') | title) }}{%- endmacro %}
 
 {% macro sport_dot(t, size='w-2 h-2') -%}
 <span class="{{ size }} rounded-full inline-block shrink-0 sport-{{ t }}"></span>

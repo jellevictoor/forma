@@ -129,7 +129,6 @@ class AthleteProfileService:
 Athlete profile:
 - Age: {age_str}
 - Weight: {weight_str}
-- Experience: {athlete.experience_years} years
 - Max hours/week: {athlete.max_hours_per_week or 'not set'}
 
 Primary goal (current):

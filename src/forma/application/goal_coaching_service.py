@@ -126,7 +126,6 @@ Here is the athlete's profile and training data for this session:
 ## Athlete profile
 Name: {name}
 Age: {age}
-Experience: {experience_years} years of training
 Max hours/week available: {max_hours}
 Notes: {notes}
 Equipment: {equipment}
@@ -381,7 +380,6 @@ class GoalCoachingService:
         return _ATHLETE_DATA_TEMPLATE.format(
             name=athlete.name,
             age=age_str,
-            experience_years=athlete.experience_years,
             max_hours=athlete.max_hours_per_week or "not set",
             notes=athlete.notes or "none",
             equipment=equipment_block,

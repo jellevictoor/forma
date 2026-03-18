@@ -82,10 +82,6 @@ class Athlete(BaseModel):
     weight_kg: float | None = None
     height_cm: float | None = None
 
-    # Experience and background
-    experience_years: float = 0
-    sports_background: list[str] = Field(default_factory=list)
-
     # Goals and limitations
     goals: list[Goal] = Field(default_factory=list)
     injuries: list[Injury] = Field(default_factory=list)

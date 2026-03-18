@@ -181,7 +181,7 @@
       {%- if w.workout_type.value == 'run' %}Run
       {%- elif w.workout_type.value == 'strength' %}Strength
       {%- elif w.workout_type.value == 'climbing' %}Climbing
-      {%- else %}{{ w.workout_type.value | capitalize }}{% endif -%}
+      {%- else %}{{ w.workout_type.value | replace('_', ' ') | title }}{% endif -%}
     </span>
   </div>
 

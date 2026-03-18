@@ -94,7 +94,7 @@
             {% elif slot.workout_type.value == 'strength' %}sport-strength
             {% elif slot.workout_type.value == 'climbing' %}sport-climbing
             {% else %}bg-edge{% endif %}"></span>
-          <span class="text-secondary capitalize">{{ slot.workout_type.value }}</span>
+          <span class="text-secondary">{{ slot.workout_type.value | replace('_', ' ') | title }}</span>
         </div>
         {% endfor %}
       </div>
