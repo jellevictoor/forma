@@ -6,13 +6,13 @@
   --color-amber: #FB923C;  /* climbing */
 
   /* Brand accent */
-  --color-accent: #0C9B6E;
+  --color-accent: #4DA3BD;
 
   /* Nav */
   --color-nav:          #F5F4F1;
   --color-nav-text:     #928E87;
   --color-nav-hover:    rgba(0, 0, 0, 0.04);
-  --color-nav-active:   rgba(12, 155, 110, 0.10);
+  --color-nav-active:   rgba(77, 163, 189, 0.10);
   --color-nav-divider:  #E0DDD7;
 
   /* Page & surfaces */
@@ -49,7 +49,7 @@
   --color-nav:         #1A1916;
   --color-nav-text:    #68635D;
   --color-nav-hover:   rgba(255, 255, 255, 0.06);
-  --color-nav-active:  rgba(12, 155, 110, 0.12);
+  --color-nav-active:  rgba(77, 163, 189, 0.12);
   --color-nav-divider: rgba(255, 255, 255, 0.06);
 
   --color-bg:          #111009;
@@ -85,7 +85,7 @@ body {
 
 /* ── Text selection ─────────────────────────────────────────── */
 ::selection {
-  background: rgba(12, 155, 110, 0.18);
+  background: rgba(77, 163, 189, 0.18);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */

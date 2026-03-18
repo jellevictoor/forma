@@ -34,7 +34,7 @@
             mint:   '#2DD4AA',
             sky:    '#60A5FA',
             amber:  '#FB923C',
-            accent: '#0C9B6E',
+            accent: '#4DA3BD',
             /* Semantic — CSS-variable-backed, auto-adapt to theme */
             'nav-bg':      'var(--color-nav)',
             'surface':     'var(--color-surface)',
@@ -59,7 +59,16 @@
 
     <!-- Logo -->
     <div class="h-14 flex items-center px-5 shrink-0">
-      <a href="/" class="font-wordmark text-xl font-bold tracking-tight text-accent">forma</a>
+      <a href="/" class="flex items-center gap-2">
+        <svg viewBox="0 0 14 20" width="14" height="20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="0" y="0" width="14" height="4.5" rx="2.25" fill="var(--color-accent)"/>
+          <rect x="0" y="0" width="4.5" height="20" rx="2.25" fill="var(--color-accent)"/>
+          <rect x="0" y="8.5" width="11" height="4" rx="2" fill="var(--color-text)"/>
+          <circle cx="2.25" cy="2.25" r="1.9" fill="var(--color-text)"/>
+          <circle cx="12" cy="17.5" r="2.2" fill="var(--color-text)"/>
+        </svg>
+        <span class="font-wordmark text-xl font-bold tracking-tight text-primary">orma</span>
+      </a>
     </div>
 
     <!-- Nav links -->
@@ -167,7 +176,16 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
       </svg>
     </button>
-    <a href="/" class="font-wordmark text-lg font-bold tracking-tight text-accent">forma</a>
+    <a href="/" class="flex items-center gap-2">
+      <svg viewBox="0 0 14 20" width="12" height="17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="0" y="0" width="14" height="4.5" rx="2.25" fill="var(--color-accent)"/>
+        <rect x="0" y="0" width="4.5" height="20" rx="2.25" fill="var(--color-accent)"/>
+        <rect x="0" y="8.5" width="11" height="4" rx="2" fill="var(--color-text)"/>
+        <circle cx="2.25" cy="2.25" r="1.9" fill="var(--color-text)"/>
+        <circle cx="12" cy="17.5" r="2.2" fill="var(--color-text)"/>
+      </svg>
+      <span class="font-wordmark text-lg font-bold tracking-tight text-primary">orma</span>
+    </a>
   </header>
 
   <!-- ── Sidebar overlay (mobile) ──────────────────────────── -->

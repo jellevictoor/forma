@@ -1,9 +1,10 @@
 <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
   <rect width="32" height="32" rx="8" fill="#1A1916"/>
-  <text x="16" y="25"
-        font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif"
-        font-size="22"
-        font-weight="900"
-        fill="#0C9B6E"
-        text-anchor="middle">f</text>
+  <g transform="translate(5, 2)">
+    <rect x="0" y="0" width="20" height="6.5" rx="3.25" fill="#4DA3BD"/>
+    <rect x="0" y="0" width="6.5" height="28" rx="3.25" fill="#4DA3BD"/>
+    <rect x="0" y="12" width="16" height="5.5" rx="2.75" fill="#F0EDE6"/>
+    <circle cx="3.25" cy="3.25" r="2.75" fill="#F0EDE6"/>
+    <circle cx="17.5" cy="25" r="3" fill="#F0EDE6"/>
+  </g>
 </svg>
