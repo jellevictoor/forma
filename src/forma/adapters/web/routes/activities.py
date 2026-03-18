@@ -13,11 +13,13 @@ from forma.adapters.web.dependencies import (
     get_activity_stream_service,
     get_analytics_service,
     get_athlete_id,
+    get_athlete_profile_service,
     get_workout_repo,
 )
 from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.activity_stream_service import ActivityStreamService
 from forma.application.analytics_service import AnalyticsService
+from forma.application.athlete_profile_service import AthleteProfileService
 from forma.ports.workout_repository import WorkoutRepository
 
 router = APIRouter()
@@ -41,16 +43,23 @@ async def activity_detail(
     activity_id: str,
     workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
     analysis_service: Annotated[ActivityAnalysisService, Depends(get_activity_analysis_service)],
+    athlete_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     workout = await workout_repo.get_workout(activity_id)
     cached_analysis = await analysis_service.get_cached(activity_id)
     chat_messages = await analysis_service.get_chat_messages(activity_id)
+    athlete = await athlete_service.get_profile(athlete_id)
 
     return templates.TemplateResponse(
         request,
         "activity_detail.html",
-        {"workout": workout, "cached_analysis": cached_analysis, "chat_messages": chat_messages},
+        {
+            "workout": workout,
+            "cached_analysis": cached_analysis,
+            "chat_messages": chat_messages,
+            "athlete": athlete,
+        },
     )
 
 
@@ -101,6 +110,7 @@ async def activity_streams(
         return JSONResponse({"error": "No GPS data available"}, status_code=404)
     return JSONResponse({
         "latlng": streams.latlng,
+        "time": streams.time,
         "velocity_smooth": streams.velocity_smooth,
         "heartrate": streams.heartrate,
         "has_hr": bool(streams.heartrate),

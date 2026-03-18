@@ -66,6 +66,9 @@ class Workout(BaseModel):
     mood: str = ""
     sleep_quality: str = ""
 
+    # Full Strava API response — stored verbatim so no field is ever lost
+    strava_raw: dict | None = None
+
     # Calculated fields
     @property
     def duration_minutes(self) -> float:

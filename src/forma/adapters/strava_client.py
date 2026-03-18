@@ -1,13 +1,16 @@
 """Strava API client adapter."""
 
 import asyncio
+import logging
 import uuid
 from datetime import datetime
 
 import httpx
 
+
 from forma.domain.workout import PerceivedEffort, Workout, WorkoutType
 from forma.ports.strava import StravaClient as StravaClientPort
+logger = logging.getLogger(__name__)
 
 
 STRAVA_TYPE_MAP = {
@@ -104,16 +107,18 @@ class StravaClient(StravaClientPort):
         short_usage = int(usage_header.split(",")[0])
         short_limit = int(limit_header.split(",")[0])
         if short_usage >= short_limit - 5:
-            print(f"\nRate limit approaching, waiting {self.RATE_LIMIT_RETRY_SECONDS}s...")
+            logger.warning("rate limit approaching (%d/%d), waiting %ds", short_usage, short_limit, self.RATE_LIMIT_RETRY_SECONDS)
             await asyncio.sleep(self.RATE_LIMIT_RETRY_SECONDS)
 
     async def _get_with_refresh(self, url: str, **kwargs) -> dict | list:
+        logger.debug("GET %s", url)
         response = await self._client.get(url, headers=self._get_headers(), **kwargs)
         if response.status_code == 401 and self._refresh_token:
+            logger.info("access token expired, refreshing")
             await self.refresh_token()
             response = await self._client.get(url, headers=self._get_headers(), **kwargs)
         while response.status_code == 429:
-            print(f"\nRate limited (429). Retrying in {self.RATE_LIMIT_RETRY_SECONDS}s...")
+            logger.warning("rate limited (429), retrying in %ds", self.RATE_LIMIT_RETRY_SECONDS)
             await asyncio.sleep(self.RATE_LIMIT_RETRY_SECONDS)
             response = await self._client.get(url, headers=self._get_headers(), **kwargs)
         response.raise_for_status()
@@ -139,6 +144,12 @@ class StravaClient(StravaClientPort):
 
     async def get_activity(self, activity_id: int) -> dict:
         return await self._get_with_refresh(f"{self.BASE_URL}/activities/{activity_id}")
+
+    async def get_activity_streams(self, activity_id: int) -> dict:
+        return await self._get_with_refresh(
+            f"{self.BASE_URL}/activities/{activity_id}/streams",
+            params={"keys": "latlng,time,velocity_smooth,heartrate", "key_by_type": "true"},
+        )
 
     async def get_activity_comments(self, activity_id: int) -> list[dict]:
         response = await self._client.get(
@@ -176,6 +187,7 @@ class StravaClient(StravaClientPort):
             elevation_gain_meters=activity.get("total_elevation_gain"),
             private_note=private_note,
             perceived_effort=self._map_perceived_effort(activity.get("perceived_exertion")),
+            strava_raw=activity,
         )
 
     def _map_perceived_effort(self, strava_effort: int | None) -> PerceivedEffort | None:

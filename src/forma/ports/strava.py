@@ -46,6 +46,11 @@ class StravaClient(ABC):
         ...
 
     @abstractmethod
+    async def get_activity_streams(self, activity_id: int) -> dict:
+        """Get GPS and metric streams for an activity keyed by type."""
+        ...
+
+    @abstractmethod
     def activity_to_workout(self, activity: dict, athlete_id: str) -> Workout:
         """Convert a Strava activity to a Workout domain entity."""
         ...
