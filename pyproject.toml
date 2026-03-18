@@ -15,6 +15,7 @@ dependencies = [
     "python-multipart>=0.0.21",
     "google-genai>=1.64.0",
     "aiosqlite>=0.22.1",
+    "asyncpg>=0.31.0",
 ]
 
 [build-system]
