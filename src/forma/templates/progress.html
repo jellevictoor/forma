@@ -11,7 +11,7 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6" id="comparison-section">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Progress comparison</h2>
   <p class="text-xs text-muted mb-5" id="comparison-subtitle">Loading…</p>
-  <div id="comparison-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+  <div id="comparison-grid" class="grid grid-cols-2 xl:grid-cols-4 gap-3"></div>
 </div>
 
 {# Fitness & Freshness #}
@@ -120,17 +120,19 @@
     return ((curr - prev) / prev) * 100;
   }
 
-  function deltaHtml(pct, invertGood = false) {
-    if (pct === null) return '<span style="color:var(--color-empty)">—</span>';
+  function deltaChip(pct, invertGood = false) {
+    if (pct === null) return '';
     const improved = invertGood ? pct < 0 : pct > 0;
-    const color = Math.abs(pct) < 1 ? 'var(--color-empty)' : (improved ? 'var(--color-mint)' : 'var(--color-negative)');
-    const arrow = pct > 0.5 ? '↑' : (pct < -0.5 ? '↓' : '=');
-    return `<span style="color:${color}">${arrow} ${Math.abs(pct).toFixed(0)}%</span>`;
+    const neutral = Math.abs(pct) < 1;
+    const bg = neutral ? 'background:var(--color-surface)' : (improved ? 'background:rgba(45,212,170,0.12)' : 'background:rgba(220,38,38,0.10)');
+    const color = neutral ? 'color:var(--color-text-muted)' : (improved ? 'color:var(--color-mint)' : 'color:var(--color-negative)');
+    const sign = pct > 0.5 ? '+' : (pct < -0.5 ? '' : '');
+    return `<span style="${bg};${color};font-size:11px;font-weight:600;padding:1px 6px;border-radius:999px">${sign}${pct.toFixed(0)}%</span>`;
   }
 
   function fmtDuration(s) {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    return h > 0 ? `${h}h\u00a0${m}m` : `${m}m`;
   }
 
   function fmtPace(p) {
@@ -139,54 +141,48 @@
     return `${m}:${String(s).padStart(2, '0')}/km`;
   }
 
+  function statRow(label, current, previous, delta, invertGood = false) {
+    return `
+      <div>
+        <p class="text-xs text-muted mb-0.5">${label}</p>
+        <div class="flex items-baseline gap-1.5 flex-wrap">
+          <span class="text-xl font-bold text-primary tabular-nums">${current}</span>
+          ${deltaChip(delta, invertGood)}
+          <span class="text-xs text-muted">vs ${previous}</span>
+        </div>
+      </div>`;
+  }
+
   for (const sport of data.sports) {
     const c = sport.current, p = sport.previous;
     const color = COLORS[sport.workout_type] || 'var(--color-edge)';
     const label = SPORT_LABELS[sport.workout_type] || sport.workout_type;
 
-    const rows = [
-      `<div class="flex justify-between items-baseline py-2 border-b border-edge">
-        <span class="text-xs text-muted">Sessions</span>
-        <span class="text-sm font-medium text-primary">${c.sessions}
-          <span class="text-xs font-normal text-muted">vs ${p.sessions}</span>
-          ${deltaHtml(pctDelta(c.sessions, p.sessions))}</span>
-      </div>`,
-    ];
+    let stats = statRow('Sessions', c.sessions, p.sessions, pctDelta(c.sessions, p.sessions));
 
     if (c.distance_meters > 0 || p.distance_meters > 0) {
-      rows.push(`<div class="flex justify-between items-baseline py-2 border-b border-edge">
-        <span class="text-xs text-muted">Volume</span>
-        <span class="text-sm font-medium text-primary">${(c.distance_meters / 1000).toFixed(1)}&nbsp;km
-          <span class="text-xs font-normal text-muted">vs ${(p.distance_meters / 1000).toFixed(1)}&nbsp;km</span>
-          ${deltaHtml(pctDelta(c.distance_meters, p.distance_meters))}</span>
-      </div>`);
+      stats += statRow('Volume',
+        `${(c.distance_meters/1000).toFixed(1)}\u00a0km`,
+        `${(p.distance_meters/1000).toFixed(1)}\u00a0km`,
+        pctDelta(c.distance_meters, p.distance_meters));
     } else {
-      rows.push(`<div class="flex justify-between items-baseline py-2 border-b border-edge">
-        <span class="text-xs text-muted">Time</span>
-        <span class="text-sm font-medium text-primary">${fmtDuration(c.duration_seconds)}
-          <span class="text-xs font-normal text-muted">vs ${fmtDuration(p.duration_seconds)}</span>
-          ${deltaHtml(pctDelta(c.duration_seconds, p.duration_seconds))}</span>
-      </div>`);
+      stats += statRow('Time', fmtDuration(c.duration_seconds), fmtDuration(p.duration_seconds),
+        pctDelta(c.duration_seconds, p.duration_seconds));
     }
 
     if (c.avg_pace_min_per_km) {
-      rows.push(`<div class="flex justify-between items-baseline py-2">
-        <span class="text-xs text-muted">Average pace</span>
-        <span class="text-sm font-medium text-primary">${fmtPace(c.avg_pace_min_per_km)}
-          <span class="text-xs font-normal text-muted">vs ${fmtPace(p.avg_pace_min_per_km)}</span>
-          ${deltaHtml(pctDelta(c.avg_pace_min_per_km, p.avg_pace_min_per_km), true)}</span>
-      </div>`);
+      stats += statRow('Average pace', fmtPace(c.avg_pace_min_per_km), fmtPace(p.avg_pace_min_per_km),
+        pctDelta(c.avg_pace_min_per_km, p.avg_pace_min_per_km), true);
     }
 
     const card = document.createElement('div');
     card.className = 'bg-surface-alt rounded-xl p-4';
     card.innerHTML = `
-      <div class="flex items-center gap-2 mb-3">
-        <span class="w-1 h-full self-stretch rounded-full" style="background:${color}"></span>
-        <span class="w-2 h-2 rounded-full" style="background:${color}"></span>
+      <div class="flex items-center gap-2 mb-4">
+        <span class="w-2 h-2 rounded-full shrink-0" style="background:${color}"></span>
         <span class="text-xs font-medium uppercase tracking-widest text-muted">${label}</span>
       </div>
-      ${rows.join('')}
+      <div class="space-y-3">${stats}</div>
     `;
     grid.appendChild(card);
   }
@@ -380,12 +376,18 @@ const DISTANCE_LABELS = {
     `).join('');
   }
 
-  const strengthData = await fetch('/api/progress/strength-frequency').then(r => r.json());
+  const strengthRaw = await fetch('/api/progress/strength-frequency').then(r => r.json());
   const strengthContainer = document.getElementById('strength-chart');
   strengthContainer.classList.remove('chart-loading');
-  if (!strengthData.length) {
+  if (!strengthRaw.length) {
     strengthContainer.innerHTML = '<p class="text-center text-muted py-6 text-sm">No strength data yet</p>';
   } else {
+    // Trim to active date range: first → last session with some padding
+    const active = strengthRaw.filter(d => d.count > 0);
+    const firstActive = active[0]?.week_start;
+    const lastActive = active[active.length - 1]?.week_start;
+    const strengthData = strengthRaw.filter(d => d.week_start >= firstActive && d.week_start <= lastActive);
+
     const width = strengthContainer.clientWidth || 700;
     const height = 180;
     const margin = {top: 10, right: 16, bottom: 30, left: 36};
@@ -424,7 +426,8 @@ const DISTANCE_LABELS = {
   }
 
   const climbingContainer = document.getElementById('climbing-list');
-  const climbingData = await fetch('/api/analytics/climbing/volume').then(r => r.json());
+  const climbingRaw = await fetch('/api/analytics/climbing/volume').then(r => r.json());
+  const climbingData = climbingRaw.filter(d => d.workout_count > 0);
   if (!climbingData.length) {
     climbingContainer.innerHTML = '<p class="text-muted text-sm">No climbing sessions yet</p>';
   } else {
