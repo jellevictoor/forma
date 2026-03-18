@@ -245,7 +245,7 @@ const YT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" vie
 
 // Split "3×10 goblet squat @ 24 kg" into { reps: "3×10", name: "goblet squat", modifier: "@ 24 kg" }
 function parseExercise(str) {
-  const repsMatch = str.match(/^([\d]+\s*[×x×]\s*[\d]+|[\d]+\s*(?:min|sec|seconds?|minutes?)\b[^a-zA-Z]*|[\d]+\s*rounds?\b[^a-zA-Z]*)\s+(.+)/i);
+  const repsMatch = str.match(/^([\d]+\s*[×x×]\s*[\d]+|[\d]+\s*(?:min|sec|seconds?|minutes?)\b\s*|[\d]+\s*rounds?\b\s*)\s*(.+)/i);
   if (!repsMatch) return { reps: null, name: str, modifier: null };
   const reps = repsMatch[1].trim();
   const rest = repsMatch[2].trim();
@@ -335,25 +335,25 @@ function dayCard(day) {
          data-date="${day.date}"
          data-type="${day.workout_type}"
          data-description="${(day.description || '').replace(/"/g, '&quot;')}">
-      <div class="flex items-start justify-between gap-3">
-        <div class="flex items-center gap-3 min-w-0">
-          ${sportDot(day.workout_type)}
-          <div class="min-w-0">
+      <div class="flex items-start gap-3">
+        ${sportDot(day.workout_type)}
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="font-semibold text-sm text-primary">${dayName}</span>
               <span class="text-xs text-muted">${dateStr}</span>
             </div>
-            <p class="text-sm text-muted mt-0.5 leading-snug">${day.description}</p>
+            <div class="flex items-center gap-2 flex-wrap">
+              ${!isRest ? `
+                <span class="text-xs font-medium capitalize" style="color:${intensityColor}">${day.intensity}</span>
+                ${day.workout_type === 'run' ? hrTargetBadge(day.intensity) : ''}
+                <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>
+                <button type="button" onclick="toggleExercises(this)"
+                        class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer">${hasExercises ? 'Hide' : 'Details'}</button>
+              ` : `<span class="text-xs italic text-muted">Rest day</span>`}
+            </div>
           </div>
-        </div>
-        <div class="flex items-center gap-3 shrink-0">
-          ${!isRest ? `
-            <span class="text-xs font-medium capitalize" style="color:${intensityColor}">${day.intensity}</span>
-            ${day.workout_type === 'run' ? hrTargetBadge(day.intensity) : ''}
-            <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>
-            <button type="button" onclick="toggleExercises(this)"
-                    class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer">${hasExercises ? 'Hide' : 'Details'}</button>
-          ` : `<span class="text-xs italic text-muted">Rest day</span>`}
+          <p class="text-sm text-muted mt-0.5 leading-snug">${day.description}</p>
         </div>
       </div>
       <div class="exercises-panel ${panelHidden}mt-3 pt-3 border-t border-edge">${panelContent}</div>
