@@ -1,33 +1,62 @@
-# Fitness Coach
+# forma
 
-Personal AI fitness coach with Strava integration.
+Personal fitness dashboard with Strava integration and AI coaching.
 
-## Setup
+![Home](screenshot-home.png)
+
+## Features
+
+- **Dashboard** — weekly volume, recent activities, progress overview
+- **Analytics** — per-sport charts and trends
+- **Plan** — AI-generated weekly training plans based on your schedule
+- **Progress** — long-term tracking across running, strength, and climbing
+- **Goal coaching** — AI advice tied to your active goals
+- **Activity detail** — GPS maps, heart rate zones, lap breakdowns
+- **iOS companion app** — guided workout execution with timers (FormaWorkout/)
+
+## Quick start
 
 ```bash
 cp .env.example .env
-# Add your API keys to .env
+# Fill in your Strava and Gemini API keys
 
-uv sync
-uv run fitness-coach setup --seed
+docker compose up
 ```
 
-## Commands
+App runs at [http://localhost:8080](http://localhost:8080).
 
-```bash
-fitness-coach setup --seed  # Load your profile and schedule
-fitness-coach profile       # View your profile
-fitness-coach schedule      # View weekly schedule
-fitness-coach chat          # Talk with your coach
-fitness-coach briefing      # Get today's briefing
-fitness-coach auth          # Authenticate with Strava
-fitness-coach sync          # Sync workouts from Strava
-fitness-coach workouts      # View recent workouts
-```
+## Environment variables
 
-## Strava Setup
+| Variable | Description |
+|---|---|
+| `DATABASE_PATH` | SQLite path (default: `data/fitness_coach.db`) |
+| `STRAVA_CLIENT_ID` | Strava API client ID |
+| `STRAVA_CLIENT_SECRET` | Strava API client secret |
+| `STRAVA_ACCESS_TOKEN` | OAuth access token |
+| `STRAVA_REFRESH_TOKEN` | OAuth refresh token |
+| `GEMINI_API_KEY` | Google Gemini API key (free at aistudio.google.com) |
+
+## Strava setup
 
 1. Create an app at https://www.strava.com/settings/api
 2. Set callback domain to `localhost`
-3. Add client ID and secret to `.env`
-4. Run `fitness-coach auth`
+3. Add `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` to `.env`
+4. Run `uv run fitness-coach auth` to get tokens
+
+## Development
+
+```bash
+uv sync
+uv run uvicorn forma.__main__:app --reload --port 8080
+
+uv run pytest          # run all tests
+uv run ruff check      # lint
+```
+
+## Stack
+
+- **Backend**: Python, FastAPI, SQLite
+- **Frontend**: Jinja2 templates, Tailwind CSS, D3.js
+- **AI**: Google Gemini 2.5 Flash
+- **Sync**: Strava API
+- **iOS**: SwiftUI (FormaWorkout/)
