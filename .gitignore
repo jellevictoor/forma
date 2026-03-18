@@ -15,3 +15,4 @@ wheels/
 .env
 *.db
 .playwright-mcp
+*.png
