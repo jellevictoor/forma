@@ -50,16 +50,23 @@ async def update_profile(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
     name: Annotated[str, Form()],
     notes: Annotated[str, Form()] = "",
+    equipment_raw: Annotated[str, Form(alias="equipment")] = "",
     height_cm: Annotated[float | None, Form()] = None,
     experience_years: Annotated[float, Form()] = 0.0,
     max_hours_per_week: Annotated[float | None, Form()] = None,
+    max_heartrate: Annotated[int | None, Form()] = None,
+    aerobic_threshold_bpm: Annotated[int | None, Form()] = None,
 ):
+    equipment = [line.strip() for line in equipment_raw.splitlines() if line.strip()]
     updates: dict = {
         "name": name,
         "notes": notes,
+        "equipment": equipment,
         "height_cm": height_cm,
         "experience_years": experience_years,
         "max_hours_per_week": max_hours_per_week,
+        "max_heartrate": max_heartrate,
+        "aerobic_threshold_bpm": aerobic_threshold_bpm,
     }
     await profile_service.update_profile(athlete_id, updates)
     return RedirectResponse(url="/profile", status_code=303)

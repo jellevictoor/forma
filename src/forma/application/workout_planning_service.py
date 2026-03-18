@@ -1,9 +1,11 @@
 """Workout planning service — generates a 7-day rolling plan using Gemini."""
 
 import json
+import logging
 from datetime import date, datetime, timedelta, timezone
 
 from google import genai
+
 
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.ports.athlete_repository import AthleteRepository
@@ -15,6 +17,7 @@ from forma.ports.plan_cache_repository import (
 )
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
+logger = logging.getLogger(__name__)
 
 PLAN_MODEL = "models/gemini-2.5-flash"
 
@@ -54,6 +57,7 @@ class WorkoutPlanningService:
 
     async def generate_and_cache(self, athlete_id: str) -> CachedWeeklyPlan:
         """Generate via Gemini, persist to cache, and return."""
+        logger.info("generating weekly plan for athlete %s", athlete_id)
         plan = await self._generate(athlete_id)
         if not plan.days:
             raise ValueError("Gemini returned an empty plan — not caching")
@@ -147,11 +151,48 @@ class WorkoutPlanningService:
 
         recent_block = "\n".join(fmt_workout(w) for w in recent_workouts) or "  None"
 
-        goal_lines = [f"  - {g.goal_type.value}: {g.description}" for g in athlete.goals]
+        goal_lines = [f"  - {g.goal_type.value}: {g.description} (since {g.set_at.strftime('%Y-%m-%d')})" for g in athlete.goals]
         goals_block = "\n".join(goal_lines) or "  (no goals set)"
+
+        if athlete.primary_goal and athlete.primary_goal.milestones:
+            upcoming = [
+                m for m in athlete.primary_goal.milestones
+                if m.date >= today
+            ]
+            if upcoming:
+                upcoming.sort(key=lambda m: m.date)
+                next_milestone = upcoming[0]
+                days_away = (next_milestone.date - today).days
+                milestone_lines = [
+                    f"  - {m.date.strftime('%Y-%m-%d')} ({(m.date - today).days}d): {m.description}"
+                    + (f" [{m.target}]" if m.target else "")
+                    for m in upcoming[:3]
+                ]
+                goals_block += "\n  Upcoming milestones:\n" + "\n".join(milestone_lines)
+                goals_block += f"\n  NOTE: Next milestone in {days_away} days — orient sessions toward this checkpoint."
+
+        if athlete.goal_history:
+            sorted_history = sorted(athlete.goal_history, key=lambda e: e.set_at)
+            history_lines = [
+                f"  - [{e.set_at.strftime('%Y-%m-%d')} → {e.retired_at.strftime('%Y-%m-%d')}]"
+                f" {e.goal_type.value}: {e.description}"
+                for e in sorted_history
+            ]
+            goals_block += "\n  Previous goals:\n" + "\n".join(history_lines)
+            last = sorted_history[-1]
+            current = athlete.primary_goal
+            if current:
+                goals_block += (
+                    f"\n  NOTE: Goal changed on {last.retired_at.strftime('%Y-%m-%d')} from"
+                    f" '{last.description}' to '{current.description}'."
+                    " Transition training gradually — avoid abrupt intensity or volume shifts."
+                )
 
         injury_lines = [f"  - {i.affected_area}: {i.description}" for i in athlete.active_injuries]
         injuries_block = "\n".join(injury_lines) or "  None"
+
+        equipment_lines = [f"  - {e}" for e in athlete.equipment]
+        equipment_block = "\n".join(equipment_lines) or "  (not specified — assume bodyweight only)"
 
         form = ff["form"]
         if form > 5:
@@ -185,6 +226,8 @@ ATHLETE PROFILE:
 {goals_block}
 - Active injuries or limitations:
 {injuries_block}
+- Available equipment:
+{equipment_block}
 - Notes: {athlete.notes}
 
 CURRENT FITNESS STATE:
@@ -225,6 +268,9 @@ Respond with only the JSON, no other text."""
             for w in workouts_with_notes
         ) or "  (no exercise notes found)"
 
+        equipment_lines = [f"  - {e}" for e in athlete.equipment]
+        equipment_block = "\n".join(equipment_lines) or "  (not specified — assume bodyweight only)"
+
         session_context = f"{workout_type} — {description}" if description else workout_type
 
         return f"""You are a personal fitness coach. The athlete has the following session planned for {day.strftime('%A %B %d, %Y')}:
@@ -234,11 +280,14 @@ SESSION: {session_context}
 RECENT WORKOUT NOTES (exercises documented in previous sessions):
 {notes_block}
 
+AVAILABLE EQUIPMENT:
+{equipment_block}
+
 ATHLETE NOTES:
 {athlete.notes or '  (none)'}
 
-Based on the planned session description and the athlete's documented exercises, suggest a concrete workout that matches the session intent.
-Reference specific circuits or exercises from the notes where relevant.
+Based on the planned session description, the athlete's documented exercises, and their available equipment, suggest a concrete workout that matches the session intent.
+Only prescribe exercises that can be done with the listed equipment. Reference specific circuits or exercises from the notes where relevant.
 
 Respond with a JSON object with three sections:
 {{

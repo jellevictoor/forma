@@ -11,15 +11,18 @@ from forma.adapters.sqlite_insights_cache import SQLiteInsightsCache
 from forma.adapters.sqlite_plan_cache import SQLitePlanCache
 from forma.adapters.sqlite_recap_cache import SQLiteRecapCache
 from forma.adapters.sqlite_storage import SQLiteStorage
+from forma.adapters.sqlite_stream_repository import SQLiteStreamRepository
 from forma.adapters.strava_client import StravaClient
+from forma.application.activity_analysis_service import ActivityAnalysisService
+from forma.application.activity_stream_service import ActivityStreamService
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
 from forma.application.training_insights import TrainingInsightsService
 from forma.application.weekly_recap import WeeklyRecapService
 from forma.application.weight_tracking_service import WeightTrackingService
-from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.workout_execution_service import WorkoutExecutionService
+from forma.application.goal_coaching_service import GoalCoachingService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.config import get_settings
 from forma.ports.workout_repository import WorkoutRepository
@@ -74,6 +77,18 @@ async def get_analytics_service() -> AnalyticsService:
 
 async def get_workout_repo() -> WorkoutRepository:
     return _create_workout_repo()
+
+
+@lru_cache
+def _create_goal_coaching_service() -> GoalCoachingService:
+    settings = get_settings()
+    db_path = settings.database_path
+    storage = SQLiteStorage(db_path)
+    return GoalCoachingService(storage, storage, settings.gemini_api_key)
+
+
+async def get_goal_coaching_service() -> GoalCoachingService:
+    return _create_goal_coaching_service()
 
 
 @lru_cache
@@ -156,6 +171,26 @@ def _create_workout_execution_service() -> WorkoutExecutionService:
 
 async def get_workout_execution_service() -> WorkoutExecutionService:
     return _create_workout_execution_service()
+
+
+@lru_cache
+def _create_activity_stream_service() -> ActivityStreamService:
+    settings = get_settings()
+    client = StravaClient(
+        client_id=settings.strava_client_id,
+        client_secret=settings.strava_client_secret,
+        access_token=settings.strava_access_token,
+        refresh_token=settings.strava_refresh_token,
+    )
+    return ActivityStreamService(
+        SQLiteStorage(settings.database_path),
+        SQLiteStreamRepository(settings.database_path),
+        client,
+    )
+
+
+async def get_activity_stream_service() -> ActivityStreamService:
+    return _create_activity_stream_service()
 
 
 async def get_athlete_id() -> str:

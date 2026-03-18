@@ -1,6 +1,6 @@
 """Athlete domain entity."""
 
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 
@@ -18,6 +18,14 @@ class GoalType(str, Enum):
     STRENGTH = "strength"
 
 
+class GoalMilestone(BaseModel):
+    """A measurable checkpoint on the way to a goal."""
+
+    date: date
+    description: str
+    target: str | None = None  # e.g. "25km/week", "sub-55min 10k"
+
+
 class Goal(BaseModel):
     """A fitness goal."""
 
@@ -26,6 +34,19 @@ class Goal(BaseModel):
     target_date: date | None = None
     target_value: str | None = None  # e.g., "sub 3:30 marathon", "10km in 45min"
     priority: int = Field(default=1, ge=1, le=5)
+    set_at: datetime = Field(default_factory=datetime.now)
+    milestones: list[GoalMilestone] = Field(default_factory=list)
+    coach_rationale: str | None = None
+
+
+class GoalHistoryEntry(BaseModel):
+    """A retired goal — kept so the coach can track intent over time."""
+
+    goal_type: GoalType
+    description: str
+    target_value: str | None = None
+    set_at: datetime
+    retired_at: datetime
 
 
 class Injury(BaseModel):
@@ -67,6 +88,14 @@ class Athlete(BaseModel):
     max_hours_per_week: float | None = None
     notes: str = ""
     schedule_template: list[ScheduleTemplateSlot] = Field(default_factory=list)
+    equipment: list[str] = Field(default_factory=list)
+
+    # Goal history — previous goals kept for coaching context
+    goal_history: list[GoalHistoryEntry] = Field(default_factory=list)
+
+    # Physiology
+    max_heartrate: int | None = None          # beats per minute; used for HR zone calculation
+    aerobic_threshold_bpm: int | None = None  # VT1 / talk-test Z2 ceiling — calibrates zones
 
     # Strava integration
     strava_athlete_id: int | None = None
@@ -84,10 +113,24 @@ class Athlete(BaseModel):
         )
 
     def with_primary_goal(self, goal: "Goal") -> "Athlete":
-        return self.model_copy(update={"goals": [goal]})
+        history = self._archive_current_goal()
+        return self.model_copy(update={"goals": [goal], "goal_history": history})
 
     def without_primary_goal(self) -> "Athlete":
-        return self.model_copy(update={"goals": []})
+        history = self._archive_current_goal()
+        return self.model_copy(update={"goals": [], "goal_history": history})
+
+    def _archive_current_goal(self) -> "list[GoalHistoryEntry]":
+        history = list(self.goal_history)
+        if self.primary_goal:
+            history.append(GoalHistoryEntry(
+                goal_type=self.primary_goal.goal_type,
+                description=self.primary_goal.description,
+                target_value=self.primary_goal.target_value,
+                set_at=self.primary_goal.set_at,
+                retired_at=datetime.now(),
+            ))
+        return history
 
     def with_schedule_slot(self, slot: "ScheduleTemplateSlot") -> "Athlete":
         return self.model_copy(update={"schedule_template": [*self.schedule_template, slot]})

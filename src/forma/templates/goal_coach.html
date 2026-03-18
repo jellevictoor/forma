@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+{% block title %}Set goal with coach — forma{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="/profile" class="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5 mb-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    Back to profile
+  </a>
+  <h1 class="text-3xl font-bold text-primary">Set goal with coach</h1>
+  <p class="text-xs text-muted mt-1">Your coach analyses your training data and guides you to a realistic, measurable goal</p>
+</div>
+
+<div class="flex flex-col lg:flex-row gap-6 items-start">
+
+  <!-- Training snapshot sidebar -->
+  <div class="w-full lg:w-80 shrink-0 space-y-4">
+
+    <!-- Key stats -->
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Your training — last 90 days</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-surface-alt rounded-xl p-3">
+          <p class="text-xs text-muted mb-1">Runs/week</p>
+          <p class="text-2xl font-bold text-primary">{{ "%.1f"|format(snapshot.avg_runs_per_week) }}</p>
+        </div>
+        <div class="bg-surface-alt rounded-xl p-3">
+          <p class="text-xs text-muted mb-1">Avg distance</p>
+          <p class="text-2xl font-bold text-primary">{{ "%.1f"|format(snapshot.avg_distance_km) }}</p>
+          <p class="text-xs text-muted">km</p>
+        </div>
+        <div class="bg-surface-alt rounded-xl p-3">
+          <p class="text-xs text-muted mb-1">Longest run</p>
+          <p class="text-2xl font-bold text-primary">{{ "%.1f"|format(snapshot.longest_run_km) if snapshot.longest_run_km else '—' }}</p>
+          {% if snapshot.longest_run_km %}<p class="text-xs text-muted">km</p>{% endif %}
+        </div>
+        <div class="bg-surface-alt rounded-xl p-3">
+          <p class="text-xs text-muted mb-1">Total runs</p>
+          <p class="text-2xl font-bold text-primary">{{ snapshot.total_runs_90d }}</p>
+        </div>
+      </div>
+
+      {% if snapshot.avg_pace_sec_per_km %}
+      <div class="mt-3 flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-alt">
+        <span class="text-xs text-muted">Average pace</span>
+        <span class="text-sm font-semibold tabular-nums text-primary">
+          {{ (snapshot.avg_pace_sec_per_km // 60)|int }}:{{ '%02d'|format((snapshot.avg_pace_sec_per_km % 60)|int) }}/km
+        </span>
+      </div>
+      {% endif %}
+
+      {% if snapshot.avg_heartrate %}
+      <div class="mt-2 flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-alt">
+        <span class="text-xs text-muted">Average HR</span>
+        <span class="text-sm font-semibold tabular-nums text-primary">{{ "%.0f"|format(snapshot.avg_heartrate) }} bpm</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Weekly volume sparkline -->
+    {% if snapshot.weekly_volumes %}
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Weekly volume</h2>
+      <div id="volume-sparkline" style="height:80px"></div>
+    </div>
+    {% endif %}
+
+    <!-- Current goal (if set) -->
+    {% if athlete and athlete.primary_goal %}
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Current goal</h2>
+      <p class="text-sm text-primary">{{ athlete.primary_goal.description }}</p>
+      {% if athlete.primary_goal.target_value %}
+      <p class="text-xs text-muted mt-1">{{ athlete.primary_goal.target_value }}</p>
+      {% endif %}
+      <p class="text-xs text-muted mt-1">Since {{ athlete.primary_goal.set_at.strftime('%d %b %Y') }}</p>
+      {% if athlete.primary_goal.coach_rationale %}
+      <p class="text-xs text-secondary mt-2 leading-relaxed italic">{{ athlete.primary_goal.coach_rationale }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Schedule -->
+    {% if athlete and athlete.schedule_template %}
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Training schedule</h2>
+      <div class="space-y-1.5">
+        {% set day_names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+        {% for slot in athlete.schedule_template %}
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-muted w-8">{{ day_names[slot.day_of_week] }}</span>
+          <span class="w-1.5 h-1.5 rounded-full
+            {% if slot.workout_type.value == 'run' %}sport-run
+            {% elif slot.workout_type.value == 'strength' %}sport-strength
+            {% elif slot.workout_type.value == 'climbing' %}sport-climbing
+            {% else %}bg-edge{% endif %}"></span>
+          <span class="text-secondary capitalize">{{ slot.workout_type.value }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Coach chat -->
+  <div class="flex-1 min-w-0">
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm flex flex-col" style="min-height:600px">
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 px-6 py-4 border-b border-edge">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--color-nav)">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary">Your coach</p>
+          <p class="text-xs text-muted">Analyses your training data to set realistic goals</p>
+        </div>
+        <div id="coach-status" class="ml-auto flex items-center gap-1.5 text-xs text-muted">
+          <span class="w-1.5 h-1.5 rounded-full bg-edge animate-pulse"></span>
+          Analysing your training…
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4" style="max-height:460px">
+        <!-- Coach opening message loads here -->
+        <div id="coach-thinking" class="flex justify-start">
+          <div class="max-w-[85%] rounded-2xl px-4 py-3 bg-surface-alt">
+            <div class="flex gap-1.5 items-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-edge animate-bounce" style="animation-delay:0ms"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-edge animate-bounce" style="animation-delay:150ms"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-edge animate-bounce" style="animation-delay:300ms"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Goal proposal card — hidden until coach outputs one -->
+      <div id="proposal-card" class="hidden mx-6 mb-4 rounded-2xl overflow-hidden border" style="border-color:rgba(45,212,170,0.3)">
+        <div class="px-5 py-4" style="background:rgba(45,212,170,0.08)">
+          <div class="flex items-center gap-2 mb-3">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:var(--color-mint)">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+            </svg>
+            <span class="text-xs font-semibold uppercase tracking-widest" style="color:var(--color-mint)">Goal proposal</span>
+          </div>
+
+          <p id="proposal-description" class="text-base font-semibold text-primary mb-1"></p>
+          <div class="flex flex-wrap gap-2 mb-3" id="proposal-meta"></div>
+          <p id="proposal-rationale" class="text-xs text-secondary leading-relaxed mb-4"></p>
+
+          <!-- Milestones timeline -->
+          <div id="proposal-milestones" class="space-y-2 mb-4"></div>
+
+          <!-- Actions -->
+          <div class="flex gap-2 flex-wrap">
+            <button
+              id="accept-btn"
+              onclick="acceptProposal()"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-90 cursor-pointer"
+              style="background:var(--color-mint);color:#0B1622"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              Accept this goal
+            </button>
+            <button
+              onclick="adjustProposal()"
+              class="px-4 py-2 rounded-xl text-sm text-muted border border-edge hover:text-secondary transition-colors cursor-pointer"
+            >
+              Let's adjust
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="px-6 pb-6 pt-2">
+        <form id="chat-form" onsubmit="sendMessage(event)" class="flex gap-2">
+          <input
+            id="chat-input"
+            type="text"
+            placeholder="Tell me what you want to achieve…"
+            disabled
+            class="flex-1 text-sm bg-surface-alt border border-edge rounded-xl px-4 py-3 text-primary placeholder-muted focus:outline-none focus:border-mint/40 transition-colors disabled:opacity-50"
+            autocomplete="off"
+          />
+          <button
+            type="submit"
+            id="send-btn"
+            disabled
+            class="px-4 py-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-40 cursor-pointer"
+            style="background:var(--color-nav);color:white"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
+        </form>
+        <div id="chat-error" class="hidden mt-2 text-xs text-red-500"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Volume sparkline ──────────────────────────────────────────
+{% if snapshot.weekly_volumes %}
+(function() {
+  const volumes = {{ snapshot.weekly_volumes | map(attribute='distance_km') | list | tojson }};
+  const labels  = {{ snapshot.weekly_volumes | map(attribute='week_start') | map('string') | list | tojson }};
+  const el = document.getElementById('volume-sparkline');
+  if (!el || !volumes.length) return;
+
+  const W = el.offsetWidth || 280;
+  const H = 80;
+  const pad = { l:4, r:4, t:8, b:20 };
+  const maxV = Math.max(...volumes, 1);
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width','100%');
+  svg.style.overflow = 'visible';
+
+  const barW = Math.max(4, (W - pad.l - pad.r) / volumes.length - 4);
+  const step  = (W - pad.l - pad.r) / volumes.length;
+
+  volumes.forEach((v, i) => {
+    const barH = Math.max(3, ((v / maxV) * (H - pad.t - pad.b)));
+    const x = pad.l + i * step + step / 2 - barW / 2;
+    const y = H - pad.b - barH;
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', x);
+    rect.setAttribute('y', y);
+    rect.setAttribute('width', barW);
+    rect.setAttribute('height', barH);
+    rect.setAttribute('rx', 3);
+    rect.setAttribute('fill', i === 0 ? 'var(--color-mint)' : 'var(--color-edge)');
+    svg.appendChild(rect);
+
+    if (i % 2 === 0) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x', x + barW / 2);
+      text.setAttribute('y', H - 4);
+      text.setAttribute('text-anchor','middle');
+      text.setAttribute('font-size','8');
+      text.setAttribute('fill','var(--color-text-muted)');
+      const d = new Date(labels[i] + 'T00:00:00');
+      text.textContent = `${d.getDate()} ${d.toLocaleString('en',{month:'short'})}`;
+      svg.appendChild(text);
+    }
+
+    if (v > 0) {
+      const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x', x + barW / 2);
+      label.setAttribute('y', y - 3);
+      label.setAttribute('text-anchor','middle');
+      label.setAttribute('font-size','8');
+      label.setAttribute('fill', i === 0 ? 'var(--color-mint)' : 'var(--color-text-muted)');
+      label.textContent = v.toFixed(0);
+      svg.appendChild(label);
+    }
+  });
+
+  el.appendChild(svg);
+})();
+{% endif %}
+
+// ── Coach chat ────────────────────────────────────────────────
+let _history = [];
+let _pendingProposal = null;
+
+function renderMarkdown(text) {
+  if (typeof marked === 'undefined') return text.replace(/\n/g, '<br>');
+  return marked.parse(text, { breaks: true });
+}
+
+function appendMessage(role, text) {
+  const messages = document.getElementById('chat-messages');
+  const wrapper = document.createElement('div');
+  wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+  const bubble = document.createElement('div');
+  bubble.className = [
+    'max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
+    role === 'user'
+      ? 'text-white'
+      : 'bg-surface-alt text-secondary prose-chat',
+  ].join(' ');
+  if (role === 'user') {
+    bubble.style.background = 'var(--color-nav)';
+    bubble.textContent = text;
+  } else {
+    bubble.innerHTML = renderMarkdown(text);
+  }
+  wrapper.appendChild(bubble);
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+  return wrapper;
+}
+
+function showProposalCard(proposal) {
+  _pendingProposal = proposal;
+  const card = document.getElementById('proposal-card');
+
+  document.getElementById('proposal-description').textContent = proposal.description;
+
+  const meta = document.getElementById('proposal-meta');
+  meta.innerHTML = '';
+  if (proposal.target_value) {
+    const pill = document.createElement('span');
+    pill.className = 'text-xs px-2.5 py-1 rounded-full font-medium';
+    pill.style.cssText = 'background:rgba(45,212,170,0.12);border:1px solid rgba(45,212,170,0.3);color:var(--color-mint)';
+    pill.textContent = proposal.target_value;
+    meta.appendChild(pill);
+  }
+  if (proposal.target_date) {
+    const d = new Date(proposal.target_date + 'T00:00:00');
+    const pill = document.createElement('span');
+    pill.className = 'text-xs px-2.5 py-1 rounded-full border border-edge text-muted';
+    pill.textContent = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    meta.appendChild(pill);
+  }
+
+  document.getElementById('proposal-rationale').textContent = proposal.rationale;
+
+  const milestonesEl = document.getElementById('proposal-milestones');
+  milestonesEl.innerHTML = '';
+  if (proposal.milestones && proposal.milestones.length) {
+    const header = document.createElement('p');
+    header.className = 'text-xs font-semibold uppercase tracking-widest text-muted mb-2';
+    header.textContent = 'Milestones';
+    milestonesEl.appendChild(header);
+
+    const timeline = document.createElement('div');
+    timeline.className = 'pl-4 border-l-2 space-y-3';
+    timeline.style.borderColor = 'rgba(45,212,170,0.3)';
+
+    proposal.milestones.forEach(m => {
+      const d = new Date(m.date + 'T00:00:00');
+      const item = document.createElement('div');
+      item.className = 'relative';
+      item.innerHTML = `
+        <div class="absolute -left-[1.35rem] top-1.5 w-2 h-2 rounded-full" style="background:var(--color-mint)"></div>
+        <p class="text-xs text-muted tabular-nums mb-0.5">${d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</p>
+        <p class="text-sm text-primary font-medium">${m.description}</p>
+        ${m.target ? `<p class="text-xs text-muted">${m.target}</p>` : ''}
+      `;
+      timeline.appendChild(item);
+    });
+    milestonesEl.appendChild(timeline);
+  }
+
+  card.classList.remove('hidden');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function acceptProposal() {
+  if (!_pendingProposal) return;
+  const btn = document.getElementById('accept-btn');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+
+  const res = await fetch('/profile/goal/coach/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proposal: _pendingProposal }),
+  });
+  if (res.redirected) {
+    window.location.href = res.url;
+  } else if (res.ok) {
+    window.location.href = '/profile';
+  } else {
+    btn.textContent = 'Accept this goal';
+    btn.disabled = false;
+    document.getElementById('chat-error').textContent = 'Could not save. Try again.';
+    document.getElementById('chat-error').classList.remove('hidden');
+  }
+}
+
+function adjustProposal() {
+  document.getElementById('proposal-card').classList.add('hidden');
+  _pendingProposal = null;
+  const input = document.getElementById('chat-input');
+  input.value = '';
+  input.placeholder = 'Tell me what you\'d like to change…';
+  input.focus();
+}
+
+async function sendMessage(event) {
+  event.preventDefault();
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-btn');
+  const errorEl = document.getElementById('chat-error');
+  const message = input.value.trim();
+  if (!message) return;
+
+  errorEl.classList.add('hidden');
+  input.value = '';
+  sendBtn.disabled = true;
+  input.disabled = true;
+
+  appendMessage('user', message);
+  const thinkingRow = appendMessage('model', '…');
+
+  try {
+    const res = await fetch('/profile/goal/coach/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history: _history }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+
+    _history.push({ role: 'user', text: message });
+    _history.push({ role: 'model', text: data.response });
+
+    thinkingRow.querySelector('div').innerHTML = renderMarkdown(data.response);
+
+    if (data.proposal) {
+      showProposalCard(data.proposal);
+    }
+  } catch (err) {
+    thinkingRow.remove();
+    errorEl.textContent = err.message || 'Something went wrong. Try again.';
+    errorEl.classList.remove('hidden');
+  } finally {
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// Load opening message on page load
+(async function startCoaching() {
+  try {
+    const res = await fetch('/profile/goal/coach/start', { method: 'POST' });
+    const data = await res.json();
+
+    document.getElementById('coach-thinking').remove();
+    const msgRow = appendMessage('model', data.message);
+    _history.push({ role: 'model', text: data.message });
+
+    document.getElementById('coach-status').innerHTML = `
+      <span class="w-1.5 h-1.5 rounded-full" style="background:var(--color-mint)"></span>
+      Ready
+    `;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('chat-input').focus();
+  } catch {
+    document.getElementById('coach-thinking').querySelector('div').innerHTML =
+      '<p class="text-sm text-muted">Could not connect to coach. Reload to try again.</p>';
+    document.getElementById('coach-status').innerHTML = `
+      <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+      Offline
+    `;
+  }
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}

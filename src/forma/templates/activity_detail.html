@@ -122,14 +122,8 @@
       <div id="legend-gradient" class="flex-1 h-1.5 rounded-full"></div>
       <span id="legend-high"></span>
     </div>
-    <!-- zones legend -->
-    <div id="legend-zones" class="hidden mt-3 flex items-center gap-4 text-xs text-muted flex-wrap">
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#60A5FA"></span>Z1 Warm-up 50–60%</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#34D399"></span>Z2 Endurance 60–70%</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#FBBF24"></span>Z3 Aerobic 70–80%</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#F97316"></span>Z4 Threshold 80–90%</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#EF4444"></span>Z5 VO₂max 90–100%</span>
-    </div>
+    <!-- zones legend — populated by JS after zone calibration -->
+    <div id="legend-zones" class="hidden mt-3 flex items-center gap-3 text-xs text-muted flex-wrap"></div>
   </div>
   <p id="map-error" class="hidden px-6 pb-6 text-xs text-muted text-center">No GPS data available for this activity.</p>
 </div>
@@ -138,20 +132,15 @@
 <div id="charts-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm px-6 pt-5 pb-6 mb-6">
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Pace &amp; heart rate</h2>
-    <div class="flex items-center gap-4">
-      <span class="text-xs text-muted">max HR: <span class="font-medium text-secondary">{% if athlete and athlete.max_heartrate %}{{ athlete.max_heartrate }} bpm{% elif athlete and athlete.age %}{{ 220 - athlete.age }} bpm <span class="font-normal">(est.)</span>{% else %}185 bpm <span class="font-normal">(default — <a href="/profile" class="text-mint hover:underline">set yours</a>)</span>{% endif %}</span></span>
+    <div class="flex items-center gap-3">
+      <span id="zone-calibration-badge" class="hidden text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 font-medium"></span>
+      <span id="drift-badge" class="hidden text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 font-medium"></span>
       <div id="chart-crosshair-label" class="text-xs text-muted font-mono hidden"></div>
     </div>
   </div>
   <svg id="activity-svg" class="w-full" style="overflow:visible"></svg>
-  <!-- zone legend strips -->
-  <div id="chart-zone-legend" class="hidden mt-4 flex items-center gap-4 text-xs text-muted flex-wrap">
-    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#60A5FA"></span>Z1 Warm-up 50–60%</span>
-    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#34D399"></span>Z2 Endurance 60–70%</span>
-    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#FBBF24"></span>Z3 Aerobic 70–80%</span>
-    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#F97316"></span>Z4 Threshold 80–90%</span>
-    <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#EF4444"></span>Z5 VO₂max 90–100%</span>
-  </div>
+  <!-- zone legend — populated by JS -->
+  <div id="chart-zone-legend" class="hidden mt-4 flex items-center gap-3 text-xs text-muted flex-wrap"></div>
 </div>
 {% endif %}
 
@@ -315,23 +304,61 @@ async function sendChatMessage(event, workoutId) {
 
 {% if workout.workout_type.value == 'run' %}
 // ── Route map + charts ─────────────────────────────────────
-// Max HR: athlete profile → age-based formula (220 - age) → 185 default
+// Max HR: athlete-set → age formula (220 - age) → 185 default
 {% if athlete and athlete.max_heartrate %}
 const MAX_HR = {{ athlete.max_heartrate }};
+const MAX_HR_IS_ESTIMATED = false;
 {% elif athlete and athlete.age %}
 const MAX_HR = {{ 220 - athlete.age }};
+const MAX_HR_IS_ESTIMATED = true;
 {% else %}
 const MAX_HR = 185;
+const MAX_HR_IS_ESTIMATED = true;
 {% endif %}
 
-// Standard 5-zone system (% of max HR) — colors chosen for clear visual separation
-const HR_ZONES = [
-  { name:'Z1', label:'Warm-up',     lo:0.50, hi:0.60, color:'#60A5FA' }, // blue
-  { name:'Z2', label:'Endurance',   lo:0.60, hi:0.70, color:'#34D399' }, // green
-  { name:'Z3', label:'Aerobic',     lo:0.70, hi:0.80, color:'#FBBF24' }, // yellow
-  { name:'Z4', label:'Threshold',   lo:0.80, hi:0.90, color:'#F97316' }, // orange
-  { name:'Z5', label:'VO\u2082max', lo:0.90, hi:1.00, color:'#EF4444' }, // red
-];
+// VT1: talk-test calibrated Zone 2 ceiling (athlete-set)
+const VT1_BPM = {{ athlete.aerobic_threshold_bpm if athlete and athlete.aerobic_threshold_bpm else 'null' }};
+
+// Compute HR zones from physiological anchors when available,
+// otherwise fall back to standard % of max HR system.
+function _computeZones(maxHr, vt1) {
+  if (vt1 && maxHr && vt1 < maxHr) {
+    // VT1-anchored: physiologically calibrated from talk test
+    const z2Floor = Math.round(vt1 - 15);  // ~15 bpm window below VT1 for Z2
+    const above   = maxHr - vt1;
+    return [
+      { name:'Z1', label:'Recovery',  lo:0,                              hi:z2Floor,                         color:'#60A5FA' },
+      { name:'Z2', label:'Endurance', lo:z2Floor,                        hi:vt1,                             color:'#34D399' },
+      { name:'Z3', label:'Aerobic',   lo:vt1,                            hi:Math.round(vt1 + above * 0.48),  color:'#FBBF24' },
+      { name:'Z4', label:'Threshold', lo:Math.round(vt1 + above * 0.48), hi:Math.round(vt1 + above * 0.82),  color:'#F97316' },
+      { name:'Z5', label:'VO\u2082max', lo:Math.round(vt1 + above * 0.82), hi:maxHr,                         color:'#EF4444' },
+    ];
+  }
+  // Fallback: standard 5-zone % of max HR (Garmin/Polar system)
+  return [
+    { name:'Z1', label:'Recovery',    lo:Math.round(maxHr*0.50), hi:Math.round(maxHr*0.60), color:'#60A5FA' },
+    { name:'Z2', label:'Endurance',   lo:Math.round(maxHr*0.60), hi:Math.round(maxHr*0.70), color:'#34D399' },
+    { name:'Z3', label:'Aerobic',     lo:Math.round(maxHr*0.70), hi:Math.round(maxHr*0.80), color:'#FBBF24' },
+    { name:'Z4', label:'Threshold',   lo:Math.round(maxHr*0.80), hi:Math.round(maxHr*0.90), color:'#F97316' },
+    { name:'Z5', label:'VO\u2082max', lo:Math.round(maxHr*0.90), hi:maxHr,                  color:'#EF4444' },
+  ];
+}
+
+const HR_ZONES = _computeZones(MAX_HR, VT1_BPM);
+const ZONE_CALIBRATED = !!(VT1_BPM && VT1_BPM < MAX_HR);
+
+function _buildZoneLegend(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = HR_ZONES.map(z =>
+    `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
+           style="background:${z.color}12;border:1px solid ${z.color}30;color:${z.color}">
+       <span class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${z.color}"></span>
+       <span class="font-semibold">${z.name}</span>
+       <span style="color:var(--color-text-secondary)">${z.lo}–${z.hi}</span>
+     </span>`
+  ).join('');
+}
 
 const MAP_LOW  = '#B2F0E4';
 const MAP_MID  = '#2DD4AA';
@@ -357,11 +384,9 @@ function _heatColor(t) {
   return t<0.5 ? _lerp(MAP_LOW,MAP_MID,t*2) : _lerp(MAP_MID,MAP_HIGH,(t-0.5)*2);
 }
 function _zoneColor(hr) {
-  if (!hr || !MAX_HR) return '#CBD5E1';
-  const pct = hr / MAX_HR;
-  if (pct < 0.50) return '#CBD5E1';
-  for (const z of HR_ZONES) { if (pct >= z.lo && pct < z.hi) return z.color; }
-  return '#EF4444';
+  if (!hr) return '#CBD5E1';
+  for (const z of HR_ZONES) { if (hr >= z.lo && hr < z.hi) return z.color; }
+  return HR_ZONES[HR_ZONES.length - 1].color;
 }
 function _formatPace(secPerKm) {
   const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
@@ -525,23 +550,21 @@ function _drawCharts(data) {
     svg.append('defs').append('clipPath').attr('id','hr-clip')
       .append('rect').attr('x',mL).attr('y',hrY1).attr('width',W-mL-mR).attr('height',hrH);
 
-    // subtle zone bands + right-side labels
+    // subtle zone bands + right-side zone labels
     for (const z of HR_ZONES) {
-      const yTop = Math.max(hrScale(Math.min(z.hi * MAX_HR, hrMax)), hrY1);
-      const yBot = Math.min(hrScale(Math.max(z.lo * MAX_HR, hrMin)), hrY2);
+      const yTop = Math.max(hrScale(Math.min(z.hi, hrMax)), hrY1);
+      const yBot = Math.min(hrScale(Math.max(z.lo, hrMin)), hrY2);
       if (yBot <= yTop) continue;
       const bandH = yBot - yTop;
       svg.append('rect')
         .attr('x', mL).attr('y', yTop)
         .attr('width', W - mL - mR).attr('height', bandH)
         .attr('fill', z.color).attr('fill-opacity', 0.07);
-      // dashed boundary at top of zone
       svg.append('line')
         .attr('x1', mL).attr('x2', W - mR)
         .attr('y1', yTop).attr('y2', yTop)
-        .attr('stroke', z.color).attr('stroke-opacity', 0.4)
+        .attr('stroke', z.color).attr('stroke-opacity', 0.35)
         .attr('stroke-width', 0.75).attr('stroke-dasharray', '3,3');
-      // label on right
       if (bandH > 12) {
         svg.append('text')
           .attr('x', W - mR + 4).attr('y', yTop + bandH / 2 + 4)
@@ -550,12 +573,28 @@ function _drawCharts(data) {
       }
     }
 
-    // HR line colored per zone — one path per zone using defined()
+    // VT1 reference line — drawn above zone bands so it's always visible
+    if (VT1_BPM && VT1_BPM > hrMin && VT1_BPM < hrMax) {
+      const vt1Y = hrScale(VT1_BPM);
+      svg.append('line')
+        .attr('x1', mL).attr('x2', W - mR)
+        .attr('y1', vt1Y).attr('y2', vt1Y)
+        .attr('stroke', '#34D399').attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '5,4').attr('stroke-opacity', 0.8);
+      // Label pinned to right edge, above the line
+      svg.append('text')
+        .attr('x', W - mR - 4).attr('y', vt1Y - 4)
+        .attr('text-anchor', 'end')
+        .attr('fill', '#34D399').style('font-size', '9px').style('font-weight', '700')
+        .text(`Z2 ceiling ${VT1_BPM} bpm`);
+    }
+
+    // HR line colored per zone using calibrated absolute BPM boundaries
     for (const z of HR_ZONES) {
       const zoneLine = d3.line()
         .x(d => xScale(d.t))
         .y(d => hrScale(d.hr))
-        .defined(d => d.hr != null && d.hr / MAX_HR >= z.lo && d.hr / MAX_HR < z.hi)
+        .defined(d => d.hr != null && d.hr >= z.lo && d.hr < z.hi)
         .curve(d3.curveMonotoneX);
       svg.append('path')
         .datum(pts)
@@ -566,17 +605,41 @@ function _drawCharts(data) {
         .attr('stroke-linecap', 'round')
         .attr('d', zoneLine);
     }
-    // fallback line for HR below Z1 (<50% max)
+    // fallback: HR below Z1 floor
     const belowZoneLine = d3.line()
       .x(d => xScale(d.t))
       .y(d => hrScale(d.hr))
-      .defined(d => d.hr != null && d.hr / MAX_HR < 0.50)
+      .defined(d => d.hr != null && d.hr < HR_ZONES[0].lo)
       .curve(d3.curveMonotoneX);
     svg.append('path')
       .datum(pts)
       .attr('clip-path', 'url(#hr-clip)')
       .attr('fill', 'none').attr('stroke', '#CBD5E1')
       .attr('stroke-width', 2.5).attr('d', belowZoneLine);
+
+    // HR drift annotation — compare first 25% of run to last 25%
+    const hrPts = pts.filter(p => p.hr != null);
+    if (hrPts.length >= 20) {
+      const q = Math.max(1, Math.floor(hrPts.length / 4));
+      const firstAvg = hrPts.slice(0, q).reduce((s, p) => s + p.hr, 0) / q;
+      const lastAvg  = hrPts.slice(-q).reduce((s, p) => s + p.hr, 0) / q;
+      const drift    = Math.round(lastAvg - firstAvg);
+      const driftEl  = document.getElementById('drift-badge');
+      if (driftEl) {
+        const absDrift = Math.abs(drift);
+        if (absDrift <= 3) {
+          driftEl.innerHTML = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Stable aerobic HR`;
+          driftEl.style.cssText = 'background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);color:#34D399';
+        } else if (drift > 0) {
+          driftEl.innerHTML = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg> Drift +${drift} bpm`;
+          driftEl.style.cssText = 'background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);color:#FBBF24';
+        } else {
+          driftEl.innerHTML = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg> Drift ${drift} bpm`;
+          driftEl.style.cssText = 'background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);color:#60A5FA';
+        }
+        driftEl.classList.remove('hidden');
+      }
+    }
 
     // HR y-axis
     const hrAxis = d3.axisLeft(hrScale).ticks(4).tickFormat(d=>`${d}`);
@@ -591,7 +654,21 @@ function _drawCharts(data) {
       .attr('fill','var(--color-text-muted)').style('font-size','9px')
       .style('writing-mode','vertical-rl').text('HR bpm');
 
+    _buildZoneLegend('chart-zone-legend');
     document.getElementById('chart-zone-legend').classList.remove('hidden');
+
+    // Calibration badge in chart header — use inline styles (JS-set classes skip CDN scan)
+    const calBadge = document.getElementById('zone-calibration-badge');
+    if (calBadge) {
+      if (ZONE_CALIBRATED) {
+        calBadge.innerHTML = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Talk-test calibrated`;
+        calBadge.style.cssText = 'background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);color:#34D399';
+      } else {
+        calBadge.textContent = MAX_HR_IS_ESTIMATED ? `% max HR · ${MAX_HR} est.` : `% of ${MAX_HR} bpm`;
+        calBadge.style.cssText = 'background:transparent;border:1px solid var(--color-edge);color:var(--color-text-muted)';
+      }
+      calBadge.classList.remove('hidden');
+    }
 
     // ── shared x-axis ───────────────────────────────────
     const xAxis = d3.axisBottom(xScale).ticks(6).tickFormat(s=>_formatTime(s));
@@ -687,6 +764,7 @@ async function loadActivityMap(workoutId) {
 
     if (_streamsData.has_hr) {
       document.getElementById('map-toggle').classList.remove('hidden');
+      _buildZoneLegend('legend-zones');
     }
     _drawRoute(_streamsData.latlng, _streamsData.velocity_smooth, false);
 

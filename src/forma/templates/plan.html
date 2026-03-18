@@ -103,6 +103,52 @@
 </div>
 
 <script>
+{% set max_hr = athlete.max_heartrate if athlete and athlete.max_heartrate else (220 - athlete.age if athlete and athlete.age else 185) %}
+{% set vt1 = athlete.aerobic_threshold_bpm if athlete and athlete.aerobic_threshold_bpm else none %}
+const MAX_HR = {{ max_hr }};
+const VT1_BPM = {{ vt1 or 'null' }};
+
+// Compute calibrated zones (mirrors activity_detail.html logic)
+function _computeZones(maxHr, vt1) {
+  if (vt1 && maxHr && vt1 < maxHr) {
+    const z2Floor = Math.round(vt1 - 15);
+    const above   = maxHr - vt1;
+    return {
+      Z1: { lo: 0,                              hi: z2Floor,                         color: '#60A5FA' },
+      Z2: { lo: z2Floor,                        hi: vt1,                             color: '#34D399' },
+      Z3: { lo: vt1,                            hi: Math.round(vt1 + above * 0.48),  color: '#FBBF24' },
+      Z4: { lo: Math.round(vt1 + above * 0.48), hi: Math.round(vt1 + above * 0.82),  color: '#F97316' },
+      Z5: { lo: Math.round(vt1 + above * 0.82), hi: maxHr,                           color: '#EF4444' },
+    };
+  }
+  return {
+    Z1: { lo: Math.round(maxHr*0.50), hi: Math.round(maxHr*0.60), color: '#60A5FA' },
+    Z2: { lo: Math.round(maxHr*0.60), hi: Math.round(maxHr*0.70), color: '#34D399' },
+    Z3: { lo: Math.round(maxHr*0.70), hi: Math.round(maxHr*0.80), color: '#FBBF24' },
+    Z4: { lo: Math.round(maxHr*0.80), hi: Math.round(maxHr*0.90), color: '#F97316' },
+    Z5: { lo: Math.round(maxHr*0.90), hi: maxHr,                  color: '#EF4444' },
+  };
+}
+
+const HR_ZONES_MAP = _computeZones(MAX_HR, VT1_BPM);
+
+// Maps intensity to zone id
+const INTENSITY_TO_ZONE = {
+  recovery:  'Z1',
+  easy:      'Z2',
+  moderate:  'Z3',
+  tempo:     'Z4',
+  threshold: 'Z4',
+};
+
+function hrTargetBadge(intensity) {
+  const zoneId = INTENSITY_TO_ZONE[intensity];
+  if (!zoneId) return '';
+  const z = HR_ZONES_MAP[zoneId];
+  if (!z) return '';
+  return `<span class="text-xs tabular-nums px-1.5 py-0.5 rounded" style="color:${z.color};background:${z.color}18">${zoneId} · ${z.lo}–${z.hi} bpm</span>`;
+}
+
 const INTENSITY_COLORS = {
   recovery:  'var(--color-text-muted)',
   easy:      'var(--color-mint)',
@@ -203,6 +249,7 @@ function dayCard(day) {
         <div class="flex items-center gap-3 shrink-0">
           ${!isRest ? `
             <span class="text-xs font-medium capitalize" style="color:${intensityColor}">${day.intensity}</span>
+            ${day.workout_type === 'run' ? hrTargetBadge(day.intensity) : ''}
             <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>
             <button type="button" onclick="toggleExercises(this)"
                     class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer">${hasExercises ? 'Hide' : 'Details'}</button>

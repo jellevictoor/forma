@@ -111,6 +111,16 @@ class AthleteProfileService:
         if goal.target_value:
             target_str += f"\nTarget value: {goal.target_value}"
 
+        history_block = ""
+        if athlete.goal_history:
+            lines = [
+                f"  - [{e.set_at.strftime('%Y-%m-%d')} → {e.retired_at.strftime('%Y-%m-%d')}]"
+                f" {e.goal_type.value}: {e.description}"
+                + (f" (target: {e.target_value})" if e.target_value else "")
+                for e in sorted(athlete.goal_history, key=lambda e: e.set_at)
+            ]
+            history_block = "\nPrevious goals (most recent last):\n" + "\n".join(lines)
+
         return f"""You are a personal running and fitness coach giving tailored training advice.
 
 Athlete profile:
@@ -119,9 +129,10 @@ Athlete profile:
 - Experience: {athlete.experience_years} years
 - Max hours/week: {athlete.max_hours_per_week or 'not set'}
 
-Primary goal:
+Primary goal (current):
 - Type: {goal.goal_type.value}
 - Description: {goal.description}{target_str}
+- Set on: {goal.set_at.strftime('%Y-%m-%d')}{history_block}
 
 Recent workouts (last 4 weeks):
 {workouts_block or 'No recent workouts'}

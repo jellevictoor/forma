@@ -73,6 +73,20 @@
             class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
           />
         </div>
+        <div>
+          <label class="block text-xs text-secondary mb-1" for="aerobic_threshold_bpm">Zone 2 ceiling — talk test (bpm)</label>
+          <input
+            type="number"
+            id="aerobic_threshold_bpm"
+            name="aerobic_threshold_bpm"
+            value="{{ athlete.aerobic_threshold_bpm if athlete and athlete.aerobic_threshold_bpm else '' }}"
+            min="80"
+            max="220"
+            placeholder="e.g. 142"
+            class="w-full px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
+          />
+          <p class="text-xs text-muted mt-1">Highest bpm where you can still hold a full conversation.</p>
+        </div>
       </div>
       <div>
         <label class="block text-xs text-secondary mb-1" for="notes">Notes</label>
@@ -107,15 +121,114 @@
     </form>
   </div>
 
+  <!-- Training zones card -->
+  {% set max_hr = athlete.max_heartrate if athlete and athlete.max_heartrate else (220 - athlete.age if athlete and athlete.age else 185) %}
+  {% set vt1 = athlete.aerobic_threshold_bpm if athlete and athlete.aerobic_threshold_bpm else none %}
+  {% set calibrated = vt1 and vt1 < max_hr %}
+  {% if calibrated %}
+    {% set z2_floor = vt1 - 15 %}
+    {% set above = max_hr - vt1 %}
+    {% set z3_top = (vt1 + above * 0.48)|int %}
+    {% set z4_top = (vt1 + above * 0.82)|int %}
+    {% set zones = [
+      ('Z1', 'Recovery',   0,        z2_floor, '#60A5FA', false),
+      ('Z2', 'Endurance',  z2_floor, vt1,      '#34D399', true),
+      ('Z3', 'Aerobic',    vt1,      z3_top,   '#FBBF24', false),
+      ('Z4', 'Threshold',  z3_top,   z4_top,   '#F97316', false),
+      ('Z5', 'VO₂max',     z4_top,   max_hr,   '#EF4444', false),
+    ] %}
+  {% else %}
+    {% set zones = [
+      ('Z1', 'Recovery',   (max_hr * 0.50)|int, (max_hr * 0.60)|int, '#60A5FA', false),
+      ('Z2', 'Endurance',  (max_hr * 0.60)|int, (max_hr * 0.70)|int, '#34D399', true),
+      ('Z3', 'Aerobic',    (max_hr * 0.70)|int, (max_hr * 0.80)|int, '#FBBF24', false),
+      ('Z4', 'Threshold',  (max_hr * 0.80)|int, (max_hr * 0.90)|int, '#F97316', false),
+      ('Z5', 'VO₂max',     (max_hr * 0.90)|int, max_hr,              '#EF4444', false),
+    ] %}
+  {% endif %}
+
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-5">
+      <div>
+        <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Training zones</h2>
+        <p class="text-xs text-muted mt-0.5">{{ max_hr }} bpm max HR{% if not (athlete and athlete.max_heartrate) %} · <span class="text-amber">estimated</span>{% endif %}</p>
+      </div>
+      {% if calibrated %}
+      <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium" style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);color:#34D399">
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        Talk-test calibrated
+      </span>
+      {% elif athlete and athlete.max_heartrate %}
+      <span class="text-xs px-2.5 py-1 rounded-full border border-edge text-muted bg-surface-alt">% max HR</span>
+      {% else %}
+      <span class="text-xs px-2.5 py-1 rounded-full font-medium" style="background:rgba(232,168,74,0.1);border:1px solid rgba(232,168,74,0.3);color:#E8A84A">Set max HR</span>
+      {% endif %}
+    </div>
+
+    <!-- Zone bar — proportional, gap-separated segments -->
+    <div class="flex gap-1 mb-6" style="height:6px">
+      {% for zone_id, label, lo, hi, color, highlight in zones %}
+      <div class="rounded-full{% if highlight %} ring-1 ring-white/20{% endif %}" style="flex:{{ hi - lo }};background:{{ color }}{% if highlight %};box-shadow:0 0 8px {{ color }}80{% endif %}"></div>
+      {% endfor %}
+    </div>
+
+    <!-- Zone rows with left accent bar -->
+    <div class="space-y-1">
+      {% for zone_id, label, lo, hi, color, highlight in zones %}
+      <div class="flex items-center gap-3 pl-0 pr-3 py-2.5 rounded-xl overflow-hidden {% if highlight %}bg-surface-alt{% endif %}">
+        <div class="w-1 rounded-r-full self-stretch flex-shrink-0" style="background:{{ color }};min-height:2.5rem{% if not highlight %};opacity:0.5{% endif %}"></div>
+        <span class="text-xs font-bold tabular-nums w-5 flex-shrink-0" style="color:{{ color }}">{{ zone_id }}</span>
+        <span class="text-sm flex-1 {% if highlight %}font-semibold text-primary{% else %}text-secondary{% endif %}">{{ label }}</span>
+        <span class="text-sm font-semibold tabular-nums" style="color:{{ color }}">{{ lo }}–{{ hi }}</span>
+        <span class="text-xs text-muted">bpm</span>
+        {% if highlight %}
+        <span class="hidden sm:flex items-center gap-1 text-xs ml-1 font-medium flex-shrink-0" style="color:#34D399">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          easy runs
+        </span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Z2 coaching callout -->
+    {% set z2 = zones[1] %}
+    <div class="mt-5 flex gap-3 p-4 rounded-xl" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,{% if calibrated %}0.25{% else %}0.12{% endif %})">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style="background:rgba(52,211,153,0.12)">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:#34D399">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-primary mb-1">Zone 2 · <span class="tabular-nums" style="color:#34D399">{{ z2[2] }}–{{ z2[3] }} bpm</span></p>
+        <p class="text-xs text-secondary leading-relaxed">
+          {% if calibrated %}
+          Calibrated from your talk test. This is your personal aerobic base zone — more accurate than a formula.
+          {% else %}
+          Conversational pace, controlled breathing, full sentences. Most runners train 10–15 bpm too high and think it's Zone 2.
+          {% endif %}
+        </p>
+        {% if not calibrated %}
+        <a href="#aerobic_threshold_bpm" class="inline-block mt-2 text-xs font-medium hover:underline" style="color:#34D399">Set your talk-test ceiling to calibrate →</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- Primary goal section -->
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Primary goal</h2>
 
     {% if athlete and athlete.primary_goal %}
     <div class="mb-5 p-4 bg-surface-alt rounded-xl flex items-start justify-between gap-4">
-      <div>
-        <span class="text-xs font-medium text-muted uppercase tracking-wider">{{ athlete.primary_goal.goal_type.value.replace('_', ' ') }}</span>
-        <p class="text-sm text-primary mt-1">{{ athlete.primary_goal.description }}</p>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xs font-medium text-muted uppercase tracking-wider">{{ athlete.primary_goal.goal_type.value.replace('_', ' ') }}</span>
+          <span class="text-xs text-muted">· since {{ athlete.primary_goal.set_at.strftime('%d %b %Y') }}</span>
+        </div>
+        <p class="text-sm text-primary">{{ athlete.primary_goal.description }}</p>
         {% if athlete.primary_goal.target_value %}
         <p class="text-xs text-muted mt-1">Target: {{ athlete.primary_goal.target_value }}</p>
         {% endif %}
@@ -126,6 +239,31 @@
         title="Remove goal"
       >Remove</button>
     </div>
+
+    {% if athlete.goal_history %}
+    <!-- Goal history timeline -->
+    <details class="mb-5 group">
+      <summary class="flex items-center gap-2 text-xs text-muted cursor-pointer hover:text-secondary transition-colors list-none">
+        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        {{ athlete.goal_history | length }} previous goal{{ 's' if athlete.goal_history | length != 1 else '' }}
+      </summary>
+      <div class="mt-3 pl-4 border-l-2 border-edge space-y-3">
+        {% for entry in athlete.goal_history | sort(attribute='set_at') | reverse %}
+        <div class="relative">
+          <div class="absolute -left-[1.3rem] top-1.5 w-2 h-2 rounded-full bg-edge"></div>
+          <p class="text-xs text-muted tabular-nums mb-0.5">
+            {{ entry.set_at.strftime('%d %b %Y') }} → {{ entry.retired_at.strftime('%d %b %Y') }}
+          </p>
+          <p class="text-sm text-secondary">{{ entry.description }}</p>
+          {% if entry.target_value %}
+          <p class="text-xs text-muted">Target: {{ entry.target_value }}</p>
+          {% endif %}
+          <span class="text-xs text-muted">{{ entry.goal_type.value.replace('_', ' ') }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
 
     <!-- Training advice -->
     <button
@@ -149,10 +287,31 @@
     </div>
     {% endif %}
 
-    <h3 class="text-xs text-secondary mb-3 {% if athlete and athlete.primary_goal %}mt-5{% endif %}">
-      {{ 'Update goal' if athlete and athlete.primary_goal else 'Set a goal' }}
-    </h3>
-    <form method="post" action="/profile/goal" class="space-y-3">
+    <!-- Coach CTA -->
+    <a
+      href="/profile/goal/coach"
+      class="flex items-center gap-3 w-full p-4 mb-5 rounded-xl border border-mint/40 bg-mint/5 hover:bg-mint/10 hover:border-mint/70 transition-all duration-200 cursor-pointer {% if athlete and athlete.primary_goal %}mt-5{% endif %}"
+    >
+      <div class="w-9 h-9 rounded-full bg-mint/15 flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+        </svg>
+      </div>
+      <div class="text-left min-w-0">
+        <p class="text-sm font-medium text-primary">{{ 'Refine goal with AI coach' if athlete and athlete.primary_goal else 'Set goal with AI coach' }}</p>
+        <p class="text-xs text-muted mt-0.5">Data-driven goal setting based on your last 90 days of training</p>
+      </div>
+      <svg class="w-4 h-4 text-muted shrink-0 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </a>
+
+    <details class="group">
+      <summary class="flex items-center gap-2 text-xs text-muted cursor-pointer hover:text-secondary transition-colors list-none mb-3">
+        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        {{ 'Update goal manually' if athlete and athlete.primary_goal else 'Set goal manually' }}
+      </summary>
+    <form method="post" action="/profile/goal" class="space-y-3 pt-1">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs text-secondary mb-1" for="goal_type">Goal type</label>
@@ -199,6 +358,7 @@
         {{ 'Update goal' if athlete and athlete.primary_goal else 'Set goal' }}
       </button>
     </form>
+    </details>
   </div>
 
   <!-- Weight tracking section -->
