@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 import pytest
 
 from forma.adapters.postgres_storage import PostgresStorage
-from forma.domain.athlete import Athlete, Role
+from forma.domain.athlete import Athlete, Goal, GoalType, Role
 from forma.domain.weight_entry import WeightEntry
 from forma.domain.workout import Workout, WorkoutType
 
@@ -152,6 +152,16 @@ async def test_save_and_list_weight_entries(storage, saved_athlete):
     result = await storage.list_weight_entries(saved_athlete.id)
 
     assert result[0].weight_kg == 75.5
+
+
+async def test_save_and_get_athlete_with_goals(storage, saved_athlete):
+    goal = Goal(goal_type=GoalType.RACE, description="Sub-4h marathon")
+    athlete = saved_athlete.with_primary_goal(goal)
+    await storage.save(athlete)
+
+    result = await storage.get(saved_athlete.id)
+
+    assert result.primary_goal.description == "Sub-4h marathon"
 
 
 async def test_get_latest_weight_returns_most_recent(storage, saved_athlete):

@@ -5,39 +5,54 @@ from datetime import date
 
 from asyncpg import Pool
 
-from forma.domain.athlete import Athlete
+from forma.domain.athlete import (
+    Athlete,
+    Goal,
+    GoalHistoryEntry,
+    Injury,
+    ScheduleTemplateSlot,
+)
 from forma.domain.weight_entry import WeightEntry
 from forma.domain.workout import Workout
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.weight_repository import WeightRepository
 from forma.ports.workout_repository import WorkoutRepository
 
-# Fields stored as proper columns — excluded from the JSON profile blob.
-_ATHLETE_COLUMN_FIELDS = frozenset({
-    "role", "is_blocked", "ai_enabled", "token_limit_30d",
-    "strava_athlete_id", "strava_access_token", "strava_refresh_token", "strava_token_expires_at",
-})
-
-_ATHLETE_SELECT = """
-    id, data, role, is_blocked, ai_enabled, token_limit_30d,
-    strava_athlete_id, strava_access_token, strava_refresh_token, strava_token_expires_at
+_ATHLETE_COLUMNS = """
+    id, name, date_of_birth, height_cm, weight_kg,
+    max_hours_per_week, notes, max_heartrate, aerobic_threshold_bpm,
+    role, is_blocked, ai_enabled, token_limit_30d,
+    strava_athlete_id, strava_access_token, strava_refresh_token, strava_token_expires_at,
+    goals, injuries, goal_history, schedule_template, equipment, preferred_workout_days
 """
 
 
 def _athlete_from_row(row) -> Athlete:
-    """Reconstruct an Athlete by merging the profile blob with the column fields."""
-    data = json.loads(row["data"])
-    data.update({
-        "role": row["role"],
-        "is_blocked": row["is_blocked"],
-        "ai_enabled": row["ai_enabled"],
-        "token_limit_30d": row["token_limit_30d"],
-        "strava_athlete_id": row["strava_athlete_id"],
-        "strava_access_token": row["strava_access_token"],
-        "strava_refresh_token": row["strava_refresh_token"],
-        "strava_token_expires_at": row["strava_token_expires_at"],
-    })
-    return Athlete.model_validate(data)
+    return Athlete(
+        id=row["id"],
+        name=row["name"],
+        date_of_birth=row["date_of_birth"],
+        height_cm=row["height_cm"],
+        weight_kg=row["weight_kg"],
+        max_hours_per_week=row["max_hours_per_week"],
+        notes=row["notes"] or "",
+        max_heartrate=row["max_heartrate"],
+        aerobic_threshold_bpm=row["aerobic_threshold_bpm"],
+        role=row["role"],
+        is_blocked=row["is_blocked"],
+        ai_enabled=row["ai_enabled"],
+        token_limit_30d=row["token_limit_30d"],
+        strava_athlete_id=row["strava_athlete_id"],
+        strava_access_token=row["strava_access_token"],
+        strava_refresh_token=row["strava_refresh_token"],
+        strava_token_expires_at=row["strava_token_expires_at"],
+        goals=[Goal.model_validate(g) for g in json.loads(row["goals"])],
+        injuries=[Injury.model_validate(i) for i in json.loads(row["injuries"])],
+        goal_history=[GoalHistoryEntry.model_validate(g) for g in json.loads(row["goal_history"])],
+        schedule_template=[ScheduleTemplateSlot.model_validate(s) for s in json.loads(row["schedule_template"])],
+        equipment=json.loads(row["equipment"]),
+        preferred_workout_days=json.loads(row["preferred_workout_days"]),
+    )
 
 
 class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
@@ -50,36 +65,55 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
 
     async def get(self, athlete_id: str) -> Athlete | None:
         row = await self._pool.fetchrow(
-            f"SELECT {_ATHLETE_SELECT} FROM athletes WHERE id = $1", athlete_id
+            f"SELECT {_ATHLETE_COLUMNS} FROM athletes WHERE id = $1", athlete_id
         )
         return _athlete_from_row(row) if row else None
 
     async def save(self, athlete: Athlete) -> None:
-        profile_json = athlete.model_dump_json(exclude=_ATHLETE_COLUMN_FIELDS)
         await self._pool.execute(
-            """
-            INSERT INTO athletes (
-                id, data,
-                role, is_blocked, ai_enabled, token_limit_30d,
-                strava_athlete_id, strava_access_token, strava_refresh_token,
-                strava_token_expires_at,
-                updated_at
+            f"""
+            INSERT INTO athletes ({_ATHLETE_COLUMNS}, updated_at)
+            VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9,
+                $10, $11, $12, $13,
+                $14, $15, $16, $17,
+                $18, $19, $20, $21, $22, $23,
+                CURRENT_TIMESTAMP
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
             ON CONFLICT (id) DO UPDATE SET
-                data                    = EXCLUDED.data,
-                role                    = EXCLUDED.role,
-                is_blocked              = EXCLUDED.is_blocked,
-                ai_enabled              = EXCLUDED.ai_enabled,
-                token_limit_30d         = EXCLUDED.token_limit_30d,
-                strava_athlete_id       = EXCLUDED.strava_athlete_id,
-                strava_access_token     = EXCLUDED.strava_access_token,
-                strava_refresh_token    = EXCLUDED.strava_refresh_token,
+                name                   = EXCLUDED.name,
+                date_of_birth          = EXCLUDED.date_of_birth,
+                height_cm              = EXCLUDED.height_cm,
+                weight_kg              = EXCLUDED.weight_kg,
+                max_hours_per_week     = EXCLUDED.max_hours_per_week,
+                notes                  = EXCLUDED.notes,
+                max_heartrate          = EXCLUDED.max_heartrate,
+                aerobic_threshold_bpm  = EXCLUDED.aerobic_threshold_bpm,
+                role                   = EXCLUDED.role,
+                is_blocked             = EXCLUDED.is_blocked,
+                ai_enabled             = EXCLUDED.ai_enabled,
+                token_limit_30d        = EXCLUDED.token_limit_30d,
+                strava_athlete_id      = EXCLUDED.strava_athlete_id,
+                strava_access_token    = EXCLUDED.strava_access_token,
+                strava_refresh_token   = EXCLUDED.strava_refresh_token,
                 strava_token_expires_at = EXCLUDED.strava_token_expires_at,
-                updated_at              = CURRENT_TIMESTAMP
+                goals                  = EXCLUDED.goals,
+                injuries               = EXCLUDED.injuries,
+                goal_history           = EXCLUDED.goal_history,
+                schedule_template      = EXCLUDED.schedule_template,
+                equipment              = EXCLUDED.equipment,
+                preferred_workout_days = EXCLUDED.preferred_workout_days,
+                updated_at             = CURRENT_TIMESTAMP
             """,
             athlete.id,
-            profile_json,
+            athlete.name,
+            athlete.date_of_birth,
+            athlete.height_cm,
+            athlete.weight_kg,
+            athlete.max_hours_per_week,
+            athlete.notes,
+            athlete.max_heartrate,
+            athlete.aerobic_threshold_bpm,
             athlete.role.value,
             athlete.is_blocked,
             athlete.ai_enabled,
@@ -88,6 +122,12 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
             athlete.strava_access_token,
             athlete.strava_refresh_token,
             athlete.strava_token_expires_at,
+            json.dumps([g.model_dump(mode="json") for g in athlete.goals]),
+            json.dumps([i.model_dump(mode="json") for i in athlete.injuries]),
+            json.dumps([g.model_dump(mode="json") for g in athlete.goal_history]),
+            json.dumps([s.model_dump(mode="json") for s in athlete.schedule_template]),
+            json.dumps(athlete.equipment),
+            json.dumps(athlete.preferred_workout_days),
         )
 
     async def delete(self, athlete_id: str) -> None:
@@ -95,7 +135,7 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
 
     async def get_by_strava_id(self, strava_id: int) -> Athlete | None:
         row = await self._pool.fetchrow(
-            f"SELECT {_ATHLETE_SELECT} FROM athletes WHERE strava_athlete_id = $1",
+            f"SELECT {_ATHLETE_COLUMNS} FROM athletes WHERE strava_athlete_id = $1",
             strava_id,
         )
         return _athlete_from_row(row) if row else None
