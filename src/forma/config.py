@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     )
 
     # Database
-    database_path: str = "data/forma.db"
+    database_url: str = ""
+    database_path: str = "data/forma.db"  # kept for reference during migration
 
     # Strava API
     strava_client_id: str = ""

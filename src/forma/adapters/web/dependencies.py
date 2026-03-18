@@ -3,15 +3,16 @@
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
-from forma.adapters.sqlite_activity_analysis import SQLiteActivityAnalysis
-from forma.adapters.sqlite_analytics import SQLiteAnalyticsRepository
-from forma.adapters.sqlite_chat import SQLiteChat
-from forma.adapters.sqlite_execution_session import SQLiteExecutionSession
-from forma.adapters.sqlite_insights_cache import SQLiteInsightsCache
-from forma.adapters.sqlite_plan_cache import SQLitePlanCache
-from forma.adapters.sqlite_recap_cache import SQLiteRecapCache
-from forma.adapters.sqlite_storage import SQLiteStorage
-from forma.adapters.sqlite_stream_repository import SQLiteStreamRepository
+from forma.adapters.postgres_activity_analysis import PostgresActivityAnalysis
+from forma.adapters.postgres_analytics import PostgresAnalyticsRepository
+from forma.adapters.postgres_chat import PostgresChat
+from forma.adapters.postgres_execution_session import PostgresExecutionSession
+from forma.adapters.postgres_insights_cache import PostgresInsightsCache
+from forma.adapters.postgres_plan_cache import PostgresPlanCache
+from forma.adapters.postgres_pool import get_pool
+from forma.adapters.postgres_recap_cache import PostgresRecapCache
+from forma.adapters.postgres_storage import PostgresStorage
+from forma.adapters.postgres_stream_repository import PostgresStreamRepository
 from forma.adapters.strava_client import StravaClient
 from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.activity_stream_service import ActivityStreamService
@@ -30,37 +31,37 @@ from forma.ports.workout_repository import WorkoutRepository
 
 @lru_cache
 def _create_analytics_service() -> AnalyticsService:
-    settings = get_settings()
-    db_path = settings.database_path
-    analytics_repo = SQLiteAnalyticsRepository(db_path)
-    workout_repo = SQLiteStorage(db_path)
-    return AnalyticsService(analytics_repo, workout_repo)
+    pool = get_pool()
+    return AnalyticsService(PostgresAnalyticsRepository(pool), PostgresStorage(pool))
 
 
 @lru_cache
 def _create_insights_service() -> TrainingInsightsService:
     settings = get_settings()
-    db_path = settings.database_path
-    analytics_repo = SQLiteAnalyticsRepository(db_path)
-    workout_repo = SQLiteStorage(db_path)
-    cache_repo = SQLiteInsightsCache(db_path)
-    return TrainingInsightsService(analytics_repo, workout_repo, settings.gemini_api_key, cache_repo)
+    pool = get_pool()
+    return TrainingInsightsService(
+        PostgresAnalyticsRepository(pool),
+        PostgresStorage(pool),
+        settings.gemini_api_key,
+        PostgresInsightsCache(pool),
+    )
 
 
 @lru_cache
 def _create_weekly_recap_service() -> WeeklyRecapService:
     settings = get_settings()
-    db_path = settings.database_path
-    analytics_repo = SQLiteAnalyticsRepository(db_path)
-    workout_repo = SQLiteStorage(db_path)
-    cache_repo = SQLiteRecapCache(db_path)
-    return WeeklyRecapService(analytics_repo, workout_repo, settings.gemini_api_key, cache_repo)
+    pool = get_pool()
+    return WeeklyRecapService(
+        PostgresAnalyticsRepository(pool),
+        PostgresStorage(pool),
+        settings.gemini_api_key,
+        PostgresRecapCache(pool),
+    )
 
 
 @lru_cache
 def _create_workout_repo() -> WorkoutRepository:
-    settings = get_settings()
-    return SQLiteStorage(settings.database_path)
+    return PostgresStorage(get_pool())
 
 
 async def get_weekly_recap_service() -> WeeklyRecapService:
@@ -82,8 +83,8 @@ async def get_workout_repo() -> WorkoutRepository:
 @lru_cache
 def _create_goal_coaching_service() -> GoalCoachingService:
     settings = get_settings()
-    db_path = settings.database_path
-    storage = SQLiteStorage(db_path)
+    pool = get_pool()
+    storage = PostgresStorage(pool)
     return GoalCoachingService(storage, storage, settings.gemini_api_key)
 
 
@@ -94,16 +95,14 @@ async def get_goal_coaching_service() -> GoalCoachingService:
 @lru_cache
 def _create_athlete_profile_service() -> AthleteProfileService:
     settings = get_settings()
-    db_path = settings.database_path
-    storage = SQLiteStorage(db_path)
+    pool = get_pool()
+    storage = PostgresStorage(pool)
     return AthleteProfileService(storage, storage, settings.gemini_api_key)
 
 
 @lru_cache
 def _create_weight_tracking_service() -> WeightTrackingService:
-    settings = get_settings()
-    storage = SQLiteStorage(settings.database_path)
-    return WeightTrackingService(storage)
+    return WeightTrackingService(PostgresStorage(get_pool()))
 
 
 async def get_athlete_profile_service() -> AthleteProfileService:
@@ -117,12 +116,14 @@ async def get_weight_tracking_service() -> WeightTrackingService:
 @lru_cache
 def _create_workout_planning_service() -> WorkoutPlanningService:
     settings = get_settings()
-    db_path = settings.database_path
-    athlete_repo = SQLiteStorage(db_path)
-    workout_repo = SQLiteStorage(db_path)
-    analytics_repo = SQLiteAnalyticsRepository(db_path)
-    plan_cache = SQLitePlanCache(db_path)
-    return WorkoutPlanningService(athlete_repo, workout_repo, analytics_repo, settings.gemini_api_key, plan_cache)
+    pool = get_pool()
+    return WorkoutPlanningService(
+        PostgresStorage(pool),
+        PostgresStorage(pool),
+        PostgresAnalyticsRepository(pool),
+        settings.gemini_api_key,
+        PostgresPlanCache(pool),
+    )
 
 
 async def get_workout_planning_service() -> WorkoutPlanningService:
@@ -139,7 +140,7 @@ async def get_strava_sync() -> AsyncIterator[FullStravaSync]:
         refresh_token=settings.strava_refresh_token,
     )
     try:
-        yield FullStravaSync(client, SQLiteStorage(settings.database_path))
+        yield FullStravaSync(client, PostgresStorage(get_pool()))
     finally:
         await client.close()
 
@@ -147,13 +148,15 @@ async def get_strava_sync() -> AsyncIterator[FullStravaSync]:
 @lru_cache
 def _create_activity_analysis_service() -> ActivityAnalysisService:
     settings = get_settings()
-    db_path = settings.database_path
-    workout_repo = SQLiteStorage(db_path)
-    analytics_repo = SQLiteAnalyticsRepository(db_path)
-    athlete_repo = SQLiteStorage(db_path)
-    cache_repo = SQLiteActivityAnalysis(db_path)
-    chat_repo = SQLiteChat(db_path)
-    return ActivityAnalysisService(workout_repo, analytics_repo, athlete_repo, settings.gemini_api_key, cache_repo, chat_repo)
+    pool = get_pool()
+    return ActivityAnalysisService(
+        PostgresStorage(pool),
+        PostgresAnalyticsRepository(pool),
+        PostgresStorage(pool),
+        settings.gemini_api_key,
+        PostgresActivityAnalysis(pool),
+        PostgresChat(pool),
+    )
 
 
 async def get_activity_analysis_service() -> ActivityAnalysisService:
@@ -162,11 +165,11 @@ async def get_activity_analysis_service() -> ActivityAnalysisService:
 
 @lru_cache
 def _create_workout_execution_service() -> WorkoutExecutionService:
-    settings = get_settings()
-    db_path = settings.database_path
-    session_repo = SQLiteExecutionSession(db_path)
-    planning_service = _create_workout_planning_service()
-    return WorkoutExecutionService(session_repo, planning_service)
+    pool = get_pool()
+    return WorkoutExecutionService(
+        PostgresExecutionSession(pool),
+        _create_workout_planning_service(),
+    )
 
 
 async def get_workout_execution_service() -> WorkoutExecutionService:
@@ -176,6 +179,7 @@ async def get_workout_execution_service() -> WorkoutExecutionService:
 @lru_cache
 def _create_activity_stream_service() -> ActivityStreamService:
     settings = get_settings()
+    pool = get_pool()
     client = StravaClient(
         client_id=settings.strava_client_id,
         client_secret=settings.strava_client_secret,
@@ -183,8 +187,8 @@ def _create_activity_stream_service() -> ActivityStreamService:
         refresh_token=settings.strava_refresh_token,
     )
     return ActivityStreamService(
-        SQLiteStorage(settings.database_path),
-        SQLiteStreamRepository(settings.database_path),
+        PostgresStorage(pool),
+        PostgresStreamRepository(pool),
         client,
     )
 
@@ -195,8 +199,7 @@ async def get_activity_stream_service() -> ActivityStreamService:
 
 async def get_athlete_id() -> str:
     """Return the default athlete ID. Single-user mode."""
-    settings = get_settings()
-    storage = SQLiteStorage(settings.database_path)
+    storage = PostgresStorage(get_pool())
     athlete = await storage.get_default()
     if athlete:
         return athlete.id

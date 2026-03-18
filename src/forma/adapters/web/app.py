@@ -28,18 +28,40 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    # Apply unified log config after uvicorn has run its own setup,
-    # so uvicorn loggers propagate to our root handler.
     logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("forma starting up")
+
+    from forma.config import get_settings
+    from forma.adapters.postgres_pool import init_pool, close_pool
+    from forma.adapters.postgres_migrations import run_migrations
+
+    settings = get_settings()
+    if settings.database_url:
+        await init_pool(settings.database_url)
+        pool = _get_pool_safe()
+        if pool:
+            await run_migrations(pool)
+        logger.info("database ready")
+    else:
+        logger.warning("DATABASE_URL not set — running without PostgreSQL")
+
     yield
+
+    await close_pool()
     logger.info("forma shutting down")
+
+
+def _get_pool_safe():
+    try:
+        from forma.adapters.postgres_pool import get_pool
+        return get_pool()
+    except RuntimeError:
+        return None
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="forma", lifespan=_lifespan)
 
-    # Add CORS middleware for home WiFi access from iOS app
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

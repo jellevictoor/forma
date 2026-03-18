@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 from forma.adapters.web.app import create_app
 from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.analytics_service import AnalyticsService
+from forma.application.athlete_profile_service import AthleteProfileService
+from forma.domain.athlete import Athlete
 from forma.domain.workout import Workout, WorkoutType
 from forma.ports.activity_analysis_repository import ActivityAnalysis, CachedActivityAnalysis
 from forma.ports.workout_repository import WorkoutRepository
@@ -57,6 +59,12 @@ def make_mock_analysis_service(cached=None) -> ActivityAnalysisService:
     return service
 
 
+def make_mock_profile_service() -> AthleteProfileService:
+    service = AsyncMock(spec=AthleteProfileService)
+    service.get_profile = AsyncMock(return_value=Athlete(id="athlete1", name="Test Athlete"))
+    return service
+
+
 @pytest.fixture
 def client():
     app = create_app()
@@ -64,11 +72,13 @@ def client():
         get_activity_analysis_service,
         get_analytics_service,
         get_athlete_id,
+        get_athlete_profile_service,
         get_workout_repo,
     )
     app.dependency_overrides[get_analytics_service] = lambda: make_mock_analytics_service([make_workout()], 1)
     app.dependency_overrides[get_workout_repo] = lambda: make_mock_workout_repo(make_workout())
     app.dependency_overrides[get_activity_analysis_service] = lambda: make_mock_analysis_service()
+    app.dependency_overrides[get_athlete_profile_service] = lambda: make_mock_profile_service()
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
     return TestClient(app, follow_redirects=True)
 
