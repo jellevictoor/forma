@@ -66,14 +66,14 @@
 <!-- Stats grid -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-muted uppercase tracking-widest mb-2">Duration</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Duration</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.duration_minutes) }}</p>
     <p class="text-xs text-muted mt-1">min</p>
   </div>
 
   {% if workout.distance_km %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-muted uppercase tracking-widest mb-2">Distance</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Distance</p>
     <p class="text-3xl font-bold text-primary">{{ "%.2f"|format(workout.distance_km) }}</p>
     <p class="text-xs text-muted mt-1">km</p>
   </div>
@@ -81,14 +81,14 @@
 
   {% if workout.pace_formatted() %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-muted uppercase tracking-widest mb-2">Pace</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Pace</p>
     <p class="text-3xl font-bold text-primary">{{ workout.pace_formatted() }}</p>
   </div>
   {% endif %}
 
   {% if workout.average_heartrate %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-muted uppercase tracking-widest mb-2">Average heart rate</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Average heart rate</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.average_heartrate) }}</p>
     <p class="text-xs text-muted mt-1">bpm</p>
   </div>
@@ -96,7 +96,7 @@
 
   {% if workout.elevation_gain_meters %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
-    <p class="text-xs text-muted uppercase tracking-widest mb-2">Elevation gain</p>
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Elevation gain</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.elevation_gain_meters) }}</p>
     <p class="text-xs text-muted mt-1">m</p>
   </div>

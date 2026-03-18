@@ -32,28 +32,28 @@
       How is this calculated?
     </summary>
     <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-secondary">
-      <div class="bg-surface-alt rounded-xl p-4">
+      <div class="bg-surface-alt rounded-2xl border border-edge p-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="w-2 h-2 rounded-full sport-run"></span>
           <span class="font-medium text-primary">Fitness (CTL)</span>
         </div>
         <p>Chronic Training Load — exponential moving average over <strong>42 days</strong>. Rises slowly as you train consistently and falls slowly when you rest. Represents your long-term endurance base.</p>
       </div>
-      <div class="bg-surface-alt rounded-xl p-4">
+      <div class="bg-surface-alt rounded-2xl border border-edge p-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="w-2 h-2 rounded-full sport-climbing"></span>
           <span class="font-medium text-primary">Fatigue (ATL)</span>
         </div>
         <p>Acute Training Load — exponential moving average over <strong>7 days</strong>. Spikes quickly after hard training and drops fast during rest. Represents how tired you are right now.</p>
       </div>
-      <div class="bg-surface-alt rounded-xl p-4">
+      <div class="bg-surface-alt rounded-2xl border border-edge p-4">
         <div class="flex items-center gap-2 mb-2">
           <span class="w-2 h-2 rounded-full sport-strength"></span>
           <span class="font-medium text-primary">Form (TSB)</span>
         </div>
         <p>Training Stress Balance = Fitness − Fatigue. <span style="color:var(--color-mint)">Positive</span> means you are fresh and ready to perform. <span style="color:var(--color-amber)">Negative</span> means you are fatigued — normal during a training block.</p>
       </div>
-      <div class="bg-surface-alt rounded-xl p-4 md:col-span-3">
+      <div class="bg-surface-alt rounded-2xl border border-edge p-4 md:col-span-3">
         <div class="flex items-center gap-2 mb-2">
           <span class="font-medium text-primary">Daily effort score</span>
         </div>
@@ -176,7 +176,7 @@
     }
 
     const card = document.createElement('div');
-    card.className = 'bg-surface-alt rounded-xl p-4';
+    card.className = 'bg-surface-alt rounded-2xl border border-edge p-4';
     card.innerHTML = `
       <div class="flex items-center gap-2 mb-4">
         <span class="w-2 h-2 rounded-full shrink-0" style="background:${color}"></span>
