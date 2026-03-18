@@ -155,9 +155,9 @@ class GoalCoachingService:
         self._client = genai.Client(api_key=gemini_api_key)
 
     async def build_snapshot(self, athlete_id: str) -> TrainingSnapshot:
-        since = datetime.now() - timedelta(days=90)
+        since = datetime.now().replace(tzinfo=None) - timedelta(days=90)
         workouts = await self._workouts.get_recent(athlete_id, count=200)
-        runs = [w for w in workouts if w.workout_type.value == "run" and w.start_time >= since]
+        runs = [w for w in workouts if w.workout_type.value == "run" and w.start_time.replace(tzinfo=None) >= since]
         runs.sort(key=lambda w: w.start_time, reverse=True)
 
         weekly: dict[date, list] = {}
