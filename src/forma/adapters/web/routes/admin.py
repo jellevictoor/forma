@@ -37,15 +37,10 @@ async def admin_page(
     pool = get_pool()
 
     # All users
+    from forma.adapters.postgres_storage import _ATHLETE_COLUMNS, _athlete_from_row
     athlete_rows = await pool.fetch(
-        """
-        SELECT id, data, role, is_blocked, ai_enabled, token_limit_30d,
-               strava_athlete_id, strava_access_token, strava_refresh_token,
-               strava_token_expires_at, created_at
-        FROM athletes ORDER BY created_at ASC
-        """
+        f"SELECT {_ATHLETE_COLUMNS}, created_at FROM athletes ORDER BY created_at ASC"
     )
-    from forma.adapters.postgres_storage import _athlete_from_row
     athletes = [(_athlete_from_row(r), r["created_at"]) for r in athlete_rows]
 
     # Token usage — 30-day totals per athlete
