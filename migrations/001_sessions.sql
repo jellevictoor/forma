@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS sessions (
     token       TEXT PRIMARY KEY,
     athlete_id  TEXT NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at  TIMESTAMP NOT NULL
+    created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    expires_at  TIMESTAMPTZ NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_athlete_id ON sessions(athlete_id);
