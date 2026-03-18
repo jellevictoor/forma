@@ -166,7 +166,8 @@ async def activities_page(
     service: Annotated[AnalyticsService, Depends(get_analytics_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    if sport not in VALID_SPORTS:
+    available = await service.available_sport_types(athlete_id)
+    if sport not in VALID_SPORTS and sport not in available:
         return RedirectResponse(url="/activities/all/1")
 
     workouts, total = await service.activities_page(athlete_id, sport, page)
@@ -184,6 +185,7 @@ async def activities_page(
             "today": date.today(),
             "date_from_str": "",
             "date_to_str": "",
+            "available_sports": available,
         },
     )
 
@@ -198,7 +200,8 @@ async def activities_page_filtered(
     service: Annotated[AnalyticsService, Depends(get_analytics_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    if sport not in VALID_SPORTS:
+    available = await service.available_sport_types(athlete_id)
+    if sport not in VALID_SPORTS and sport not in available:
         return RedirectResponse(url="/activities/all/1")
 
     try:
@@ -222,5 +225,6 @@ async def activities_page_filtered(
             "today": date.today(),
             "date_from_str": from_date,
             "date_to_str": to_date,
+            "available_sports": available,
         },
     )

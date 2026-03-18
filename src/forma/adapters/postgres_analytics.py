@@ -458,6 +458,19 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             for row in rows
         ]
 
+    async def distinct_sport_types(self, athlete_id: str) -> list[str]:
+        rows = await self._pool.fetch(
+            """
+            SELECT workout_type
+            FROM workouts
+            WHERE athlete_id = $1 AND workout_type IS NOT NULL
+            GROUP BY workout_type
+            ORDER BY COUNT(*) DESC
+            """,
+            athlete_id,
+        )
+        return [row["workout_type"] for row in rows]
+
     async def workouts_with_notes(self, athlete_id: str, year: int) -> list[dict]:
         year_start, year_end = self._year_range(year)
         rows = await self._pool.fetch(

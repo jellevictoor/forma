@@ -198,6 +198,9 @@ class AnalyticsService:
             athlete_id, workout_type, exclude_id, count
         )
 
+    async def available_sport_types(self, athlete_id: str) -> list[str]:
+        return await self._analytics.distinct_sport_types(athlete_id)
+
     async def activities_page(
         self,
         athlete_id: str,

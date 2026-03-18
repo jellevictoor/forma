@@ -17,14 +17,24 @@
 {# ── Filter bar ──────────────────────────────────────────────────── #}
 <div class="bg-surface border border-edge rounded-2xl px-3 py-2.5 flex flex-wrap items-center gap-2 mb-6">
 
-  {# Sport segmented control #}
-  <div class="inline-flex bg-surface-alt rounded-xl p-0.5 gap-0.5">
-    {% for s, label, dot_cls in [('all','All',''), ('run','Running','sport-run'), ('strength','Strength','sport-strength'), ('climbing','Climbing','sport-climbing')] %}
+  {# Sport segmented control — dynamic based on athlete's actual sport types #}
+  {% set _sport_display = {
+    'run': 'Running', 'strength': 'Strength', 'climbing': 'Climbing',
+    'yoga': 'Yoga', 'hike': 'Hike', 'walk': 'Walk',
+    'swim': 'Swim', 'bike': 'Bike', 'cross_training': 'Cross training',
+  } %}
+  <div class="inline-flex bg-surface-alt rounded-xl p-0.5 gap-0.5 flex-wrap">
+    <a href="{% if date_from_str and date_to_str %}/activities/all/{{ date_from_str }}/{{ date_to_str }}/1{% else %}/activities/all/1{% endif %}"
+       class="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium transition-all duration-150 cursor-pointer
+              {% if sport == 'all' %}bg-surface shadow-sm text-primary{% else %}text-muted hover:text-secondary{% endif %}">
+      All
+    </a>
+    {% for s in available_sports %}
     <a href="{% if date_from_str and date_to_str %}/activities/{{ s }}/{{ date_from_str }}/{{ date_to_str }}/1{% else %}/activities/{{ s }}/1{% endif %}"
        class="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium transition-all duration-150 cursor-pointer
               {% if sport == s %}bg-surface shadow-sm text-primary{% else %}text-muted hover:text-secondary{% endif %}">
-      {% if dot_cls %}<span class="w-1.5 h-1.5 rounded-full {{ dot_cls }} shrink-0"></span>{% endif %}
-      {{ label }}
+      <span class="w-1.5 h-1.5 rounded-full sport-{{ s }} shrink-0"></span>
+      {{ _sport_display.get(s, s | replace('_', ' ') | title) }}
     </a>
     {% endfor %}
   </div>

@@ -138,6 +138,10 @@ class WorkoutAnalyticsRepository(ABC):
         """
 
     @abstractmethod
+    async def distinct_sport_types(self, athlete_id: str) -> list[str]:
+        """Return all distinct workout_type values for the athlete, ordered by frequency."""
+
+    @abstractmethod
     async def recent_same_type_summary(
         self,
         athlete_id: str,
