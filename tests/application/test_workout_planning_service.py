@@ -230,7 +230,7 @@ async def test_plan_excludes_days_with_completed_workouts():
 
     captured_prompt = []
 
-    def capture_plan(prompt):
+    def capture_plan(prompt, *_):
         captured_prompt.append(prompt)
         return WeeklyPlan(days=[PlannedDay(day=date.today() + timedelta(days=1), workout_type="rest", intensity="recovery", duration_minutes=0, description="Rest.")], rationale="", generated_at=datetime.now(tz=timezone.utc))
 
@@ -248,7 +248,7 @@ async def test_plan_includes_days_without_completed_workouts():
 
     captured_prompt = []
 
-    def capture_plan(prompt):
+    def capture_plan(prompt, *_):
         captured_prompt.append(prompt)
         return WeeklyPlan(days=[PlannedDay(day=date.today() + timedelta(days=1), workout_type="rest", intensity="recovery", duration_minutes=0, description="Rest.")], rationale="", generated_at=datetime.now(tz=timezone.utc))
 

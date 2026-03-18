@@ -83,7 +83,7 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
             workout.id,
             workout.athlete_id,
             workout.strava_id,
-            workout.start_time.isoformat(),
+            workout.start_time,
             workout.workout_type.value,
             workout.model_dump_json(),
         )
@@ -102,10 +102,10 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
         clauses = ["athlete_id = $1"]
 
         if start_date:
-            params.append(start_date.isoformat())
+            params.append(start_date)
             clauses.append(f"start_time >= ${len(params)}")
         if end_date:
-            params.append(end_date.isoformat())
+            params.append(end_date)
             clauses.append(f"start_time <= ${len(params)}")
 
         params.append(limit)
@@ -134,7 +134,7 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
             entry.id,
             entry.athlete_id,
             entry.weight_kg,
-            entry.recorded_at.isoformat(),
+            entry.recorded_at,
             entry.notes,
         )
 
@@ -175,6 +175,6 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
             id=row["id"],
             athlete_id=row["athlete_id"],
             weight_kg=row["weight_kg"],
-            recorded_at=date.fromisoformat(row["recorded_at"]),
+            recorded_at=row["recorded_at"],
             notes=row["notes"] or "",
         )

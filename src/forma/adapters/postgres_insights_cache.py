@@ -29,12 +29,12 @@ class PostgresInsightsCache(InsightsCacheRepository):
             impact=data["impact"],
             recommendations=data["recommendations"],
             note_count=data["note_count"],
-            generated_at=datetime.fromisoformat(row["generated_at"]),
+            generated_at=row["generated_at"],
             year=row["year"],
         )
 
     async def save(self, athlete_id: str, year: int, insights) -> None:
-        generated_at = datetime.now(tz=timezone.utc).isoformat()
+        generated_at = datetime.now(tz=timezone.utc)
         data = json.dumps({
             "summary": insights.summary,
             "patterns": insights.patterns,

@@ -22,13 +22,13 @@ class PostgresChat(ChatRepository):
             ChatMessage(
                 role=row["role"],
                 content=row["content"],
-                created_at=datetime.fromisoformat(row["created_at"]),
+                created_at=row["created_at"],
             )
             for row in rows
         ]
 
     async def append_message(self, workout_id: str, role: str, content: str) -> None:
-        created_at = datetime.now(tz=timezone.utc).isoformat()
+        created_at = datetime.now(tz=timezone.utc)
         await self._pool.execute(
             "INSERT INTO activity_chat (workout_id, role, content, created_at) VALUES ($1, $2, $3, $4)",
             workout_id,

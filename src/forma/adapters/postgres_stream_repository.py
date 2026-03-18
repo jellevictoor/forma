@@ -44,6 +44,6 @@ class PostgresStreamRepository(StreamRepository):
                 data = EXCLUDED.data
             """,
             workout_id,
-            datetime.now(timezone.utc).isoformat(),
+            datetime.now(timezone.utc),
             data,
         )

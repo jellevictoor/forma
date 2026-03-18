@@ -43,8 +43,8 @@ class PostgresPlanCache(PlanCacheRepository):
                 data = EXCLUDED.data
             """,
             athlete_id,
-            plan.generated_at.isoformat(),
-            latest_activity_at.isoformat() if latest_activity_at else None,
+            plan.generated_at,
+            latest_activity_at,
             self._serialize_plan(plan),
         )
 
@@ -88,11 +88,6 @@ class PostgresPlanCache(PlanCacheRepository):
         })
 
     def _row_to_cached_plan(self, row) -> CachedWeeklyPlan:
-        latest_activity_at = (
-            datetime.fromisoformat(row["latest_activity_at"])
-            if row["latest_activity_at"]
-            else None
-        )
         payload = json.loads(row["data"])
         days = [
             PlannedDay(
@@ -108,7 +103,7 @@ class PostgresPlanCache(PlanCacheRepository):
         return CachedWeeklyPlan(
             days=days,
             rationale=payload["rationale"],
-            generated_at=datetime.fromisoformat(row["generated_at"]),
-            latest_activity_at=latest_activity_at,
+            generated_at=row["generated_at"],
+            latest_activity_at=row["latest_activity_at"],
             is_stale=False,
         )

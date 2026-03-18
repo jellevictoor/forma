@@ -34,11 +34,11 @@ class PostgresActivityAnalysis(ActivityAnalysisRepository):
                 comparison_to_recent=data["comparison_to_recent"],
                 takeaway=data["takeaway"],
             ),
-            generated_at=datetime.fromisoformat(row["generated_at"]),
+            generated_at=row["generated_at"],
         )
 
     async def save(self, workout_id: str, analysis: ActivityAnalysis) -> None:
-        generated_at = datetime.now(tz=timezone.utc).isoformat()
+        generated_at = datetime.now(tz=timezone.utc)
         data = json.dumps({
             "performance_assessment": analysis.performance_assessment,
             "training_load_context": analysis.training_load_context,

@@ -20,18 +20,13 @@ class PostgresRecapCache(RecapCacheRepository):
         )
         if row is None:
             return None
-        latest_activity_at = (
-            datetime.fromisoformat(row["latest_activity_at"])
-            if row["latest_activity_at"]
-            else None
-        )
         return CachedRecap(
             summary=row["summary"],
             highlight=row["highlight"],
             form_note=row["form_note"],
             focus=json.loads(row["focus"]),
-            generated_at=datetime.fromisoformat(row["generated_at"]),
-            latest_activity_at=latest_activity_at,
+            generated_at=row["generated_at"],
+            latest_activity_at=row["latest_activity_at"],
         )
 
     async def save(
@@ -40,8 +35,6 @@ class PostgresRecapCache(RecapCacheRepository):
         recap: WeeklyRecap,
         latest_activity_at: datetime | None,
     ) -> None:
-        generated_at = datetime.now(tz=timezone.utc).isoformat()
-        latest_at_str = latest_activity_at.isoformat() if latest_activity_at else None
         await self._pool.execute(
             """
             INSERT INTO recap_cache
@@ -56,8 +49,8 @@ class PostgresRecapCache(RecapCacheRepository):
                 focus = EXCLUDED.focus
             """,
             athlete_id,
-            generated_at,
-            latest_at_str,
+            datetime.now(tz=timezone.utc),
+            latest_activity_at,
             recap.summary,
             recap.highlight,
             recap.form_note,

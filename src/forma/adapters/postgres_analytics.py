@@ -26,8 +26,8 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
     def __init__(self, pool: Pool) -> None:
         self._pool = pool
 
-    def _year_range(self, year: int) -> tuple[str, str]:
-        return date(year, 1, 1).isoformat(), date(year, 12, 31).isoformat()
+    def _year_range(self, year: int) -> tuple[date, date]:
+        return date(year, 1, 1), date(year, 12, 31)
 
     async def weekly_volume(
         self,
@@ -90,8 +90,8 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             ORDER BY week_start
             """,
             athlete_id,
-            since.isoformat(),
-            until.isoformat(),
+            since,
+            until,
         )
         return [
             WeeklyVolume(
@@ -121,7 +121,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             athlete_id,
         )
         workouts = [
-            (row["id"], date.fromisoformat(row["start_time"][:10]), Workout.model_validate_json(row["data"]))
+            (row["id"], row["start_time"].date(), Workout.model_validate_json(row["data"]))
             for row in rows
         ]
         return [
@@ -211,8 +211,8 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             """,
             athlete_id,
             workout_type,
-            since.isoformat(),
-            until.isoformat(),
+            since,
+            until,
         )
         return [
             {"week_start": str(row["week_start"]), "pace_min_per_km": row["pace_min_per_km"]}
@@ -265,10 +265,10 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         clauses = ["athlete_id = $1"]
 
         if date_from:
-            params.append(date_from.isoformat())
+            params.append(date_from)
             clauses.append(f"start_time >= ${len(params)}")
         if date_to:
-            params.append(date_to.isoformat())
+            params.append(date_to)
             clauses.append(f"start_time <= ${len(params)}")
         if workout_type and workout_type != "all":
             params.append(workout_type)
@@ -324,7 +324,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         return [
             {
                 "id": row["id"],
-                "date": row["start_time"][:10],
+                "date": str(row["start_time"].date()),
                 "duration_seconds": json.loads(row["data"]).get("duration_seconds", 0),
                 "name": json.loads(row["data"]).get("name", ""),
             }
@@ -357,8 +357,8 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             ORDER BY workout_type
             """,
             athlete_id,
-            start.isoformat(),
-            end.isoformat(),
+            start,
+            end,
         )
         return [
             {
@@ -389,7 +389,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         return [
             {
                 "id": row["id"],
-                "date": row["start_time"][:10],
+                "date": str(row["start_time"].date()),
                 "workout_type": row["workout_type"],
                 "duration_seconds": json.loads(row["data"]).get("duration_seconds", 0),
                 "distance_meters": json.loads(row["data"]).get("distance_meters") or 0,
@@ -419,7 +419,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             ORDER BY day
             """,
             athlete_id,
-            since.isoformat(),
+            since,
         )
         return [{"date": str(row["day"]), "effort": row["effort"]} for row in rows]
 
@@ -478,7 +478,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             d = json.loads(row["data"])
             results.append({
                 "id": row["id"],
-                "date": row["start_time"][:10],
+                "date": str(row["start_time"].date()),
                 "workout_type": row["workout_type"],
                 "name": d.get("name", ""),
                 "duration_seconds": d.get("duration_seconds", 0),

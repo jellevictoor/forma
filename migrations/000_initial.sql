@@ -1,4 +1,4 @@
--- Initial schema: all tables from the original SQLite implementation.
+-- Initial schema.
 
 CREATE TABLE IF NOT EXISTS athletes (
     id TEXT PRIMARY KEY,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS workouts (
     id TEXT PRIMARY KEY,
     athlete_id TEXT NOT NULL,
     strava_id BIGINT,
-    start_time TEXT NOT NULL,
+    start_time TIMESTAMP NOT NULL,
     workout_type TEXT,
     data TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS weight_entries (
     id TEXT PRIMARY KEY,
     athlete_id TEXT NOT NULL,
     weight_kg REAL NOT NULL,
-    recorded_at TEXT NOT NULL,
+    recorded_at DATE NOT NULL,
     notes TEXT DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_weight_entries_recorded_at ON weight_entries(reco
 
 CREATE TABLE IF NOT EXISTS activity_analysis_cache (
     workout_id TEXT PRIMARY KEY,
-    generated_at TEXT NOT NULL,
+    generated_at TIMESTAMP NOT NULL,
     data TEXT NOT NULL
 );
 
@@ -45,21 +45,21 @@ CREATE TABLE IF NOT EXISTS activity_chat (
     workout_id TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS insights_cache (
     athlete_id TEXT NOT NULL,
     year INTEGER NOT NULL,
-    generated_at TEXT NOT NULL,
+    generated_at TIMESTAMP NOT NULL,
     data TEXT NOT NULL,
     PRIMARY KEY (athlete_id, year)
 );
 
 CREATE TABLE IF NOT EXISTS recap_cache (
     athlete_id TEXT PRIMARY KEY,
-    generated_at TEXT NOT NULL,
-    latest_activity_at TEXT,
+    generated_at TIMESTAMP NOT NULL,
+    latest_activity_at TIMESTAMP,
     summary TEXT NOT NULL,
     highlight TEXT NOT NULL,
     form_note TEXT NOT NULL,
@@ -68,14 +68,14 @@ CREATE TABLE IF NOT EXISTS recap_cache (
 
 CREATE TABLE IF NOT EXISTS plan_cache (
     athlete_id TEXT PRIMARY KEY,
-    generated_at TEXT NOT NULL,
-    latest_activity_at TEXT,
+    generated_at TIMESTAMP NOT NULL,
+    latest_activity_at TIMESTAMP,
     data TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS activity_streams (
     workout_id TEXT PRIMARY KEY,
-    fetched_at TEXT NOT NULL,
+    fetched_at TIMESTAMP NOT NULL,
     data TEXT NOT NULL
 );
 
