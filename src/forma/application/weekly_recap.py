@@ -5,6 +5,7 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 
 from google import genai
+from google.genai import types
 
 
 from forma.application.analytics_service import compute_fitness_freshness
@@ -18,6 +19,11 @@ from forma.ports.workout_repository import WorkoutRepository
 logger = logging.getLogger(__name__)
 
 RECAP_MODEL = "models/gemini-2.5-flash"
+
+_SYSTEM_INSTRUCTION = """\
+You are a personal fitness coach. Analyse an athlete's training week and write a brief,
+motivating recap. Keep the tone direct, coaching, and grounded in the data.
+"""
 
 
 class WeeklyRecapService:
@@ -108,9 +114,7 @@ class WeeklyRecapService:
         else:
             form_context = "neutral (balanced training load)"
 
-        return f"""You are a personal fitness coach. Analyse this athlete's training week and write a brief, motivating recap.
-
-THIS WEEK:
+        return f"""THIS WEEK:
 {this_block}
 
 PREVIOUS WEEK (for comparison):
@@ -132,7 +136,8 @@ Respond with a JSON object with exactly these fields:
 Keep the tone direct, coaching, and grounded in the data. Respond with only the JSON, no other text."""
 
     def _call_gemini(self, prompt: str) -> WeeklyRecap:
-        response = self._client.models.generate_content(model=RECAP_MODEL, contents=prompt)
+        config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
+        response = self._client.models.generate_content(model=RECAP_MODEL, contents=prompt, config=config)
         return self._parse_response(response.text)
 
     def _parse_response(self, text: str) -> WeeklyRecap:

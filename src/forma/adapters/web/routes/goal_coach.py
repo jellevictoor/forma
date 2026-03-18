@@ -23,7 +23,6 @@ templates = Jinja2Templates(directory="src/forma/templates")
 
 class ChatRequest(BaseModel):
     message: str
-    history: list[dict]  # [{role: "user"|"model", text: "..."}]
 
 
 class ConfirmRequest(BaseModel):
@@ -65,7 +64,7 @@ async def goal_message(
     coaching_service: Annotated[GoalCoachingService, Depends(get_goal_coaching_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    response = await coaching_service.chat(athlete_id, body.message, body.history)
+    response = await coaching_service.chat(athlete_id, body.message)
     proposal = coaching_service.extract_proposal(response)
     clean_response = response
     if proposal:

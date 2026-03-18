@@ -85,7 +85,7 @@ def _create_goal_coaching_service() -> GoalCoachingService:
     settings = get_settings()
     pool = get_pool()
     storage = PostgresStorage(pool)
-    return GoalCoachingService(storage, storage, settings.gemini_api_key)
+    return GoalCoachingService(storage, storage, settings.gemini_api_key, PostgresChat(pool))
 
 
 async def get_goal_coaching_service() -> GoalCoachingService:

@@ -404,7 +404,6 @@
 {% endif %}
 
 // ── Coach chat ────────────────────────────────────────────────
-let _history = [];
 let _pendingProposal = null;
 
 function renderMarkdown(text) {
@@ -544,13 +543,10 @@ async function sendMessage(event) {
     const res = await fetch('/goal/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, history: _history }),
+      body: JSON.stringify({ message }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Request failed');
-
-    _history.push({ role: 'user', text: message });
-    _history.push({ role: 'model', text: data.response });
 
     thinkingRow.querySelector('div').innerHTML = renderMarkdown(data.response);
     if (data.proposal) showProposalCard(data.proposal);
@@ -580,7 +576,6 @@ async function removeGoal() {
 
     document.getElementById('coach-thinking').remove();
     const msgRow = appendMessage('model', data.message);
-    _history.push({ role: 'model', text: data.message });
 
     document.getElementById('coach-status').innerHTML = `
       <span class="w-1.5 h-1.5 rounded-full" style="background:var(--color-mint)"></span>
