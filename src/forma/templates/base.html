@@ -15,6 +15,8 @@
       }
     })();
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="stylesheet" href="/static/css/theme.css" />
@@ -24,11 +26,15 @@
       darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            wordmark: ['"Space Grotesk"', 'sans-serif'],
+          },
           colors: {
             /* Brand — same in both modes */
-            mint:  '#00DC9E',
-            sky:   '#3AAFE8',
-            amber: '#F5A623',
+            mint:   '#2DD4AA',
+            sky:    '#60A5FA',
+            amber:  '#FB923C',
+            accent: '#0C9B6E',
             /* Semantic — CSS-variable-backed, auto-adapt to theme */
             'nav-bg':      'var(--color-nav)',
             'surface':     'var(--color-surface)',
@@ -53,9 +59,7 @@
 
     <!-- Logo -->
     <div class="h-14 flex items-center px-5 shrink-0">
-      <a href="/" class="text-xl font-bold tracking-tight">
-        <span class="text-mint">f</span><span class="text-white/90">orma</span>
-      </a>
+      <a href="/" class="font-wordmark text-xl font-bold tracking-tight text-accent">forma</a>
     </div>
 
     <!-- Nav links -->
@@ -97,7 +101,7 @@
       </a>
 
       <!-- Divider -->
-      <div class="my-2 mx-1 h-px" style="background:rgba(255,255,255,0.06)"></div>
+      <div class="my-2 mx-1 h-px" style="background:var(--color-nav-divider)"></div>
 
       <a href="/plan" data-nav-href="/plan" class="nav-link">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -116,13 +120,13 @@
     </nav>
 
     <!-- Sidebar footer: year + sync + theme -->
-    <div class="shrink-0 px-4 py-4" style="border-top:1px solid rgba(255,255,255,0.06)">
+    <div class="shrink-0 px-4 py-4" style="border-top:1px solid var(--color-nav-divider)">
       <div class="flex items-center justify-between">
         <span id="nav-year" class="text-xs font-medium tracking-widest text-muted" title="Current year"></span>
         <div class="flex items-center gap-0.5">
           <span id="sync-result" class="hidden text-xs mr-1.5 font-medium text-muted"></span>
           <button id="sync-btn" onclick="triggerSync()"
-                  class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10 text-muted cursor-pointer"
+                  class="nav-btn w-7 h-7 flex items-center justify-center rounded-full text-muted cursor-pointer"
                   title="Sync from Strava" aria-label="Sync from Strava">
             <svg id="sync-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -132,7 +136,7 @@
             </svg>
           </button>
           <button id="theme-toggle" onclick="toggleTheme()"
-                  class="w-7 h-7 flex items-center justify-center rounded-full transition-colors hover:bg-white/10 text-muted cursor-pointer"
+                  class="nav-btn w-7 h-7 flex items-center justify-center rounded-full text-muted cursor-pointer"
                   title="Toggle theme" aria-label="Toggle theme">
             <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" class="hidden w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
@@ -150,15 +154,13 @@
   <!-- ── Mobile header ─────────────────────────────────────── -->
   <header class="md:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center px-4 gap-3 shadow-sm" style="background:var(--color-nav)">
     <button onclick="toggleSidebar()"
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-white/10 text-muted cursor-pointer"
+            class="nav-btn w-8 h-8 flex items-center justify-center rounded-lg text-muted cursor-pointer"
             aria-label="Open navigation">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
       </svg>
     </button>
-    <a href="/" class="text-lg font-bold tracking-tight">
-      <span class="text-mint">f</span><span class="text-white/90">orma</span>
-    </a>
+    <a href="/" class="font-wordmark text-lg font-bold tracking-tight text-accent">forma</a>
   </header>
 
   <!-- ── Sidebar overlay (mobile) ──────────────────────────── -->

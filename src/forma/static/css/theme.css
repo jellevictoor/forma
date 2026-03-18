@@ -1,69 +1,80 @@
 /* ── Color tokens ──────────────────────────────────────────── */
 :root {
-  /* Sport / brand — identical in both modes */
-  --color-mint:  #00DC9E;
-  --color-sky:   #3AAFE8;
-  --color-amber: #F5A623;
+  /* Sport colors — identical in both modes */
+  --color-mint:  #2DD4AA;  /* running */
+  --color-sky:   #60A5FA;  /* strength */
+  --color-amber: #FB923C;  /* climbing */
+
+  /* Brand accent */
+  --color-accent: #0C9B6E;
 
   /* Nav */
-  --color-nav: #0F1B2D;
+  --color-nav:          #F5F4F1;
+  --color-nav-text:     #928E87;
+  --color-nav-hover:    rgba(0, 0, 0, 0.04);
+  --color-nav-active:   rgba(12, 155, 110, 0.10);
+  --color-nav-divider:  #E0DDD7;
 
   /* Page & surfaces */
-  --color-bg:          #EFF4FB;
-  --color-surface:     #FFFFFF;
-  --color-surface-alt: #E6EDF7;
-  --color-edge:        #CFDAED;
+  --color-bg:          #EDECEA;
+  --color-surface:     #FAFAF8;
+  --color-surface-alt: #EDECEA;
+  --color-edge:        #DCD9D1;
 
   /* Text */
-  --color-text:           #111827;
-  --color-text-secondary: #4B5563;
-  --color-text-muted:     #9CA3AF;
+  --color-text:           #1C1A15;
+  --color-text-secondary: #5A5651;
+  --color-text-muted:     #928E87;
 
   /* Semantic */
-  --color-negative: #EF4444;
-  --color-empty:    #9CA3AF;
+  --color-negative: #DC2626;
+  --color-empty:    #C4C0B9;
   --color-amber-subtle: #FEF3C7;
   --color-amber-subtle-text: #92400E;
 
   /* Chart helpers */
-  --color-chart-axis:      #9CA3AF;
-  --color-chart-grid:      #CFDAED;
-  --color-effort-bar:      rgba(15, 27, 45, 0.06);
-  --color-chart-empty-bar: rgba(156, 163, 175, 0.12);
+  --color-chart-axis:      #928E87;
+  --color-chart-grid:      #DCD9D1;
+  --color-effort-bar:      rgba(28, 26, 21, 0.04);
+  --color-chart-empty-bar: rgba(146, 142, 135, 0.15);
 
   /* Tooltip */
-  --color-tooltip-bg:     #FFFFFF;
-  --color-tooltip-border: #CFDAED;
-  --color-tooltip-text:   #4B5563;
-  --color-tooltip-date:   #9CA3AF;
+  --color-tooltip-bg:     #FAFAF8;
+  --color-tooltip-border: #DCD9D1;
+  --color-tooltip-text:   #5A5651;
+  --color-tooltip-date:   #928E87;
 }
 
 .dark {
-  --color-nav: #080F1A;
+  --color-nav:         #1A1916;
+  --color-nav-text:    #68635D;
+  --color-nav-hover:   rgba(255, 255, 255, 0.06);
+  --color-nav-active:  rgba(12, 155, 110, 0.12);
+  --color-nav-divider: rgba(255, 255, 255, 0.06);
 
-  --color-bg:          #090F1A;
-  --color-surface:     #111C2C;
-  --color-surface-alt: #182538;
-  --color-edge:        #1F3050;
+  --color-bg:          #111009;
+  --color-surface:     #1A1916;
+  --color-surface-alt: #231F1B;
+  --color-edge:        #312D28;
 
-  --color-text:           #EDF2F9;
-  --color-text-secondary: #8BAEC8;
-  --color-text-muted:     #5C7A96;
+  --color-text:           #F0EDE6;
+  --color-text-secondary: #9A958E;
+  --color-text-muted:     #68635D;
 
   --color-negative: #F87171;
-  --color-empty:    #3A5272;
-  --color-amber-subtle: rgba(245, 166, 35, 0.15);
-  --color-amber-subtle-text: #F5A623;
+  --color-empty:    #514D48;
+  --color-amber-subtle: rgba(251, 146, 60, 0.15);
+  --color-amber-subtle-text: #FB923C;
 
-  --color-chart-axis:      #5C7A96;
-  --color-chart-grid:      #1F3050;
+  --color-chart-axis:      #68635D;
+  --color-chart-grid:      #312D28;
   --color-effort-bar:      rgba(255, 255, 255, 0.04);
-  --color-chart-empty-bar: rgba(60, 90, 130, 0.15);
+  --color-chart-empty-bar: rgba(100, 95, 88, 0.18);
 
-  --color-tooltip-bg:     #182538;
-  --color-tooltip-border: #1F3050;
-  --color-tooltip-text:   #8BAEC8;
-  --color-tooltip-date:   #5C7A96;
+  --color-tooltip-bg:     #231F1B;
+  --color-tooltip-border: #312D28;
+  --color-tooltip-text:   #9A958E;
+  --color-tooltip-date:   #68635D;
 }
 
 /* ── Base ──────────────────────────────────────────────────── */
@@ -74,7 +85,7 @@ body {
 
 /* ── Text selection ─────────────────────────────────────────── */
 ::selection {
-  background: rgba(0, 220, 158, 0.18);
+  background: rgba(12, 155, 110, 0.18);
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────── */
@@ -145,7 +156,7 @@ tbody tr:nth-child(even) {
 
 /* ── Card depth — subtle inner highlight in dark mode ──────── */
 .dark .card-depth {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ── Chart containers ───────────────────────────────────────── */
@@ -185,7 +196,7 @@ tbody tr:nth-child(even) {
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: var(--color-nav-text);
   transition: background-color 150ms ease, color 150ms ease;
   text-decoration: none;
 }
@@ -197,17 +208,30 @@ tbody tr:nth-child(even) {
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.88);
+  background-color: var(--color-nav-hover);
+  color: var(--color-text);
 }
 
 .nav-link-active {
-  background-color: rgba(0, 220, 158, 0.12);
-  color: rgba(255, 255, 255, 0.95);
+  background-color: var(--color-nav-active);
+  color: var(--color-text);
 }
 
 .nav-link-active .nav-icon {
-  color: var(--color-mint);
+  color: var(--color-accent);
+}
+
+/* ── Nav icon buttons (sync, theme) ─────────────────────────── */
+.nav-btn {
+  transition: background-color 150ms ease;
+}
+
+.nav-btn:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.dark .nav-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Reduced motion ─────────────────────────────────────────── */

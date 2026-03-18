@@ -173,24 +173,27 @@ All URLs must be externally linkable. Parameters go in the path: `/{param}`, nev
 - Tailwind is configured with `darkMode: 'class'` and semantic color extensions that reference CSS variables
 - Use semantic Tailwind classes in templates: `bg-surface`, `bg-surface-alt`, `border-edge`
 - Use CSS variables directly in D3 charts via `.style('fill', 'var(--color-mint)')` etc.
+- The sidebar (`--color-nav`) is **light in light mode** (`#F5F4F1`) and dark in dark mode (`#1A1916`) — nav link text and hover states use `--color-nav-text` / `--color-nav-hover` CSS vars (not hardcoded white opacities)
+- Nav icon buttons use the `.nav-btn` CSS class for theme-adaptive hover (not `hover:bg-white/10`)
 
 ### Charts
 - SVG with `viewBox` fills container width (no fixed pixel widths)
 - Use d3.js to generate all graphs
 - Always use CSS variables for colors in D3 — never hardcoded hex values
 - Brand colors — respect them in all charts and sport indicators:
-    nav:          var(--color-nav)         light: #111D2C  dark: #07101C
+    nav:          var(--color-nav)         light: #F5F4F1  dark: #1A1916
+    accent:       var(--color-accent)      #0C9B6E  (brand/logo, teal-green)
     mint:         var(--color-mint)        #2DD4AA  (running)
-    sky:          var(--color-sky)         #5BA8D4  (strength)
-    amber:        var(--color-amber)       #E8A84A  (climbing)
-    page bg:      var(--color-bg)          light: #F0F5FA  dark: #0B1622
-    surface:      var(--color-surface)     light: #FFFFFF  dark: #122030
-    surface-alt:  var(--color-surface-alt) light: #EAF0F7  dark: #1A2B3D
-    edge:         var(--color-edge)        light: #D8E4EF  dark: #213349
+    sky:          var(--color-sky)         #60A5FA  (strength)
+    amber:        var(--color-amber)       #FB923C  (climbing)
+    page bg:      var(--color-bg)          light: #EDECEA  dark: #111009
+    surface:      var(--color-surface)     light: #FAFAF8  dark: #1A1916
+    surface-alt:  var(--color-surface-alt) light: #EDECEA  dark: #231F1B
+    edge:         var(--color-edge)        light: #DCD9D1  dark: #312D28
 - Sport color mapping:
     running   → mint   var(--color-mint)   #2DD4AA
-    strength  → sky    var(--color-sky)    #5BA8D4
-    climbing  → amber  var(--color-amber)  #E8A84A
+    strength  → sky    var(--color-sky)    #60A5FA
+    climbing  → amber  var(--color-amber)  #FB923C
 - Use `.sport-run`, `.sport-strength`, `.sport-climbing` CSS classes for sport indicator dots
 - When showing multiple timeseries, always align the x-axis vertically across charts on the page
 
