@@ -43,10 +43,19 @@
 } %}
 {% set sport_color = _sport_colors.get(workout.workout_type.value, 'var(--color-edge)') %}
 <div class="mb-6">
-  <a href="/activities/all/1" class="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5 mb-4">
+  <a href="/activities/all/1" id="back-link" class="text-xs text-muted hover:text-secondary transition-colors inline-flex items-center gap-1.5 mb-4">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     Back to activities
   </a>
+  <script>
+    // Go back to exact page the user came from if it was the activities list
+    (function() {
+      const ref = document.referrer;
+      if (ref && new URL(ref).pathname.startsWith('/activities')) {
+        document.getElementById('back-link').href = ref;
+      }
+    })();
+  </script>
   <div class="flex items-center gap-3">
     <div class="w-1 h-10 rounded-full shrink-0" style="background:{{ sport_color }}"></div>
     <div>
