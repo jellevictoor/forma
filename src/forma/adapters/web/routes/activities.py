@@ -47,6 +47,14 @@ async def activity_detail(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     workout = await workout_repo.get_workout(activity_id)
+    if workout and workout.strava_raw:
+        updates = {}
+        if workout.average_heartrate is None and workout.strava_raw.get("average_heartrate"):
+            updates["average_heartrate"] = float(workout.strava_raw["average_heartrate"])
+        if workout.max_heartrate is None and workout.strava_raw.get("max_heartrate"):
+            updates["max_heartrate"] = float(workout.strava_raw["max_heartrate"])
+        if updates:
+            workout = workout.model_copy(update=updates)
     cached_analysis = await analysis_service.get_cached(activity_id)
     chat_messages = await analysis_service.get_chat_messages(activity_id)
     athlete = await athlete_service.get_profile(athlete_id)
@@ -97,6 +105,38 @@ async def chat_about_activity(
         return JSONResponse({"error": "Workout not found"}, status_code=404)
 
 
+@router.get("/activities/detail/{activity_id}/context")
+async def activity_context(
+    activity_id: str,
+    workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    workout = await workout_repo.get_workout(activity_id)
+    if not workout:
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    calories = None
+    calories_estimated = False
+    if workout.strava_raw:
+        calories = workout.strava_raw.get("calories")
+    if not calories and workout.average_heartrate and workout.duration_seconds:
+        # MET-based: strength/climbing ≈ 4.0 MET, 70 kg default body weight
+        calories = round(4.0 * 70 * workout.duration_seconds / 3600)
+        calories_estimated = True
+    elif calories:
+        calories_estimated = False
+
+    recent = await service.recent_same_type_summary(
+        athlete_id, workout.workout_type.value, activity_id, count=4
+    )
+    return JSONResponse({
+        "calories": calories,
+        "calories_estimated": calories_estimated,
+        "recent": recent,
+    })
+
+
 @router.get("/activities/detail/{activity_id}/streams")
 async def activity_streams(
     activity_id: str,
@@ -106,14 +146,15 @@ async def activity_streams(
         streams = await stream_service.get_or_fetch(activity_id)
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
-    if not streams or not streams.latlng:
-        return JSONResponse({"error": "No GPS data available"}, status_code=404)
+    if not streams or (not streams.latlng and not streams.heartrate):
+        return JSONResponse({"error": "No stream data available"}, status_code=404)
     return JSONResponse({
         "latlng": streams.latlng,
         "time": streams.time,
         "velocity_smooth": streams.velocity_smooth,
         "heartrate": streams.heartrate,
         "has_hr": bool(streams.heartrate),
+        "has_gps": bool(streams.latlng),
     })
 
 

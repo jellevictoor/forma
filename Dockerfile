@@ -8,11 +8,14 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml README.md .
 
-# Install dependencies
-RUN uv sync --no-dev
+# Install dependencies (without the project itself)
+RUN uv sync --no-dev --no-install-project
 
 # Copy source code
 COPY src/ src/
+
+# Install project in editable mode so watch-synced source is used directly
+RUN uv pip install -e . --no-deps
 
 # Create data directory
 RUN mkdir -p data

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>forma — getting started</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <script>
+    (function() {
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/theme.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { wordmark: ['"Space Grotesk"', 'sans-serif'] },
+          colors: {
+            mint:    '#599DA4',
+            amber:   '#EFB74C',
+            coral:   '#E46B47',
+            sky:     '#60A5FA',
+            surface: 'var(--color-surface)',
+            'surface-alt': 'var(--color-surface-alt)',
+            edge:    'var(--color-edge)',
+            primary: 'var(--color-text)',
+            muted:   'var(--color-text-muted)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .input-row {
+      display: flex;
+      flex-direction: column;
+      padding: 14px 16px;
+    }
+    .input-row label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+    }
+    .input-row input {
+      background: transparent;
+      font-size: 14px;
+      color: var(--color-text);
+      outline: none;
+      min-height: 28px;
+      line-height: 1.4;
+    }
+    .input-row input::placeholder { color: var(--color-text-muted); opacity: 0.6; }
+
+    .goal-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
+      border-radius: 12px; border: 1.5px solid var(--color-edge);
+      background: var(--color-surface); cursor: pointer; transition: border-color 200ms; }
+    .goal-card:hover { border-color: #599DA4; }
+    .goal-card.selected { border-color: #599DA4; background: var(--color-surface-alt); }
+    .goal-icon { width: 36px; height: 36px; border-radius: 8px; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col" style="background:var(--color-bg)">
+
+  <!-- Top bar -->
+  <div class="flex items-center justify-between px-5 py-4 shrink-0">
+    <div class="flex items-center gap-2">
+      <svg viewBox="0 0 14 20" width="12" height="17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="0" y="0" width="14" height="4.5" rx="2.25" fill="var(--color-nav-logo-body)"/>
+        <rect x="0" y="0" width="4.5" height="20" rx="2.25" fill="var(--color-nav-logo-body)"/>
+        <rect x="0" y="8.5" width="11" height="4" rx="2" fill="var(--color-nav-logo-mark)"/>
+        <circle cx="2.25" cy="2.25" r="1.9" fill="var(--color-nav-logo-mark)"/>
+        <circle cx="12" cy="17.5" r="2.2" fill="var(--color-nav-logo-mark)"/>
+      </svg>
+      <span class="font-wordmark text-base font-bold tracking-tight text-primary">forma</span>
+    </div>
+    <a href="/" class="text-xs text-muted hover:text-primary transition-colors cursor-pointer py-2 px-1">Skip setup</a>
+  </div>
+
+  <!-- Stepper -->
+  <div class="px-5 pb-6 shrink-0">
+    <div class="max-w-sm mx-auto">
+      <div class="flex items-center gap-0">
+        {% for i, label in [(1, "Profile"), (2, "Sync"), (3, "Goal")] %}
+          <div class="flex flex-col items-center gap-1.5 flex-1">
+            <div class="w-full flex items-center">
+              <div class="flex-1 h-0.5 {% if i == 1 %}invisible{% endif %} {% if i <= step %}bg-mint{% else %}bg-edge{% endif %}"></div>
+              <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors duration-200
+                {% if i < step %}bg-mint text-white{% elif i == step %}bg-mint text-white{% else %}bg-surface-alt text-muted border border-edge{% endif %}">
+                {% if i < step %}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                {% else %}
+                  {{ i }}
+                {% endif %}
+              </div>
+              <div class="flex-1 h-0.5 {% if i == 3 %}invisible{% endif %} {% if i < step %}bg-mint{% else %}bg-edge{% endif %}"></div>
+            </div>
+            <span class="text-xs font-medium {% if i == step %}text-primary{% else %}text-muted{% endif %}">{{ label }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 flex items-start justify-center px-5 pb-10">
+    <div class="w-full max-w-sm">
+
+      {# ════════════════════════════════════════
+         STEP 1 — Profile
+         ════════════════════════════════════════ #}
+      {% if step == 1 %}
+
+      <div class="mb-5">
+        <h1 class="text-xl font-bold text-primary mb-1">Tell us about yourself</h1>
+        <p class="text-sm text-muted leading-relaxed">forma uses these to calculate your training zones and give you relevant coaching — no need to update Strava.</p>
+      </div>
+
+      <form method="post" action="/onboarding/profile" id="profile-form">
+        <div class="rounded-2xl border divide-y overflow-hidden mb-3" style="background:var(--color-surface);border-color:var(--color-edge)">
+
+          <div class="input-row">
+            <label for="name">Name</label>
+            <input id="name" type="text" name="name" autocomplete="name"
+                   value="{{ athlete.name if athlete else '' }}" />
+          </div>
+
+          <div class="input-row">
+            <label for="dob">Date of birth</label>
+            <input id="dob" type="date" name="date_of_birth"
+                   value="{{ athlete.date_of_birth.isoformat() if athlete and athlete.date_of_birth else '' }}" />
+          </div>
+
+          <div class="grid grid-cols-2 divide-x" style="border-color:var(--color-edge)">
+            <div class="input-row">
+              <label for="weight">Weight (kg)</label>
+              <input id="weight" type="number" name="weight_kg" step="0.1" min="30" max="300"
+                     value="{{ athlete.weight_kg if athlete and athlete.weight_kg else '' }}"
+                     placeholder="70" />
+            </div>
+            <div class="input-row">
+              <label for="height">Height (cm)</label>
+              <input id="height" type="number" name="height_cm" step="1" min="100" max="250"
+                     value="{{ athlete.height_cm if athlete and athlete.height_cm else '' }}"
+                     placeholder="175" />
+            </div>
+          </div>
+
+          <div class="input-row">
+            <label for="maxhr">Max heart rate (bpm)</label>
+            <input id="maxhr" type="number" name="max_heartrate" min="120" max="220"
+                   value="{{ athlete.max_heartrate if athlete and athlete.max_heartrate else '' }}"
+                   placeholder="{% if athlete and athlete.age %}{{ 220 - athlete.age }} estimated{% else %}e.g. 182{% endif %}" />
+          </div>
+
+        </div>
+
+        <p class="text-xs text-muted mb-5 px-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 inline mr-1 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Max HR is used to calculate your Zone 2 ceiling — the most important zone for aerobic fitness.
+        </p>
+
+        <button type="submit" id="profile-submit"
+                class="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 min-h-[48px]"
+                style="background:#599DA4"
+                onclick="this.disabled=true; this.innerHTML='<svg class=\'w-4 h-4 animate-spin\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><path d=\'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83\'/></svg> Saving…'; this.form.submit();">
+          Continue
+        </button>
+
+        <a href="/" class="block text-center text-xs text-muted hover:text-primary transition-colors cursor-pointer py-3 min-h-[44px] flex items-center justify-center">
+          Skip setup entirely
+        </a>
+      </form>
+
+
+      {# ════════════════════════════════════════
+         STEP 2 — Sync
+         ════════════════════════════════════════ #}
+      {% elif step == 2 %}
+
+      <div class="mb-5">
+        <h1 class="text-xl font-bold text-primary mb-1">Import your activities</h1>
+        <p class="text-sm text-muted leading-relaxed">Sync your Strava history to unlock analytics, personal records, and AI-powered coaching insights.</p>
+      </div>
+
+      <!-- What you'll get -->
+      <div class="rounded-2xl border divide-y mb-4 overflow-hidden" style="background:var(--color-surface);border-color:var(--color-edge)">
+        {% for icon_color, title, desc in [
+          ("var(--color-mint)",  "Training analytics",    "Weekly volume, pace trends, and sport breakdowns"),
+          ("var(--color-amber)", "Personal records",      "Your best times at every distance, automatically tracked"),
+          ("var(--color-coral)", "AI coaching insights",  "Weekly recap and training advice based on your data"),
+        ] %}
+        <div class="flex items-center gap-3 px-4 py-3.5">
+          <div class="w-2 h-2 rounded-full shrink-0" style="background:{{ icon_color }}"></div>
+          <div>
+            <p class="text-sm font-medium text-primary">{{ title }}</p>
+            <p class="text-xs text-muted">{{ desc }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Sync status -->
+      <div id="sync-status" class="hidden rounded-xl px-4 py-3 mb-3 text-sm font-medium"></div>
+
+      <!-- Sync button -->
+      <button id="sync-btn" onclick="runSync()"
+              class="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 min-h-[48px] mb-3"
+              style="background:#FC4C02">
+        <svg id="sync-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+        </svg>
+        <span id="sync-label">Sync from Strava</span>
+      </button>
+
+      <!-- Navigation -->
+      <div class="flex gap-2">
+        <a href="/onboarding"
+           class="flex-1 py-3 rounded-xl text-sm font-medium text-center cursor-pointer border transition-colors hover:border-mint/50 min-h-[44px] flex items-center justify-center"
+           style="border-color:var(--color-edge);color:var(--color-text-muted)">
+          Back
+        </a>
+        <a href="/onboarding/goal" id="continue-btn"
+           class="flex-1 py-3 rounded-xl text-sm font-medium text-center cursor-pointer border transition-colors hover:border-mint/50 min-h-[44px] flex items-center justify-center"
+           style="border-color:var(--color-edge);color:var(--color-text-muted)">
+          Continue
+        </a>
+      </div>
+
+      <p class="text-center text-xs text-muted mt-3">First sync can take 1–2 minutes for large histories.</p>
+
+
+      {# ════════════════════════════════════════
+         STEP 3 — Goal
+         ════════════════════════════════════════ #}
+      {% elif step == 3 %}
+
+      <div class="mb-5">
+        <h1 class="text-xl font-bold text-primary mb-1">What are you training for?</h1>
+        <p class="text-sm text-muted leading-relaxed">Your goal shapes the weekly plan, coaching tone, and what forma highlights for you.</p>
+      </div>
+
+      {% set goal_options = [
+        ("general_fitness", "General fitness",    "Build consistency, health, and a sustainable habit",    "var(--color-mint)",  "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"),
+        ("weight_loss",     "Weight loss",         "Improve body composition through training and tracking", "var(--color-amber)", "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75z M9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625z M16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"),
+        ("race",            "Race preparation",    "Target a specific event — 5k, marathon, triathlon",      "var(--color-coral)", "M3 3l1.664 9.526a2.25 2.25 0 002.238 1.974H17.1a2.25 2.25 0 002.238-1.974L21 3M3 3h18M3 3h1.5m15 0h-1.5M12 12.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"),
+        ("time_goal",       "Time goal",           "Chase a pace or distance personal best",                "#60A5FA",            "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"),
+      ] %}
+
+      <div class="flex flex-col gap-2 mb-4" id="goal-cards">
+        {% for value, label, desc, color, path in goal_options %}
+        <div class="goal-card" data-value="{{ value }}" onclick="selectGoal(this)">
+          <div class="goal-icon" style="background:{{ color }}20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:{{ color }}">
+              <path stroke-linecap="round" stroke-linejoin="round" d="{{ path }}"/>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-primary">{{ label }}</p>
+            <p class="text-xs text-muted mt-0.5 leading-relaxed">{{ desc }}</p>
+          </div>
+          <div class="shrink-0 w-4 h-4 rounded-full border-2 mt-0.5 transition-colors goal-check" style="border-color:var(--color-edge)"></div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="rounded-xl border overflow-hidden mb-4" style="background:var(--color-surface);border-color:var(--color-edge)">
+        <div class="input-row">
+          <label for="goal-desc">Describe your goal <span class="normal-case font-normal">(optional)</span></label>
+          <input id="goal-desc" type="text" placeholder="e.g. Run a sub-25 min 5k by July" />
+        </div>
+      </div>
+
+      <button onclick="saveGoalAndFinish(this)"
+              class="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer flex items-center justify-center gap-2 min-h-[48px] mb-2"
+              style="background:#599DA4">
+        Let's go
+      </button>
+
+      <div class="flex gap-2">
+        <a href="/onboarding/sync"
+           class="flex-1 py-3 rounded-xl text-sm font-medium text-center cursor-pointer border transition-colors hover:border-mint/50 min-h-[44px] flex items-center justify-center"
+           style="border-color:var(--color-edge);color:var(--color-text-muted)">
+          Back
+        </a>
+        <form method="post" action="/onboarding/complete" class="flex-1">
+          <button type="submit"
+                  class="w-full py-3 rounded-xl text-sm font-medium text-center cursor-pointer border transition-colors hover:border-mint/50 min-h-[44px] flex items-center justify-center"
+                  style="border-color:var(--color-edge);color:var(--color-text-muted)">
+            Skip
+          </button>
+        </form>
+      </div>
+
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bauhaus strip -->
+  <div class="flex h-1 shrink-0">
+    <div class="flex-1" style="background:#599DA4"></div>
+    <div class="flex-1" style="background:#EFB74C"></div>
+    <div class="flex-1" style="background:#E46B47"></div>
+  </div>
+
+  {% if step == 2 %}
+  <script>
+    async function runSync() {
+      const btn = document.getElementById('sync-btn');
+      const icon = document.getElementById('sync-icon');
+      const label = document.getElementById('sync-label');
+      const status = document.getElementById('sync-status');
+      const continueBtn = document.getElementById('continue-btn');
+
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      icon.classList.add('animate-spin');
+      label.textContent = 'Syncing…';
+
+      status.textContent = 'Importing your activities from Strava…';
+      status.style.background = 'var(--color-surface-alt)';
+      status.style.color = 'var(--color-text-muted)';
+      status.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/sync', { method: 'POST' });
+        const data = await res.json();
+        const count = data.synced ?? 0;
+        status.textContent = count === 0
+          ? '✓ Already up to date — no new activities.'
+          : `✓ Done! Imported ${count} ${count === 1 ? 'activity' : 'activities'}.`;
+        status.style.background = '#599DA420';
+        status.style.color = '#599DA4';
+
+        continueBtn.style.background = '#599DA4';
+        continueBtn.style.color = 'white';
+        continueBtn.style.borderColor = 'transparent';
+        continueBtn.textContent = 'Continue →';
+      } catch {
+        status.textContent = 'Sync failed — you can retry from the dashboard.';
+        status.style.background = 'var(--color-amber)20';
+        status.style.color = 'var(--color-amber)';
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        icon.classList.remove('animate-spin');
+        label.textContent = 'Sync again';
+      }
+    }
+  </script>
+  {% endif %}
+
+  {% if step == 3 %}
+  <script>
+    let selectedGoal = null;
+
+    function selectGoal(card) {
+      document.querySelectorAll('.goal-card').forEach(c => {
+        c.classList.remove('selected');
+        c.querySelector('.goal-check').style.background = 'transparent';
+        c.querySelector('.goal-check').style.borderColor = 'var(--color-edge)';
+      });
+      card.classList.add('selected');
+      const check = card.querySelector('.goal-check');
+      check.style.background = '#599DA4';
+      check.style.borderColor = '#599DA4';
+      selectedGoal = card.dataset.value;
+    }
+
+    async function saveGoalAndFinish(btn) {
+      const description = document.getElementById('goal-desc').value.trim();
+
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      if (selectedGoal || description) {
+        const msg = description || selectedGoal.replace('_', ' ');
+        try {
+          await fetch('/goal/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ message: msg }),
+          });
+        } catch { /* non-fatal */ }
+      }
+
+      window.location.href = '/';
+    }
+  </script>
+  {% endif %}
+
+</body>
+</html>

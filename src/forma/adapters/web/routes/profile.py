@@ -129,3 +129,5 @@ async def delete_weight_entry(
 ):
     await weight_service.delete_entry(entry_id)
     return JSONResponse({"status": "ok"})
+
+

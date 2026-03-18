@@ -7,6 +7,8 @@ from datetime import date, datetime, timedelta, timezone
 from google import genai
 from google.genai import types
 
+from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+
 
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.domain.workout import Workout
@@ -57,17 +59,18 @@ class ActivityAnalysisService:
     async def generate_and_cache(
         self, athlete_id: str, workout_id: str
     ) -> CachedActivityAnalysis:
+        await check_ai_access(athlete_id)
         workout = await self._workouts.get_workout(workout_id)
         if workout is None:
             raise ValueError(f"Workout {workout_id} not found")
 
         logger.info("generating analysis for workout %s (%s)", workout_id, workout.name)
-        athlete = await self._athletes.get_default()
+        athlete = await self._athletes.get(athlete_id)
         recent_similar = await self._recent_similar_workouts(athlete_id, workout)
         ff = await self._fitness_freshness_at(athlete_id, workout.start_time.date())
 
         prompt = self._build_prompt(workout, athlete, recent_similar, ff)
-        analysis = self._call_gemini(prompt)
+        analysis = self._call_gemini(prompt, athlete_id)
 
         await self._cache.save(workout_id, analysis)
         logger.info("analysis saved for workout %s", workout_id)
@@ -204,15 +207,16 @@ Respond with only the JSON, no other text."""
         return await self._chat.list_messages(workout_id)
 
     async def chat(self, athlete_id: str, workout_id: str, message: str) -> str:
+        await check_ai_access(athlete_id)
         workout = await self._workouts.get_workout(workout_id)
         if workout is None:
             raise ValueError(f"Workout {workout_id} not found")
 
         logger.info("chat message for workout %s (history len=%d)", workout_id, len(await self._chat.list_messages(workout_id)))
-        athlete = await self._athletes.get_default()
+        athlete = await self._athletes.get(athlete_id)
         history = await self._chat.list_messages(workout_id)
         context = self._build_chat_context(workout, athlete)
-        response = self._call_gemini_chat(context, history, message)
+        response = self._call_gemini_chat(context, history, message, athlete_id)
 
         await self._chat.append_message(workout_id, "user", message)
         await self._chat.append_message(workout_id, "model", response)
@@ -236,7 +240,7 @@ THE WORKOUT:
 Answer their questions about this workout: how it went, what it means for their training, comparisons, recommendations, etc. Be direct and coaching. Keep answers concise."""
 
     def _call_gemini_chat(
-        self, context: str, history: list[ChatMessage], message: str
+        self, context: str, history: list[ChatMessage], message: str, athlete_id: str
     ) -> str:
         contents = [
             {"role": "user", "parts": [{"text": context}]},
@@ -247,16 +251,12 @@ Answer their questions about this workout: how it went, what it means for their 
         contents.append({"role": "user", "parts": [{"text": message}]})
 
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(
-            model=ANALYSIS_MODEL, contents=contents, config=config
-        )
+        response = gemini_generate(self._client, ANALYSIS_MODEL, contents, config, service="activity-chat", athlete_id=athlete_id)
         return response.text.strip()
 
-    def _call_gemini(self, prompt: str) -> ActivityAnalysis:
+    def _call_gemini(self, prompt: str, athlete_id: str) -> ActivityAnalysis:
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(
-            model=ANALYSIS_MODEL, contents=prompt, config=config
-        )
+        response = gemini_generate(self._client, ANALYSIS_MODEL, prompt, config, service="activity-analysis", athlete_id=athlete_id)
         return self._parse_response(response.text)
 
     def _parse_response(self, text: str) -> ActivityAnalysis:

@@ -191,6 +191,13 @@ class AnalyticsService:
     async def personal_records(self, athlete_id: str) -> list[PersonalRecord]:
         return await self._analytics.personal_records_for_run(athlete_id, PR_DISTANCES_METERS)
 
+    async def recent_same_type_summary(
+        self, athlete_id: str, workout_type: str, exclude_id: str, count: int = 4
+    ) -> list[dict]:
+        return await self._analytics.recent_same_type_summary(
+            athlete_id, workout_type, exclude_id, count
+        )
+
     async def activities_page(
         self,
         athlete_id: str,

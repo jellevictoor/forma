@@ -24,7 +24,8 @@ class ActivityStreamService:
         logger.info("streams requested for workout %s", workout_id)
         cached = await self._streams.get(workout_id)
         if cached:
-            logger.info("stream cache hit for workout %s (%d points)", workout_id, len(cached.latlng))
+            gps_pts = len(cached.latlng) if cached.latlng else 0
+            logger.info("stream cache hit for workout %s (%d gps points)", workout_id, gps_pts)
             return cached
 
         workout = await self._workouts.get_workout(workout_id)
@@ -36,17 +37,27 @@ class ActivityStreamService:
             return None
 
         logger.info("fetching streams from Strava for workout %s (strava_id=%s)", workout_id, workout.strava_id)
-        raw = await self._strava.get_activity_streams(workout.strava_id)
-        if not raw or "latlng" not in raw:
-            logger.warning("no latlng stream available for strava activity %s", workout.strava_id)
+        try:
+            raw = await self._strava.get_activity_streams(workout.strava_id)
+        except Exception:
+            logger.warning("failed to fetch streams from Strava for activity %s", workout.strava_id)
+            return None
+        if not raw:
+            return None
+
+        has_latlng = "latlng" in raw
+        has_heartrate = "heartrate" in raw
+        if not has_latlng and not has_heartrate:
+            logger.warning("no stream data available for strava activity %s", workout.strava_id)
             return None
 
         streams = WorkoutStreams(
-            latlng=raw["latlng"]["data"],
+            latlng=raw["latlng"]["data"] if has_latlng else None,
             time=raw["time"]["data"] if "time" in raw else [],
             velocity_smooth=raw["velocity_smooth"]["data"] if "velocity_smooth" in raw else [],
-            heartrate=raw["heartrate"]["data"] if "heartrate" in raw else None,
+            heartrate=raw["heartrate"]["data"] if has_heartrate else None,
         )
-        logger.info("cached %d GPS points for workout %s (has_hr=%s)", len(streams.latlng), workout_id, streams.heartrate is not None)
+        gps_pts = len(streams.latlng) if streams.latlng else 0
+        logger.info("cached streams for workout %s (gps=%d pts, has_hr=%s)", workout_id, gps_pts, has_heartrate)
         await self._streams.save(workout_id, streams)
         return streams

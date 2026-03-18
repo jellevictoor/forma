@@ -21,6 +21,7 @@ class CachedRecap:
     focus: list[str]
     generated_at: datetime
     latest_activity_at: datetime | None = field(default=None)
+    is_stale: bool = field(default=False)
 
 
 class RecapCacheRepository(ABC):

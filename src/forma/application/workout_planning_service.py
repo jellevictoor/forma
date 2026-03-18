@@ -8,6 +8,7 @@ from google import genai
 from google.genai import types
 
 
+from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.plan_cache_repository import (
@@ -54,14 +55,17 @@ class WorkoutPlanningService:
         """Return current CTL/ATL/form for display."""
         return await self._current_fitness_freshness(athlete_id)
 
+    STALE_AFTER_DAYS = 7
+
     async def get_cached(self, athlete_id: str) -> CachedWeeklyPlan | None:
-        """Return cached plan with staleness flag set."""
+        """Return cached plan with staleness flag (new activity or older than 7 days)."""
         cached = await self._cache.get(athlete_id)
         if cached is None:
             return None
         recent = await self._workouts.get_recent(athlete_id, count=1)
         latest_at = recent[0].start_time if recent else None
-        cached.is_stale = (
+        age_days = (datetime.now(timezone.utc) - cached.generated_at.replace(tzinfo=timezone.utc)).days
+        cached.is_stale = age_days >= self.STALE_AFTER_DAYS or (
             latest_at is not None
             and cached.latest_activity_at is not None
             and latest_at > cached.latest_activity_at
@@ -70,6 +74,7 @@ class WorkoutPlanningService:
 
     async def generate_and_cache(self, athlete_id: str) -> CachedWeeklyPlan:
         """Generate via Gemini, persist to cache, and return."""
+        await check_ai_access(athlete_id)
         logger.info("generating weekly plan for athlete %s", athlete_id)
         plan = await self._generate(athlete_id)
         if not plan.days:
@@ -100,6 +105,7 @@ class WorkoutPlanningService:
         self, athlete_id: str, day: date, workout_type: str, description: str = ""
     ) -> dict[str, list[str]]:
         """Always regenerate exercises via Gemini and update the cache."""
+        await check_ai_access(athlete_id)
         return await self._generate_and_cache_exercises(athlete_id, day, workout_type, description)
 
     async def _generate_and_cache_exercises(
@@ -112,7 +118,7 @@ class WorkoutPlanningService:
         )
         workouts_with_notes = [w for w in recent_workouts if w.private_note]
         prompt = self._build_exercises_prompt(athlete, day, workout_type, description, workouts_with_notes)
-        exercises = self._call_gemini_for_exercises(prompt)
+        exercises = self._call_gemini_for_exercises(prompt, athlete_id)
         await self._cache.update_day_exercises(athlete_id, day, exercises)
         return exercises
 
@@ -124,7 +130,7 @@ class WorkoutPlanningService:
         ff = await self._current_fitness_freshness(athlete_id)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
-        return self._call_gemini_for_plan(prompt)
+        return self._call_gemini_for_plan(prompt, athlete_id)
 
     async def _completed_dates_in_window(self, athlete_id: str) -> set[date]:
         today = date.today()
@@ -315,14 +321,14 @@ Respond with a JSON object with three sections:
 Each item is a concise exercise string (e.g. "3×10 goblet squat @ 24\u202fkg", "5\u202fmin easy jog").
 Respond with only the JSON object, no other text."""
 
-    def _call_gemini_for_plan(self, prompt: str) -> WeeklyPlan:
+    def _call_gemini_for_plan(self, prompt: str, athlete_id: str) -> WeeklyPlan:
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(model=PLAN_MODEL, contents=prompt, config=config)
+        response = gemini_generate(self._client, PLAN_MODEL, prompt, config, service="plan", athlete_id=athlete_id)
         return self._parse_plan_response(response.text)
 
-    def _call_gemini_for_exercises(self, prompt: str) -> dict[str, list[str]]:
+    def _call_gemini_for_exercises(self, prompt: str, athlete_id: str) -> dict[str, list[str]]:
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(model=PLAN_MODEL, contents=prompt, config=config)
+        response = gemini_generate(self._client, PLAN_MODEL, prompt, config, service="exercises", athlete_id=athlete_id)
         return self._parse_exercises_response(response.text)
 
     def _parse_plan_response(self, text: str) -> WeeklyPlan:

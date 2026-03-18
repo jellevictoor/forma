@@ -22,9 +22,9 @@ class PostgresStreamRepository(StreamRepository):
             return None
         d = json.loads(row["data"])
         return WorkoutStreams(
-            latlng=d["latlng"],
-            time=d["time"],
-            velocity_smooth=d["velocity_smooth"],
+            latlng=d.get("latlng"),
+            time=d.get("time", []),
+            velocity_smooth=d.get("velocity_smooth", []),
             heartrate=d.get("heartrate"),
         )
 

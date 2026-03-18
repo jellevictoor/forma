@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 @dataclass
 class WorkoutStreams:
-    latlng: list[list[float]]
+    latlng: list[list[float]] | None
     time: list[int]
     velocity_smooth: list[float]
     heartrate: list[float] | None

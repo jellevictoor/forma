@@ -1,5 +1,6 @@
 """Overview dashboard routes."""
 
+import asyncio
 from datetime import date
 from typing import Annotated
 
@@ -10,14 +11,14 @@ from fastapi.templating import Jinja2Templates
 from forma.adapters.web.dependencies import (
     get_analytics_service,
     get_athlete_id,
+    get_athlete_profile_service,
     get_strava_sync,
     get_weekly_recap_service,
-    get_workout_repo,
 )
 from forma.application.analytics_service import AnalyticsService
+from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
 from forma.application.weekly_recap import WeeklyRecapService
-from forma.ports.workout_repository import WorkoutRepository
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/forma/templates")
@@ -27,10 +28,18 @@ templates = Jinja2Templates(directory="src/forma/templates")
 async def overview_page(
     request: Request,
     service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    stats = await service.overview_stats(athlete_id)
-    return templates.TemplateResponse(request, "overview.html", {"stats": stats, "today": date.today()})
+    stats, athlete = await asyncio.gather(
+        service.overview_stats(athlete_id),
+        profile_service.get_profile(athlete_id),
+    )
+    return templates.TemplateResponse(request, "overview.html", {
+        "stats": stats,
+        "today": date.today(),
+        "goal": athlete.primary_goal,
+    })
 
 
 @router.get("/api/overview/weekly-volume")
@@ -52,24 +61,15 @@ async def training_log_api(
 @router.get("/api/overview/weekly-recap")
 async def weekly_recap_api(
     recap_service: Annotated[WeeklyRecapService, Depends(get_weekly_recap_service)],
-    workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     cached = await recap_service.get_cached(athlete_id)
     if not cached:
         return {"cached": False}
 
-    recent = await workout_repo.get_recent(athlete_id, count=1)
-    latest_at = recent[0].start_time if recent else None
-    stale = (
-        latest_at is not None
-        and cached.latest_activity_at is not None
-        and latest_at > cached.latest_activity_at
-    )
-
     return {
         "cached": True,
-        "stale": stale,
+        "stale": cached.is_stale,
         "summary": cached.summary,
         "highlight": cached.highlight,
         "form_note": cached.form_note,

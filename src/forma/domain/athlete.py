@@ -7,6 +7,13 @@ from pydantic import BaseModel, Field
 from forma.domain.workout import WorkoutType
 
 
+class Role(str, Enum):
+    """User role — controls access to admin features."""
+
+    USER = "user"
+    SUPERADMIN = "superadmin"
+
+
 class GoalType(str, Enum):
     """Types of fitness goals."""
 
@@ -97,8 +104,17 @@ class Athlete(BaseModel):
     max_heartrate: int | None = None          # beats per minute; used for HR zone calculation
     aerobic_threshold_bpm: int | None = None  # VT1 / talk-test Z2 ceiling — calibrates zones
 
+    # Access control
+    is_blocked: bool = False
+    role: Role = Role.USER
+    ai_enabled: bool = True
+    token_limit_30d: int | None = None  # None = unlimited
+
     # Strava integration
     strava_athlete_id: int | None = None
+    strava_access_token: str | None = None
+    strava_refresh_token: str | None = None
+    strava_token_expires_at: datetime | None = None
 
     @property
     def age(self) -> int | None:

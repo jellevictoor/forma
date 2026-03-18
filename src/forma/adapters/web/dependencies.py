@@ -3,6 +3,8 @@
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
+from fastapi import HTTPException, Request
+
 from forma.adapters.postgres_activity_analysis import PostgresActivityAnalysis
 from forma.adapters.postgres_analytics import PostgresAnalyticsRepository
 from forma.adapters.postgres_chat import PostgresChat
@@ -11,6 +13,7 @@ from forma.adapters.postgres_insights_cache import PostgresInsightsCache
 from forma.adapters.postgres_plan_cache import PostgresPlanCache
 from forma.adapters.postgres_pool import get_pool
 from forma.adapters.postgres_recap_cache import PostgresRecapCache
+from forma.adapters.postgres_session_repository import PostgresSessionRepository
 from forma.adapters.postgres_storage import PostgresStorage
 from forma.adapters.postgres_stream_repository import PostgresStreamRepository
 from forma.adapters.strava_client import StravaClient
@@ -130,17 +133,33 @@ async def get_workout_planning_service() -> WorkoutPlanningService:
     return _create_workout_planning_service()
 
 
-async def get_strava_sync() -> AsyncIterator[FullStravaSync]:
-    """Create a FullStravaSync instance, ensuring the HTTP client is closed after use."""
+async def get_strava_sync(request: Request) -> AsyncIterator[FullStravaSync]:
+    """Create a FullStravaSync using the authenticated athlete's stored Strava tokens."""
     settings = get_settings()
+    pool = get_pool()
+    storage = PostgresStorage(pool)
+
+    access_token = settings.strava_access_token
+    refresh_token = settings.strava_refresh_token
+
+    token = request.cookies.get("session")
+    if token:
+        session_repo = PostgresSessionRepository(pool)
+        session = await session_repo.get_by_token(token)
+        if session:
+            athlete = await storage.get(session.athlete_id)
+            if athlete and athlete.strava_access_token:
+                access_token = athlete.strava_access_token
+                refresh_token = athlete.strava_refresh_token
+
     client = StravaClient(
         client_id=settings.strava_client_id,
         client_secret=settings.strava_client_secret,
-        access_token=settings.strava_access_token,
-        refresh_token=settings.strava_refresh_token,
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
     try:
-        yield FullStravaSync(client, PostgresStorage(get_pool()))
+        yield FullStravaSync(client, storage)
     finally:
         await client.close()
 
@@ -176,31 +195,44 @@ async def get_workout_execution_service() -> WorkoutExecutionService:
     return _create_workout_execution_service()
 
 
-@lru_cache
-def _create_activity_stream_service() -> ActivityStreamService:
+async def get_activity_stream_service(request: Request) -> ActivityStreamService:
     settings = get_settings()
     pool = get_pool()
+    storage = PostgresStorage(pool)
+
+    access_token = settings.strava_access_token
+    refresh_token = settings.strava_refresh_token
+
+    token = request.cookies.get("session")
+    if token:
+        session_repo = PostgresSessionRepository(pool)
+        session = await session_repo.get_by_token(token)
+        if session:
+            athlete = await storage.get(session.athlete_id)
+            if athlete and athlete.strava_access_token:
+                access_token = athlete.strava_access_token
+                refresh_token = athlete.strava_refresh_token
+
     client = StravaClient(
         client_id=settings.strava_client_id,
         client_secret=settings.strava_client_secret,
-        access_token=settings.strava_access_token,
-        refresh_token=settings.strava_refresh_token,
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
-    return ActivityStreamService(
-        PostgresStorage(pool),
-        PostgresStreamRepository(pool),
-        client,
-    )
+    return ActivityStreamService(storage, PostgresStreamRepository(pool), client)
 
 
-async def get_activity_stream_service() -> ActivityStreamService:
-    return _create_activity_stream_service()
-
-
-async def get_athlete_id() -> str:
-    """Return the default athlete ID. Single-user mode."""
-    storage = PostgresStorage(get_pool())
-    athlete = await storage.get_default()
-    if athlete:
-        return athlete.id
-    return "default"
+async def get_athlete_id(request: Request) -> str:
+    """Return the authenticated athlete ID from the session cookie."""
+    token = request.cookies.get("session")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    pool = get_pool()
+    session_repo = PostgresSessionRepository(pool)
+    session = await session_repo.get_by_token(token)
+    if session is None:
+        raise HTTPException(status_code=401, detail="Session expired")
+    athlete = await PostgresStorage(pool).get(session.athlete_id)
+    if athlete and athlete.is_blocked:
+        raise HTTPException(status_code=403, detail="Account blocked")
+    return session.athlete_id

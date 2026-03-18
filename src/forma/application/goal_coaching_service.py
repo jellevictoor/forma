@@ -4,10 +4,12 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from google import genai
 from google.genai import types
+
+from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
 
 from forma.domain.athlete import Athlete, Goal, GoalMilestone, GoalType
 from forma.ports.athlete_repository import AthleteRepository
@@ -70,37 +72,45 @@ You have access to their full training history. Use it. Don't guess — referenc
 - Prioritise injury prevention and long-term consistency over short-term performance.
 - Be direct. Give clear recommendations, not wishy-washy suggestions.
 - Ground every claim in the athlete's actual data.
-- Be encouraging but honest. If a goal is unrealistic, say so — and explain why using the data.
+- **Push back on unrealistic goals.** If the numbers don't support it, say so clearly and explain why using the data. Then work together to find a version of the goal that does make sense.
+- Don't just validate whatever the athlete says — be honest, but collaborative. You're solving this together.
 - Aerobic base first. Speed and performance come later.
 - A goal should stretch but not break the athlete.
+
+## Non-negotiables for every goal
+- **A goal without a target date is a wish, not a goal.** Always negotiate a specific date.
+- **Milestones are mandatory.** Every goal needs 2-4 intermediate checkpoints with a date and a measurable target. These are how you follow up. No milestones = no proposal.
+- If the athlete's proposed timeline is too aggressive, counter-propose a realistic one with a clear explanation based on their data. Don't just accept what they say.
 
 ## How to run this conversation
 
 1. Open with a brief, specific observation about their current fitness — one or two things you actually see in the data. Not generic praise.
 2. Ask what they want to achieve.
-3. If they name something vague ("get fitter", "lose weight"), ask for a more concrete outcome.
+3. If they name something vague ("get fitter", "lose weight"), push for a concrete, measurable outcome.
 4. Once you understand their aspiration, give your honest assessment:
-   - Is it realistic given their current level?
-   - What's a better target if theirs is off?
-   - What time frame is appropriate?
-5. Propose 2-3 milestones with dates and measurable targets.
-6. When the athlete agrees on a specific goal, output a structured proposal using EXACTLY this format — do not deviate:
+   - Is it realistic given their current level? Show the numbers.
+   - If their timeline is too short: say so, explain the gap using their data, and propose a realistic alternative together.
+   - If their target is too easy: mention it and explore if they want more ambition.
+   - If their target is off: suggest a better one and explain your reasoning.
+5. Negotiate milestones — specific dates, measurable targets. Frame them as accountability checkpoints: "by this date, you should be able to do X."
+6. Only once the athlete has explicitly agreed to a specific goal AND you have at least 2 milestones, output a structured proposal using EXACTLY this format — do not deviate:
 
 <<GOAL_PROPOSAL>>
-{{
+{
   "goal_type": "<one of: race, time_goal, distance_goal, general_fitness, weight_loss, strength>",
   "description": "<one clear sentence>",
   "target_value": "<measurable target, e.g. sub-52min 10k, or null>",
-  "target_date": "<YYYY-MM-DD or null>",
+  "target_date": "<YYYY-MM-DD — always required, never null>",
   "milestones": [
-    {{"date": "YYYY-MM-DD", "description": "<what this checkpoint means>", "target": "<measurable or null>"}},
-    {{"date": "YYYY-MM-DD", "description": "...", "target": "..."}}
+    {"date": "YYYY-MM-DD", "description": "<what this checkpoint means>", "target": "<measurable target>"},
+    {"date": "YYYY-MM-DD", "description": "...", "target": "..."},
+    {"date": "YYYY-MM-DD", "description": "...", "target": "..."}
   ],
-  "rationale": "<2-3 sentences: why this goal, why this timeline, based on their specific data>"
-}}
+  "rationale": "<2-3 sentences: why this goal, why this specific timeline, and what the milestones are measuring — grounded in their data>"
+}
 <<END_PROPOSAL>>
 
-Only output the proposal block once the athlete has explicitly said yes to a specific goal.
+Only output the proposal block once the athlete has explicitly agreed to a specific goal.
 Do not output the proposal block during the negotiation phase.
 After outputting the proposal, add a short human sentence like "Does this look right? Hit Accept to save it."
 
@@ -153,6 +163,9 @@ Do not output a GOAL_PROPOSAL yet.
 """
 
 
+_SNAPSHOT_TTL = timedelta(minutes=30)
+
+
 class GoalCoachingService:
     """Conversational, data-grounded goal-setting powered by Gemini."""
 
@@ -167,8 +180,15 @@ class GoalCoachingService:
         self._workouts = workout_repo
         self._client = genai.Client(api_key=gemini_api_key)
         self._chat = chat_repo
+        self._snapshot_cache: dict[str, tuple[TrainingSnapshot, datetime]] = {}
 
     async def build_snapshot(self, athlete_id: str) -> TrainingSnapshot:
+        cached_entry = self._snapshot_cache.get(athlete_id)
+        if cached_entry is not None:
+            snapshot, cached_at = cached_entry
+            if datetime.now(timezone.utc) - cached_at < _SNAPSHOT_TTL:
+                return snapshot
+
         since = datetime.now().replace(tzinfo=None) - timedelta(days=90)
         workouts = await self._workouts.get_recent(athlete_id, count=200)
         runs = [w for w in workouts if w.workout_type.value == "run" and w.start_time.replace(tzinfo=None) >= since]
@@ -192,7 +212,7 @@ class GoalCoachingService:
         pace_vals = [r.pace_min_per_km for r in runs if r.pace_min_per_km]
         hr_vals = [r.average_heartrate for r in runs if r.average_heartrate]
 
-        return TrainingSnapshot(
+        snapshot = TrainingSnapshot(
             recent_runs=runs[:10],
             weekly_volumes=weekly_volumes[:8],
             avg_runs_per_week=len(runs) / (90 / 7),
@@ -203,9 +223,12 @@ class GoalCoachingService:
             has_hr_data=bool(hr_vals),
             avg_heartrate=sum(hr_vals) / len(hr_vals) if hr_vals else None,
         )
+        self._snapshot_cache[athlete_id] = (snapshot, datetime.now(timezone.utc))
+        return snapshot
 
     async def start(self, athlete_id: str) -> str:
         """Start a new goal-setting session: clear history and generate the opening message."""
+        await check_ai_access(athlete_id)
         athlete = await self._athletes.get(athlete_id)
         if not athlete:
             raise ValueError(f"Athlete {athlete_id} not found")
@@ -219,13 +242,14 @@ class GoalCoachingService:
         ]
         logger.info("goal coaching: generating opening message for %s", athlete_id)
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(model=COACHING_MODEL, contents=contents, config=config)
+        response = gemini_generate(self._client, COACHING_MODEL, contents, config, service="goal-coach-open", athlete_id=athlete_id)
         opening = response.text.strip()
         await self._chat.append_message(conv_key, "model", opening)
         return opening
 
     async def chat(self, athlete_id: str, message: str) -> str:
         """Continue the coaching conversation using server-side history."""
+        await check_ai_access(athlete_id)
         athlete = await self._athletes.get(athlete_id)
         if not athlete:
             raise ValueError(f"Athlete {athlete_id} not found")
@@ -244,7 +268,7 @@ class GoalCoachingService:
 
         logger.info("goal coaching: chat turn for %s (history len %d)", athlete_id, len(history))
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(model=COACHING_MODEL, contents=contents, config=config)
+        response = gemini_generate(self._client, COACHING_MODEL, contents, config, service="goal-coach-chat", athlete_id=athlete_id)
         reply = response.text.strip()
         await self._chat.append_message(conv_key, "user", message)
         await self._chat.append_message(conv_key, "model", reply)

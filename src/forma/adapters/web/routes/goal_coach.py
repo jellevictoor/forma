@@ -66,11 +66,9 @@ async def goal_message(
 ):
     response = await coaching_service.chat(athlete_id, body.message)
     proposal = coaching_service.extract_proposal(response)
-    clean_response = response
-    if proposal:
-        clean_response = re.sub(
-            r"<<GOAL_PROPOSAL>>.*?<<END_PROPOSAL>>", "", response, flags=re.DOTALL
-        ).strip()
+    clean_response = re.sub(
+        r"<<GOAL_PROPOSAL>>.*?<<END_PROPOSAL>>", "", response, flags=re.DOTALL
+    ).strip()
     return JSONResponse({
         "response": clean_response,
         "proposal": _proposal_to_dict(proposal) if proposal else None,

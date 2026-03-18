@@ -14,7 +14,6 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = ""
-    database_path: str = "data/forma.db"  # kept for reference during migration
 
     # Strava API
     strava_client_id: str = ""
@@ -24,6 +23,10 @@ class Settings(BaseSettings):
 
     # Google Gemini
     gemini_api_key: str = ""
+
+    # Auth
+    base_url: str = "http://localhost:8080"
+    session_lifetime_days: int = 30
 
 
 def get_settings() -> Settings:

@@ -8,8 +8,10 @@ from fastapi.testclient import TestClient
 
 from forma.adapters.web.app import create_app
 from forma.application.analytics_service import AnalyticsService, OverviewStats
+from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
 from forma.application.weekly_recap import WeeklyRecapService
+from forma.domain.athlete import Athlete
 from forma.ports.recap_cache_repository import CachedRecap
 from forma.ports.workout_analytics_repository import SportSummary
 
@@ -59,67 +61,40 @@ def make_mock_strava_sync(synced: int = 3) -> FullStravaSync:
     return service
 
 
-@pytest.fixture
-def client(tmp_path):
-    app = create_app()
+def make_mock_profile_service() -> AthleteProfileService:
+    service = AsyncMock(spec=AthleteProfileService)
+    service.get_profile = AsyncMock(return_value=Athlete(id="athlete1", name="Test"))
+    return service
 
-    async def override_analytics_service():
-        return make_mock_analytics_service()
 
-    async def override_recap_service():
-        return make_mock_recap_service(cached=make_cached_recap())
-
-    async def override_workout_repo():
-        return make_mock_workout_repo()
-
-    async def override_strava_sync():
-        return make_mock_strava_sync()
-
+def _apply_overrides(app, *, cached_recap):
     from forma.adapters.web.dependencies import (
         get_analytics_service,
         get_athlete_id,
+        get_athlete_profile_service,
         get_strava_sync,
         get_weekly_recap_service,
         get_workout_repo,
     )
-    app.dependency_overrides[get_analytics_service] = override_analytics_service
-    app.dependency_overrides[get_weekly_recap_service] = override_recap_service
-    app.dependency_overrides[get_workout_repo] = override_workout_repo
-    app.dependency_overrides[get_strava_sync] = override_strava_sync
+    app.dependency_overrides[get_analytics_service] = lambda: make_mock_analytics_service()
+    app.dependency_overrides[get_weekly_recap_service] = lambda: make_mock_recap_service(cached=cached_recap)
+    app.dependency_overrides[get_workout_repo] = lambda: make_mock_workout_repo()
+    app.dependency_overrides[get_strava_sync] = lambda: make_mock_strava_sync()
+    app.dependency_overrides[get_athlete_profile_service] = lambda: make_mock_profile_service()
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
 
+
+@pytest.fixture
+def client(tmp_path):
+    app = create_app()
+    _apply_overrides(app, cached_recap=make_cached_recap())
     return TestClient(app)
 
 
 @pytest.fixture
 def client_no_cache(tmp_path):
     app = create_app()
-
-    async def override_analytics_service():
-        return make_mock_analytics_service()
-
-    async def override_recap_service():
-        return make_mock_recap_service(cached=None)
-
-    async def override_workout_repo():
-        return make_mock_workout_repo()
-
-    async def override_strava_sync():
-        return make_mock_strava_sync()
-
-    from forma.adapters.web.dependencies import (
-        get_analytics_service,
-        get_athlete_id,
-        get_strava_sync,
-        get_weekly_recap_service,
-        get_workout_repo,
-    )
-    app.dependency_overrides[get_analytics_service] = override_analytics_service
-    app.dependency_overrides[get_weekly_recap_service] = override_recap_service
-    app.dependency_overrides[get_workout_repo] = override_workout_repo
-    app.dependency_overrides[get_strava_sync] = override_strava_sync
-    app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
-
+    _apply_overrides(app, cached_recap=None)
     return TestClient(app)
 
 

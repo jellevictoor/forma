@@ -266,10 +266,10 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
 
         if date_from:
             params.append(date_from.isoformat())
-            clauses.append(f"start_time::date >= ${len(params)}")
+            clauses.append(f"start_time >= ${len(params)}")
         if date_to:
             params.append(date_to.isoformat())
-            clauses.append(f"start_time::date <= ${len(params)}")
+            clauses.append(f"start_time <= ${len(params)}")
         if workout_type and workout_type != "all":
             params.append(workout_type)
             clauses.append(f"workout_type = ${len(params)}")
@@ -332,10 +332,10 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         ]
 
     async def sport_stats_for_month(self, athlete_id: str, year: int, month: int) -> list[dict]:
-        start = date(year, month, 1).isoformat()
+        start = date(year, month, 1)
         next_month = month + 1 if month < 12 else 1
         next_year = year if month < 12 else year + 1
-        end = date(next_year, next_month, 1).isoformat()
+        end = date(next_year, next_month, 1)
 
         rows = await self._pool.fetch(
             f"""
@@ -357,8 +357,8 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             ORDER BY workout_type
             """,
             athlete_id,
-            start,
-            end,
+            start.isoformat(),
+            end.isoformat(),
         )
         return [
             {
@@ -422,6 +422,40 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             since.isoformat(),
         )
         return [{"date": str(row["day"]), "effort": row["effort"]} for row in rows]
+
+    async def recent_same_type_summary(
+        self,
+        athlete_id: str,
+        workout_type: str,
+        exclude_id: str,
+        count: int = 4,
+    ) -> list[dict]:
+        rows = await self._pool.fetch(
+            f"""
+            SELECT
+                start_time::date AS day,
+                {_DURATION} / 60.0 AS duration_minutes,
+                {_HEARTRATE} AS avg_hr
+            FROM workouts
+            WHERE athlete_id = $1
+              AND workout_type = $2
+              AND id != $3
+            ORDER BY start_time DESC
+            LIMIT $4
+            """,
+            athlete_id,
+            workout_type,
+            exclude_id,
+            count,
+        )
+        return [
+            {
+                "date": str(row["day"]),
+                "duration_minutes": round(row["duration_minutes"] or 0, 1),
+                "avg_hr": round(row["avg_hr"]) if row["avg_hr"] else None,
+            }
+            for row in rows
+        ]
 
     async def workouts_with_notes(self, athlete_id: str, year: int) -> list[dict]:
         year_start, year_end = self._year_range(year)

@@ -5,12 +5,20 @@ import logging.config
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from forma.application.gemini_utils import AIQuotaExceeded
+from fastapi.exceptions import HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse
+from google.genai.errors import ClientError
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from forma.logging_config import LOGGING_CONFIG
 
+from forma.adapters.web.routes.admin import router as admin_router
+from forma.adapters.web.routes.auth import router as auth_router
+from forma.adapters.web.routes.onboarding import router as onboarding_router
 from forma.adapters.web.routes.execution import router as execution_router
 from forma.adapters.web.routes.goal_coach import router as goal_coach_router
 from forma.adapters.web.routes.overview import router as overview_router
@@ -51,6 +59,29 @@ async def _lifespan(app: FastAPI):
     logger.info("forma shutting down")
 
 
+class _SuperadminMiddleware(BaseHTTPMiddleware):
+    """Injects request.state.is_superadmin for use in templates."""
+
+    async def dispatch(self, request: Request, call_next):
+        request.state.is_superadmin = False
+        token = request.cookies.get("session")
+        if token:
+            try:
+                from forma.adapters.postgres_pool import get_pool as _get_pool
+                from forma.adapters.postgres_session_repository import PostgresSessionRepository
+                from forma.adapters.postgres_storage import PostgresStorage
+                from forma.domain.athlete import Role
+                pool = _get_pool()
+                session = await PostgresSessionRepository(pool).get_by_token(token)
+                if session:
+                    athlete = await PostgresStorage(pool).get(session.athlete_id)
+                    if athlete and athlete.role == Role.SUPERADMIN:
+                        request.state.is_superadmin = True
+            except Exception:  # noqa: BLE001
+                pass
+        return await call_next(request)
+
+
 def _get_pool_safe():
     try:
         from forma.adapters.postgres_pool import get_pool
@@ -62,6 +93,7 @@ def _get_pool_safe():
 def create_app() -> FastAPI:
     app = FastAPI(title="forma", lifespan=_lifespan)
 
+    app.add_middleware(_SuperadminMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -69,9 +101,35 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        if exc.status_code == 401:
+            return RedirectResponse("/login", status_code=302)
+        raise exc
+
+    @app.exception_handler(AIQuotaExceeded)
+    async def ai_quota_handler(request: Request, exc: AIQuotaExceeded):
+        return JSONResponse(
+            status_code=403,
+            content={"error": "ai_quota_exceeded", "message": str(exc)},
+        )
+
+    @app.exception_handler(ClientError)
+    async def gemini_client_error_handler(request: Request, exc: ClientError):
+        if exc.status_code == 429:
+            logger.warning("Gemini quota exceeded: %s", exc)
+            return JSONResponse(
+                status_code=429,
+                content={"error": "quota_exceeded", "message": "Gemini API quota exceeded. Please try again later."},
+            )
+        raise exc
+
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+    app.include_router(admin_router)
+    app.include_router(auth_router)
+    app.include_router(onboarding_router)
     app.include_router(overview_router)
     app.include_router(activities_router)
     app.include_router(analytics_router)

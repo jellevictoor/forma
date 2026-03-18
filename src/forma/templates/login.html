@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>forma — sign in</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <script>
+    (function() {
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/theme.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { wordmark: ['"Space Grotesk"', 'sans-serif'] },
+          colors: {
+            mint:    '#599DA4',
+            amber:   '#EFB74C',
+            coral:   '#E46B47',
+            surface: 'var(--color-surface)',
+            edge:    'var(--color-edge)',
+            primary: 'var(--color-text)',
+            muted:   'var(--color-text-muted)',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen flex items-center justify-center" style="background:var(--color-bg)">
+
+  <div class="w-full max-w-sm px-6">
+
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-10">
+      <div class="flex items-center gap-3 mb-3">
+        <svg viewBox="0 0 14 20" width="20" height="28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="0" y="0" width="14" height="4.5" rx="2.25" fill="var(--color-nav-logo-body)"/>
+          <rect x="0" y="0" width="4.5" height="20" rx="2.25" fill="var(--color-nav-logo-body)"/>
+          <rect x="0" y="8.5" width="11" height="4" rx="2" fill="var(--color-nav-logo-mark)"/>
+          <circle cx="2.25" cy="2.25" r="1.9" fill="var(--color-nav-logo-mark)"/>
+          <circle cx="12" cy="17.5" r="2.2" fill="var(--color-nav-logo-mark)"/>
+        </svg>
+        <span class="font-wordmark text-3xl font-bold tracking-tight text-primary">forma</span>
+      </div>
+      <p class="text-xs text-muted tracking-widest uppercase">your fitness dashboard</p>
+    </div>
+
+    <!-- Card -->
+    <div class="rounded-2xl border p-8 flex flex-col gap-6" style="background:var(--color-surface);border-color:var(--color-edge)">
+
+      <div>
+        <h1 class="text-lg font-semibold text-primary mb-1">Sign in</h1>
+        <p class="text-sm text-muted">Connect your Strava account to continue.</p>
+      </div>
+
+      <a href="{{ strava_auth_url }}"
+         class="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl font-semibold text-white text-sm transition-opacity hover:opacity-90 cursor-pointer"
+         style="background:#FC4C02">
+        <!-- Strava logo -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+        </svg>
+        Continue with Strava
+      </a>
+
+    </div>
+
+    <!-- Bauhaus strip -->
+    <div class="flex h-1 mt-8 rounded-full overflow-hidden">
+      <div class="flex-1" style="background:#599DA4"></div>
+      <div class="flex-1" style="background:#EFB74C"></div>
+      <div class="flex-1" style="background:#E46B47"></div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import types
 
+from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+
 
 from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
@@ -52,6 +54,7 @@ class TrainingInsightsService:
         return await self._cache.get(athlete_id, year)
 
     async def generate_and_cache(self, athlete_id: str, year: int) -> CachedInsights:
+        await check_ai_access(athlete_id)
         logger.info("generating training insights for athlete %s year %d", athlete_id, year)
         insights = await self._generate(athlete_id, year)
         await self._cache.save(athlete_id, year, insights)
@@ -75,7 +78,7 @@ class TrainingInsightsService:
         logger.info("calling Gemini for insights (%d noted workouts)", len(noted_workouts))
         prompt = self._build_prompt(noted_workouts, all_recent)
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(model=INSIGHT_MODEL, contents=prompt, config=config)
+        response = gemini_generate(self._client, INSIGHT_MODEL, prompt, config, service="insights", athlete_id=athlete_id)
         return self._parse_response(response.text, len(noted_workouts))
 
     def _build_prompt(self, noted_workouts: list[dict], recent_workouts: list) -> str:

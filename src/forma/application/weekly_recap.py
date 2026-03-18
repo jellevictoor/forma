@@ -7,6 +7,8 @@ from datetime import date, datetime, timedelta, timezone
 from google import genai
 from google.genai import types
 
+from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+
 
 from forma.application.analytics_service import compute_fitness_freshness
 from forma.ports.recap_cache_repository import (
@@ -41,12 +43,26 @@ class WeeklyRecapService:
         self._client = genai.Client(api_key=gemini_api_key)
         self._cache = cache_repo
 
+    STALE_AFTER_DAYS = 7
+
     async def get_cached(self, athlete_id: str) -> CachedRecap | None:
-        """Return the cached recap without calling the LLM."""
-        return await self._cache.get(athlete_id)
+        """Return cached recap with staleness flag (new activity or older than 7 days)."""
+        cached = await self._cache.get(athlete_id)
+        if cached is None:
+            return None
+        recent = await self._workouts.get_recent(athlete_id, count=1)
+        latest_at = recent[0].start_time if recent else None
+        age_days = (datetime.now(timezone.utc) - cached.generated_at.replace(tzinfo=timezone.utc)).days
+        cached.is_stale = age_days >= self.STALE_AFTER_DAYS or (
+            latest_at is not None
+            and cached.latest_activity_at is not None
+            and latest_at > cached.latest_activity_at
+        )
+        return cached
 
     async def generate_and_cache(self, athlete_id: str) -> CachedRecap:
         """Call the LLM, persist the result, and return a CachedRecap."""
+        await check_ai_access(athlete_id)
         logger.info("generating weekly recap for athlete %s", athlete_id)
         recap = await self._generate(athlete_id)
         recent = await self._workouts.get_recent(athlete_id, count=1)
@@ -83,7 +99,7 @@ class WeeklyRecapService:
 
         logger.info("calling Gemini for weekly recap (%d workouts this week)", len(this_week))
         prompt = self._build_prompt(this_week, prev_week, current_ff)
-        return self._call_gemini(prompt)
+        return self._call_gemini(prompt, athlete_id)
 
     async def _current_fitness_freshness(self, athlete_id: str) -> dict:
         since = date.today() - timedelta(days=42 * 2 + 7)
@@ -135,9 +151,9 @@ Respond with a JSON object with exactly these fields:
 
 Keep the tone direct, coaching, and grounded in the data. Respond with only the JSON, no other text."""
 
-    def _call_gemini(self, prompt: str) -> WeeklyRecap:
+    def _call_gemini(self, prompt: str, athlete_id: str) -> WeeklyRecap:
         config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = self._client.models.generate_content(model=RECAP_MODEL, contents=prompt, config=config)
+        response = gemini_generate(self._client, RECAP_MODEL, prompt, config, service="recap", athlete_id=athlete_id)
         return self._parse_response(response.text)
 
     def _parse_response(self, text: str) -> WeeklyRecap:

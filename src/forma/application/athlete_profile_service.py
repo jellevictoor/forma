@@ -6,6 +6,8 @@ from datetime import date
 
 from google import genai
 
+from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+
 from forma.domain.athlete import Athlete, Goal, ScheduleTemplateSlot
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.workout_repository import WorkoutRepository
@@ -79,6 +81,7 @@ class AthleteProfileService:
         return updated
 
     async def get_goal_advice(self, athlete_id: str) -> GoalAdvice:
+        await check_ai_access(athlete_id)
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
@@ -87,7 +90,7 @@ class AthleteProfileService:
 
         recent_workouts = await self._workouts.get_recent(athlete_id, count=28)
         prompt = self._build_advice_prompt(athlete, recent_workouts)
-        response = self._client.models.generate_content(model=ADVICE_MODEL, contents=prompt)
+        response = gemini_generate(self._client, ADVICE_MODEL, prompt, service="profile-advice", athlete_id=athlete_id)
         return self._parse_advice_response(response.text)
 
     def _build_advice_prompt(self, athlete: Athlete, recent_workouts: list) -> str:

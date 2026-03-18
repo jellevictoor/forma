@@ -136,3 +136,17 @@ class WorkoutAnalyticsRepository(ABC):
         Each dict has 'date' (str ISO) and 'effort' (float).
         Effort uses HR-based TRIMP when heart rate is available, else duration in minutes.
         """
+
+    @abstractmethod
+    async def recent_same_type_summary(
+        self,
+        athlete_id: str,
+        workout_type: str,
+        exclude_id: str,
+        count: int = 4,
+    ) -> list[dict]:
+        """Return recent workouts of the same type for cross-session comparison.
+
+        Each dict has: date (str ISO), duration_minutes (float), avg_hr (float|None).
+        Ordered most-recent first. Excludes the workout with exclude_id.
+        """

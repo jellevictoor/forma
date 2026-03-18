@@ -64,7 +64,7 @@ def _make_deps():
     analytics_repo.daily_effort = AsyncMock(return_value=[])
 
     athlete_repo = AsyncMock()
-    athlete_repo.get_default = AsyncMock(return_value=_make_athlete())
+    athlete_repo.get = AsyncMock(return_value=_make_athlete())
 
     cache_repo = AsyncMock()
     cache_repo.get = AsyncMock(return_value=None)
@@ -166,7 +166,7 @@ async def test_generate_fetches_athlete_profile():
     with patch.object(service, "_call_gemini", return_value=_sample_analysis()):
         await service.generate_and_cache("athlete1", "w1")
 
-    athlete_repo.get_default.assert_called_once()
+    athlete_repo.get.assert_called_once_with("athlete1")
 
 
 async def test_prompt_contains_workout_type():
@@ -305,6 +305,6 @@ async def test_chat_passes_history_to_gemini():
     with patch.object(service, "_call_gemini_chat", return_value="Answer") as mock:
         await service.chat("athlete1", "w1", "New question")
 
-    _, passed_history, _ = mock.call_args[0]
+    _, passed_history, *_ = mock.call_args[0]
     assert len(passed_history) == 1
     assert passed_history[0].content == "Prior question"

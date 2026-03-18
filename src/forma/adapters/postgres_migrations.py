@@ -1,7 +1,7 @@
 """Applies numbered SQL migrations from the migrations/ directory in order."""
 
 import logging
-from importlib.resources import files
+from pathlib import Path
 
 from asyncpg import Pool
 
@@ -14,16 +14,15 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 )
 """
 
+# Project root: adapters/ → forma/ → src/ → project root
+_MIGRATIONS_DIR = Path(__file__).parent.parent.parent.parent / "migrations"
+
 
 async def run_migrations(pool: Pool) -> None:
     """Create the tracking table, then apply any unapplied migrations in filename order."""
     await pool.execute(_TRACKING_TABLE)
 
-    migrations_pkg = files("forma.migrations")
-    sql_files = sorted(
-        entry for entry in migrations_pkg.iterdir()
-        if entry.name.endswith(".sql")
-    )
+    sql_files = sorted(_MIGRATIONS_DIR.glob("*.sql"))
 
     applied = {row["filename"] for row in await pool.fetch("SELECT filename FROM schema_migrations")}
 
@@ -31,7 +30,7 @@ async def run_migrations(pool: Pool) -> None:
         if entry.name in applied:
             logger.debug("migration already applied: %s", entry.name)
             continue
-        sql = entry.read_text(encoding="utf-8")
+        sql = entry.read_text()
         logger.info("applying migration: %s", entry.name)
         async with pool.acquire() as conn:
             async with conn.transaction():

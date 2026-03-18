@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block title %}Admin — forma{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <div class="flex items-center gap-2 mb-1">
+      <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber/10 border border-amber/30 text-amber">admin</span>
+    </div>
+    <h1 class="text-3xl font-bold text-primary">Instance overview</h1>
+    <p class="text-xs text-muted mt-1">Operations view — not linked from the main navigation</p>
+  </div>
+  <a href="/" class="text-xs text-muted hover:text-primary transition-colors flex items-center gap-1">
+    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
+    Back to app
+  </a>
+</div>
+
+{% set cost_30d = stats.cost_30d or 0 %}
+{% set tokens_30d = stats.tokens_30d or 0 %}
+
+<!-- KPI row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  <div class="bg-surface rounded-xl border border-edge p-4">
+    <p class="text-xs text-muted mb-1">Users</p>
+    <p class="text-2xl font-bold text-primary tabular-nums">{{ stats.total_athletes or 0 }}</p>
+  </div>
+  <div class="bg-surface rounded-xl border border-edge p-4">
+    <p class="text-xs text-muted mb-1">Workouts</p>
+    <p class="text-2xl font-bold text-primary tabular-nums">{{ "{:,}".format(stats.total_workouts or 0).replace(",", "\u00a0") }}</p>
+  </div>
+  <div class="bg-surface rounded-xl border border-edge p-4">
+    <p class="text-xs text-muted mb-1">AI calls — 30 days</p>
+    <p class="text-2xl font-bold text-primary tabular-nums">{{ "{:,}".format(stats.total_llm_calls or 0).replace(",", "\u00a0") }}</p>
+  </div>
+  <div class="bg-surface rounded-xl border border-edge p-4">
+    <p class="text-xs text-muted mb-1">Est. cost — 30 days</p>
+    <p class="text-2xl font-bold text-primary tabular-nums">
+      {% if cost_30d < 0.01 %}< $0.01{% else %}${{ "%.3f"|format(cost_30d) }}{% endif %}
+    </p>
+    <p class="text-xs text-muted mt-0.5 tabular-nums">{{ "{:,}".format(tokens_30d|int).replace(",", "\u00a0") }} tokens</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left column: Users + token usage per user -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <!-- User management -->
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">User management</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-muted font-medium border-b border-edge">
+            <th class="text-left py-2 pr-4">Name</th>
+            <th class="text-left py-2 pr-4 hidden sm:table-cell">Strava ID</th>
+            <th class="text-right py-2 pr-4 hidden md:table-cell">Joined</th>
+            <th class="text-right py-2 pr-4">Tokens (30d)</th>
+            <th class="text-right py-2 pr-4 hidden md:table-cell">Limit</th>
+            <th class="text-right py-2 pr-4 hidden lg:table-cell">Role</th>
+            <th class="py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for athlete, created_at in athletes %}
+          {% set u = usage_by_athlete.get(athlete.id, {}) %}
+          {% set u_total = (u.get('input', 0) or 0) + (u.get('output', 0) or 0) %}
+          <tr class="border-b border-edge{% if athlete.is_blocked %} opacity-40{% endif %}" id="user-row-{{ athlete.id }}">
+            <td class="py-2.5 pr-4">
+              <div class="flex items-center gap-2">
+                {% if athlete.id == current_athlete_id %}
+                <span class="w-1.5 h-1.5 rounded-full bg-mint flex-shrink-0"></span>
+                {% else %}
+                <span class="w-1.5 h-1.5 rounded-full bg-edge flex-shrink-0"></span>
+                {% endif %}
+                <span class="font-medium text-primary">{{ athlete.name }}</span>
+                {% if athlete.is_blocked %}
+                <span class="text-xs px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 font-mono">blocked</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="py-2.5 pr-4 text-muted font-mono text-xs hidden sm:table-cell">
+              {{ athlete.strava_athlete_id or '—' }}
+            </td>
+            <td class="py-2.5 pr-4 text-muted text-xs text-right hidden md:table-cell">
+              {{ created_at.strftime('%d %b %Y') if created_at else '—' }}
+            </td>
+            <td class="py-2.5 pr-4 text-right tabular-nums text-xs text-secondary">
+              {% if u_total > 0 %}
+                {{ "{:,}".format(u_total).replace(",", "\u00a0") }}
+                {% if athlete.token_limit_30d %}
+                <span class="text-muted">/ {{ "{:,}".format(athlete.token_limit_30d).replace(",", "\u00a0") }}</span>
+                {% endif %}
+              {% else %}
+                <span class="value-empty">—</span>
+              {% endif %}
+            </td>
+            <td class="py-2.5 pr-4 text-right hidden md:table-cell">
+              {% if athlete.id != current_athlete_id %}
+              <input
+                type="number"
+                placeholder="∞"
+                value="{{ athlete.token_limit_30d or '' }}"
+                onchange="setTokenLimit('{{ athlete.id }}', this.value)"
+                class="w-20 px-2 py-0.5 text-xs text-right border border-edge rounded bg-surface text-primary focus:outline-none focus:ring-1 focus:ring-mint/40 font-mono tabular-nums"
+              />
+              {% else %}
+              <span class="value-empty">—</span>
+              {% endif %}
+            </td>
+            <td class="py-2.5 pr-4 text-right hidden lg:table-cell">
+              {% if athlete.role == 'superadmin' %}
+              <span class="text-xs px-1.5 py-0.5 rounded bg-mint/10 border border-mint/30 text-mint font-mono">superadmin</span>
+              {% else %}
+              <span class="text-xs text-muted font-mono">user</span>
+              {% endif %}
+            </td>
+            <td class="py-2.5 text-right">
+              {% if athlete.id != current_athlete_id %}
+              <div class="flex items-center justify-end gap-1.5">
+                {% if athlete.is_blocked %}
+                <button
+                  onclick="setBlocked('{{ athlete.id }}', false)"
+                  class="text-xs text-mint hover:opacity-75 transition-opacity cursor-pointer px-2 py-0.5 rounded border border-mint/30 hover:border-mint/60 font-mono">
+                  unblock
+                </button>
+                {% else %}
+                <button
+                  onclick="setBlocked('{{ athlete.id }}', true)"
+                  class="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer px-2 py-0.5 rounded border border-edge hover:border-red-400/40 font-mono">
+                  block
+                </button>
+                {% endif %}
+                {% if athlete.ai_enabled %}
+                <button
+                  onclick="toggleAI('{{ athlete.id }}')"
+                  class="text-xs text-secondary hover:text-amber transition-colors cursor-pointer px-2 py-0.5 rounded border border-edge hover:border-amber/40 font-mono"
+                  title="Disable AI for this user">
+                  AI on
+                </button>
+                {% else %}
+                <button
+                  onclick="toggleAI('{{ athlete.id }}')"
+                  class="text-xs text-amber hover:opacity-75 transition-opacity cursor-pointer px-2 py-0.5 rounded border border-amber/30 hover:border-amber/60 font-mono"
+                  title="Enable AI for this user">
+                  AI off
+                </button>
+                {% endif %}
+                {% if athlete.role == 'superadmin' %}
+                <button
+                  onclick="setRole('{{ athlete.id }}', 'demote')"
+                  class="text-xs text-muted hover:text-amber transition-colors cursor-pointer px-2 py-0.5 rounded border border-edge hover:border-amber/40 font-mono hidden lg:inline-block">
+                  demote
+                </button>
+                {% else %}
+                <button
+                  onclick="setRole('{{ athlete.id }}', 'promote')"
+                  class="text-xs text-muted hover:text-mint transition-colors cursor-pointer px-2 py-0.5 rounded border border-edge hover:border-mint/40 font-mono hidden lg:inline-block">
+                  promote
+                </button>
+                {% endif %}
+                <button
+                  onclick="deleteAthlete('{{ athlete.id }}')"
+                  class="text-xs text-muted hover:text-red-400 transition-colors cursor-pointer px-2 py-0.5 rounded border border-edge hover:border-red-400/40 font-mono">
+                  delete
+                </button>
+              </div>
+              {% else %}
+              <span class="text-xs text-muted font-mono">you</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Token usage by service -->
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Token usage by service — 30 days</h2>
+      {% if service_rows %}
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-muted font-medium border-b border-edge">
+            <th class="text-left py-2 pr-4">Service</th>
+            <th class="text-right py-2 pr-4">Calls</th>
+            <th class="text-right py-2 pr-4">Input</th>
+            <th class="text-right py-2 pr-4">Output</th>
+            <th class="text-right py-2">Est. cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set total_all = namespace(v=0) %}
+          {% for row in service_rows %}
+          {% set row_total = (row.input_tokens or 0) + (row.output_tokens or 0) %}
+          {% set row_cost = ((row.input_tokens or 0) * 0.15 + (row.output_tokens or 0) * 0.60) / 1000000 %}
+          {% set total_all.v = total_all.v + row_total %}
+          <tr class="border-b border-edge">
+            <td class="py-2 pr-4 font-mono text-xs text-secondary">{{ row.service }}</td>
+            <td class="py-2 pr-4 text-right tabular-nums text-muted text-xs">{{ row.calls }}</td>
+            <td class="py-2 pr-4 text-right tabular-nums text-xs text-secondary">{{ "{:,}".format(row.input_tokens or 0).replace(",", "\u00a0") }}</td>
+            <td class="py-2 pr-4 text-right tabular-nums text-xs text-secondary">{{ "{:,}".format(row.output_tokens or 0).replace(",", "\u00a0") }}</td>
+            <td class="py-2 text-right tabular-nums text-xs text-muted">
+              {% if row_cost < 0.001 %}< $0.001{% else %}${{ "%.4f"|format(row_cost) }}{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-sm text-muted py-4 text-center">No AI calls in the last 30 days.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Right column: recent calls -->
+  <div class="space-y-6">
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Recent AI calls</h2>
+      {% if recent_calls %}
+      <div class="space-y-1.5">
+        {% for call in recent_calls %}
+        {% set total_t = (call.input_tokens or 0) + (call.output_tokens or 0) %}
+        <div class="flex items-start gap-2 py-1.5 border-b border-edge last:border-0">
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-mono text-secondary truncate">{{ call.service }}</p>
+            <p class="text-xs text-muted mt-0.5">
+              {{ athlete_names.get(call.athlete_id, '—') }}
+              · <span class="tabular-nums">{{ "{:,}".format(total_t).replace(",", "\u00a0") }}</span> tok
+            </p>
+          </div>
+          <p class="text-xs text-muted tabular-nums flex-shrink-0">
+            {{ call.created_at.strftime('%H:%M') if call.created_at else '' }}
+          </p>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-muted text-center py-4">No calls yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function setBlocked(athleteId, block) {
+  const action = block ? 'block' : 'unblock';
+  const res = await fetch(`/admin/athletes/${athleteId}/${action}`, { method: 'POST' });
+  if (res.ok) window.location.reload();
+}
+
+async function setRole(athleteId, action) {
+  const res = await fetch(`/admin/athletes/${athleteId}/${action}`, { method: 'POST' });
+  if (res.ok) window.location.reload();
+}
+
+async function deleteAthlete(athleteId) {
+  if (!confirm('Delete this user? This cannot be undone.')) return;
+  const res = await fetch(`/admin/athletes/${athleteId}`, { method: 'DELETE' });
+  if (res.ok) window.location.reload();
+}
+
+async function toggleAI(athleteId) {
+  const res = await fetch(`/admin/athletes/${athleteId}/toggle-ai`, { method: 'POST' });
+  if (res.ok) window.location.reload();
+}
+
+async function setTokenLimit(athleteId, value) {
+  const limit = value === '' ? null : parseInt(value, 10);
+  await fetch(`/admin/athletes/${athleteId}/token-limit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ limit }),
+  });
+}
+</script>
+{% endblock %}

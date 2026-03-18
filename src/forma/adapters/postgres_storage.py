@@ -44,26 +44,14 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
     async def delete(self, athlete_id: str) -> None:
         await self._pool.execute("DELETE FROM athletes WHERE id = $1", athlete_id)
 
-    async def get_default(self) -> Athlete | None:
+    async def get_by_strava_id(self, strava_id: int) -> Athlete | None:
         row = await self._pool.fetchrow(
-            "SELECT data FROM athletes WHERE is_default = TRUE"
-        )
-        if row:
-            return Athlete.model_validate_json(row["data"])
-        row = await self._pool.fetchrow(
-            "SELECT data FROM athletes ORDER BY created_at LIMIT 1"
+            "SELECT data FROM athletes WHERE (data::jsonb->>'strava_athlete_id')::bigint = $1",
+            strava_id,
         )
         if row:
             return Athlete.model_validate_json(row["data"])
         return None
-
-    async def set_default(self, athlete_id: str) -> None:
-        async with self._pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute("UPDATE athletes SET is_default = FALSE")
-                await conn.execute(
-                    "UPDATE athletes SET is_default = TRUE WHERE id = $1", athlete_id
-                )
 
     # WorkoutRepository
 

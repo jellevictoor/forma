@@ -87,10 +87,24 @@
   {% endif %}
 
   {% if workout.average_heartrate %}
+  {% set _mhr = athlete.max_heartrate if athlete and athlete.max_heartrate else none %}
+  {% set _hr_pct = ((workout.average_heartrate / _mhr * 100) | int) if _mhr else none %}
+  {% if _hr_pct %}
+    {% if _hr_pct < 60 %}{% set _hr_zone = "Z1" %}{% set _hr_zone_label = "Recovery" %}{% set _hr_zone_color = "sky" %}
+    {% elif _hr_pct < 70 %}{% set _hr_zone = "Z2" %}{% set _hr_zone_label = "Endurance" %}{% set _hr_zone_color = "mint" %}
+    {% elif _hr_pct < 80 %}{% set _hr_zone = "Z3" %}{% set _hr_zone_label = "Aerobic" %}{% set _hr_zone_color = "amber" %}
+    {% elif _hr_pct < 90 %}{% set _hr_zone = "Z4" %}{% set _hr_zone_label = "Threshold" %}{% set _hr_zone_color = "coral" %}
+    {% else %}{% set _hr_zone = "Z5" %}{% set _hr_zone_label = "VO₂max" %}{% set _hr_zone_color = "coral" %}
+    {% endif %}
+  {% endif %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
     <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Avg heart rate</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.average_heartrate) }}</p>
+    {% if _hr_zone %}
+    <p class="text-xs font-medium text-{{ _hr_zone_color }} mt-1">{{ _hr_zone }} · {{ _hr_zone_label }} ({{ _hr_pct }}%)</p>
+    {% else %}
     <p class="text-xs text-muted mt-1">bpm</p>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -98,7 +112,11 @@
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
     <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Max heart rate</p>
     <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.max_heartrate) }}</p>
+    {% if _mhr %}
+    <p class="text-xs text-muted mt-1">{{ ((workout.max_heartrate / _mhr * 100) | int) }}% of max</p>
+    {% else %}
     <p class="text-xs text-muted mt-1">bpm</p>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -109,6 +127,44 @@
     <p class="text-xs text-muted mt-1">m</p>
   </div>
   {% endif %}
+  <!-- Calories card — populated async -->
+  <div id="cal-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Calories</p>
+    <p class="text-3xl font-bold text-primary" id="cal-value"></p>
+    <p class="text-xs text-muted mt-1" id="cal-note"></p>
+  </div>
+</div>
+
+<!-- Plan linkage card — populated by JS if workout date matches a planned day -->
+<div id="plan-match-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Plan</h2>
+    <a href="/plan" class="text-xs text-muted hover:text-primary transition-colors">View plan →</a>
+  </div>
+  <div id="plan-match-body"></div>
+</div>
+
+{% if workout.workout_type.value != 'run' and workout.average_heartrate %}
+<!-- HR chart for non-run workouts — zone gauge always shown, time-series if stream available -->
+<div id="hr-chart-card" class="bg-surface rounded-2xl border border-edge shadow-sm px-6 pt-5 pb-6 mb-4">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Heart rate</h2>
+    <span id="hr-drift-badge" class="hidden text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 font-medium"></span>
+  </div>
+  <!-- Zone gauge (always shown) -->
+  <div id="hr-zone-gauge"></div>
+  <!-- Zone time distribution (shown when stream loads) -->
+  <div id="hr-zone-distribution" class="hidden mt-4 pt-4 border-t border-edge"></div>
+  <!-- Time-series chart (shown if stream data available) -->
+  <svg id="hr-svg" class="hidden w-full mt-4" style="overflow:visible"></svg>
+  <div id="hr-zone-legend" class="hidden mt-4 flex items-center gap-2 flex-wrap text-xs text-muted"></div>
+</div>
+{% endif %}
+
+<!-- Cross-session comparison card — populated async -->
+<div id="comparison-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Compared to recent {{ workout.workout_type.value }} sessions</h2>
+  <div id="comparison-body"></div>
 </div>
 
 {% if workout.workout_type.value == 'run' %}
@@ -253,6 +309,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
   {% if workout and workout.workout_type.value == 'run' %}
   loadActivityMap('{{ workout.id }}');
+  {% endif %}
+  {% if workout %}
+  loadPlanCard('{{ workout.start_time.strftime('%Y-%m-%d') }}', '{{ workout.workout_type.value }}', '{{ workout.duration_minutes | int }}');
+  loadActivityContext('{{ workout.id }}');
+  {% if workout.workout_type.value != 'run' and workout.average_heartrate %}
+  loadHrChart('{{ workout.id }}');
+  {% endif %}
   {% endif %}
 });
 
@@ -792,6 +855,390 @@ async function loadActivityMap(workoutId) {
     const errEl = document.getElementById('map-error');
     errEl.textContent = err?.message || 'Failed to load map.';
     errEl.classList.remove('hidden');
+  }
+}
+{% endif %}
+
+// ── Activity context: calories + cross-session comparison ─────────────────────
+async function loadActivityContext(workoutId) {
+  try {
+    const res = await fetch(`/activities/detail/${workoutId}/context`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // Calories
+    if (data.calories) {
+      const card  = document.getElementById('cal-card');
+      const val   = document.getElementById('cal-value');
+      const note  = document.getElementById('cal-note');
+      if (card && val && note) {
+        val.textContent  = Math.round(data.calories);
+        note.textContent = data.calories_estimated ? 'kcal (rough estimate)' : 'kcal';
+        card.classList.remove('hidden');
+      }
+    }
+
+    // Cross-session comparison
+    const recent = data.recent;
+    if (!recent?.length) return;
+    const card = document.getElementById('comparison-card');
+    const body = document.getElementById('comparison-body');
+    if (!card || !body) return;
+
+    const avgDur = recent.reduce((s, r) => s + r.duration_minutes, 0) / recent.length;
+    const hrItems = recent.filter(r => r.avg_hr);
+    const avgHr  = hrItems.length ? hrItems.reduce((s, r) => s + r.avg_hr, 0) / hrItems.length : null;
+
+    const thisHr  = {{ workout.average_heartrate | int if workout.average_heartrate else 0 }};
+    const thisDur = {{ workout.duration_minutes | int }};
+
+    const durDiff = Math.round(thisDur - avgDur);
+    const hrDiff  = avgHr && thisHr ? Math.round(thisHr - avgHr) : null;
+
+    const sign   = n => n >= 0 ? `+${n}` : `${n}`;
+    const fmtDur = m => `${Math.round(m)} min`;
+    const diffColor = (n, invert) => {
+      if (n === 0) return 'var(--color-text-muted)';
+      const pos = invert ? n < 0 : n > 0;
+      return pos ? 'var(--color-mint)' : 'var(--color-amber)';
+    };
+
+    // Sparkline dots for duration trend (most recent = right)
+    const reversed = [...recent].reverse();
+    const maxDurAll = Math.max(...reversed.map(r => r.duration_minutes), thisDur);
+    const dotH = 32;
+    const dotSparkline = reversed.map((r, i) => {
+      const x = (i / Math.max(reversed.length, 1)) * 100;
+      const y = 100 - (r.duration_minutes / maxDurAll * 100);
+      const d = new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return `<circle cx="${x.toFixed(1)}%" cy="${y.toFixed(1)}%" r="3" fill="var(--color-edge)" title="${d}: ${fmtDur(r.duration_minutes)}"/>`;
+    }).join('');
+    // "this session" dot
+    const thisY = 100 - (thisDur / maxDurAll * 100);
+    const thisDot = `<circle cx="100%" cy="${thisY.toFixed(1)}%" r="4" fill="var(--color-mint)"/>`;
+
+    body.innerHTML = `
+      <div class="grid grid-cols-2 gap-4 mb-2">
+        <div class="bg-surface-alt rounded-xl p-4">
+          <p class="text-xs text-muted mb-2">Duration vs avg of ${recent.length}</p>
+          <p class="text-2xl font-bold text-primary tabular-nums leading-none">${fmtDur(thisDur)}</p>
+          ${durDiff !== 0 ? `<p class="text-xs mt-1.5" style="color:${diffColor(durDiff, false)}">${sign(durDiff)} min vs avg ${fmtDur(avgDur)}</p>`
+                         : `<p class="text-xs text-muted mt-1.5">Same as avg (${fmtDur(avgDur)})</p>`}
+        </div>
+        ${avgHr && thisHr ? `<div class="bg-surface-alt rounded-xl p-4">
+          <p class="text-xs text-muted mb-2">Heart rate vs avg of ${recent.length}</p>
+          <p class="text-2xl font-bold text-primary tabular-nums leading-none">${thisHr} bpm</p>
+          ${hrDiff !== 0 ? `<p class="text-xs mt-1.5" style="color:${diffColor(hrDiff, true)}">${sign(hrDiff)} bpm vs avg ${Math.round(avgHr)} bpm</p>`
+                        : `<p class="text-xs text-muted mt-1.5">Same as avg (${Math.round(avgHr)} bpm)</p>`}
+        </div>` : ''}
+      </div>
+      <p class="text-xs text-muted mt-3">Based on last ${recent.length} ${recent.length === 1 ? 'session' : 'sessions'}: ${reversed.map(r => {
+        const d = new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        return `${d} ${fmtDur(r.duration_minutes)}${r.avg_hr ? ` · ${r.avg_hr} bpm` : ''}`;
+      }).join(' &nbsp;·&nbsp; ')}</p>`;
+    card.classList.remove('hidden');
+  } catch { /* silent */ }
+}
+
+// ── Plan linkage ──────────────────────────────────────────────────────────────
+async function loadPlanCard(workoutDate, workoutType, durationMin) {
+  try {
+    const res = await fetch('/api/plan');
+    if (!res.ok) return;
+    const plan = await res.json();
+    if (!plan.cached || !plan.days) return;
+
+    const match = plan.days.find(d => d.date === workoutDate);
+    if (!match) return;
+
+    const card = document.getElementById('plan-match-card');
+    const body = document.getElementById('plan-match-body');
+    if (!card || !body) return;
+
+    const SPORT_COLORS = { run:'var(--color-mint)', strength:'var(--color-sky)', climbing:'var(--color-amber)' };
+    const planned = match.workout_type.toLowerCase();
+    const actual  = workoutType.toLowerCase();
+    const plannedLabel = planned.charAt(0).toUpperCase() + planned.slice(1);
+    const actualLabel  = actual.charAt(0).toUpperCase() + actual.slice(1);
+    const typeMatch    = planned === actual || (planned === 'rest' && actual === 'rest');
+    const durationDiff = durationMin - match.duration_minutes;
+    const durationSign = durationDiff >= 0 ? '+' : '';
+
+    const INTENSITY_COLORS = { easy:'#34D399', moderate:'#FBBF24', hard:'#F97316', 'very hard':'#EF4444' };
+    const intensityColor = INTENSITY_COLORS[match.intensity?.toLowerCase()] || 'var(--color-text-muted)';
+
+    body.innerHTML = `
+      <div class="flex flex-wrap items-start gap-4">
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-muted mb-1">Planned</p>
+          <p class="text-sm font-semibold text-primary">${plannedLabel}
+            <span class="font-normal text-muted">· ${match.duration_minutes} min</span>
+            <span class="ml-1 px-1.5 py-0.5 rounded text-xs font-medium" style="background:${intensityColor}20;color:${intensityColor}">${match.intensity || ''}</span>
+          </p>
+          ${match.description ? `<p class="text-xs text-muted mt-1 leading-relaxed">${match.description}</p>` : ''}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-muted mb-1">Actual</p>
+          <p class="text-sm font-semibold text-primary">${actualLabel}
+            <span class="font-normal text-muted">· ${durationMin} min</span>
+            ${durationDiff !== 0 ? `<span class="text-xs ml-1 ${durationDiff > 0 ? 'text-mint' : 'text-amber'}">${durationSign}${durationDiff} min</span>` : ''}
+          </p>
+          ${!typeMatch ? `<p class="text-xs text-amber mt-1">Planned ${plannedLabel}, did ${actualLabel}</p>` : '<p class="text-xs text-mint mt-1">Matched your plan</p>'}
+        </div>
+      </div>`;
+    card.classList.remove('hidden');
+  } catch { /* silent */ }
+}
+
+// ── HR chart for non-run workouts ─────────────────────────────────────────────
+{% if workout and workout.workout_type.value != 'run' %}
+{% if athlete and athlete.max_heartrate %}
+const _MAX_HR = {{ athlete.max_heartrate }};
+{% elif athlete and athlete.age %}
+const _MAX_HR = {{ 220 - athlete.age }};
+{% else %}
+const _MAX_HR = 185;
+{% endif %}
+
+const _HR_ZONES = [
+  { name:'Z1', label:'Recovery',    lo:Math.round(_MAX_HR*0.50), hi:Math.round(_MAX_HR*0.60), color:'#60A5FA' },
+  { name:'Z2', label:'Endurance',   lo:Math.round(_MAX_HR*0.60), hi:Math.round(_MAX_HR*0.70), color:'#34D399' },
+  { name:'Z3', label:'Aerobic',     lo:Math.round(_MAX_HR*0.70), hi:Math.round(_MAX_HR*0.80), color:'#FBBF24' },
+  { name:'Z4', label:'Threshold',   lo:Math.round(_MAX_HR*0.80), hi:Math.round(_MAX_HR*0.90), color:'#F97316' },
+  { name:'Z5', label:'VO\u2082max', lo:Math.round(_MAX_HR*0.90), hi:_MAX_HR,                  color:'#EF4444' },
+];
+function _hrZoneColor(hr) {
+  for (const z of _HR_ZONES) { if (hr >= z.lo && hr < z.hi) return z.color; }
+  return _HR_ZONES[_HR_ZONES.length - 1].color;
+}
+function _hrZoneFor(hr) {
+  return _HR_ZONES.find(z => hr >= z.lo && hr < z.hi) || _HR_ZONES[_HR_ZONES.length - 1];
+}
+
+function _sessionLoadLabel(score) {
+  if (score < 20) return { text: 'Light recovery', color: '#60A5FA' };
+  if (score < 40) return { text: 'Easy aerobic', color: '#34D399' };
+  if (score < 60) return { text: 'Moderate', color: '#FBBF24' };
+  if (score < 80) return { text: 'Hard', color: '#F97316' };
+  return { text: 'Very hard', color: '#EF4444' };
+}
+
+function _effortDescription(avgHr, maxHr) {
+  const avgZ = _hrZoneFor(avgHr);
+  const maxZ = maxHr ? _hrZoneFor(maxHr) : null;
+  const avgIdx = _HR_ZONES.indexOf(avgZ);
+  const maxIdx = maxZ ? _HR_ZONES.indexOf(maxZ) : avgIdx;
+  const spread = maxIdx - avgIdx;
+
+  if (avgIdx <= 1 && maxIdx <= 2) return 'Light aerobic conditioning';
+  if (avgIdx <= 1 && spread >= 2) return 'Aerobic base with anaerobic spikes — typical for strength circuits';
+  if (avgIdx === 2 && spread <= 1) return 'Solid aerobic session';
+  if (avgIdx === 2 && spread >= 2) return 'Aerobic session with threshold bursts — monitor recovery';
+  if (avgIdx >= 3) return 'High-intensity session — allow 48 h before next hard effort';
+  return 'Moderate effort';
+}
+
+function _drawHrZoneGauge(avgHr, maxHr, durationMin) {
+  const gauge = document.getElementById('hr-zone-gauge');
+  if (!gauge) return;
+
+  const lo = Math.round(_MAX_HR * 0.45);
+  const totalRange = _MAX_HR - lo;
+  const avgZone = _hrZoneFor(avgHr);
+
+  const bandHtml = _HR_ZONES.map(z => {
+    const w = Math.max(0, Math.min(z.hi, _MAX_HR) - Math.max(z.lo, lo)) / totalRange * 100;
+    return `<div style="width:${w.toFixed(1)}%;background:${z.color};height:100%;opacity:0.4;border-radius:2px"></div>`;
+  }).join('');
+
+  const avgPct = Math.max(0, Math.min(100, ((avgHr - lo) / totalRange) * 100));
+  const maxPct = maxHr ? Math.max(0, Math.min(100, ((maxHr - lo) / totalRange) * 100)) : null;
+
+  const load = durationMin > 0
+    ? Math.min(100, Math.round((durationMin / 60) * (avgHr / _MAX_HR) * 100))
+    : null;
+  const loadLabel = load !== null ? _sessionLoadLabel(load) : null;
+  const effort = _effortDescription(avgHr, maxHr || avgHr);
+
+  gauge.innerHTML = `
+    <!-- Zone bar -->
+    <div class="relative mb-5">
+      <div class="flex gap-0.5 h-4 rounded-full overflow-hidden">${bandHtml}</div>
+      <div class="absolute top-0 h-4 w-0.5 -ml-px bg-white opacity-90 rounded-full"
+           style="left:${avgPct.toFixed(1)}%" title="${Math.round(avgHr)} bpm avg"></div>
+      ${maxPct !== null ? `<div class="absolute top-0 h-4 w-0.5 -ml-px rounded-full opacity-60"
+           style="left:${maxPct.toFixed(1)}%;background:${_hrZoneFor(maxHr).color}"
+           title="${Math.round(maxHr)} bpm max"></div>` : ''}
+    </div>
+    <!-- HR numbers -->
+    <div class="flex items-end justify-between mb-4">
+      <div>
+        <p class="text-3xl font-bold text-primary tabular-nums leading-none">${Math.round(avgHr)}<span class="text-base font-normal text-muted ml-1">bpm</span></p>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold" style="background:${avgZone.color}20;color:${avgZone.color}">${avgZone.name} · ${avgZone.label}</span>
+          <span class="text-xs text-muted">${Math.round(avgHr / _MAX_HR * 100)}% max HR</span>
+        </div>
+      </div>
+      ${maxHr ? `<div class="text-right">
+        <p class="text-xl font-semibold text-primary tabular-nums leading-none">${Math.round(maxHr)}<span class="text-sm font-normal text-muted ml-1">bpm max</span></p>
+        <p class="text-xs text-muted mt-1">${Math.round(maxHr / _MAX_HR * 100)}% max HR</p>
+      </div>` : ''}
+    </div>
+    <!-- Context row -->
+    <div class="flex items-center justify-between pt-3 border-t border-edge">
+      <p class="text-xs text-muted leading-relaxed">${effort}</p>
+      ${loadLabel ? `<span class="ml-4 shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style="background:${loadLabel.color}15;color:${loadLabel.color};border:1px solid ${loadLabel.color}30">Load ${load} · ${loadLabel.text}</span>` : ''}
+    </div>`;
+}
+
+function _drawZoneDistribution(hrs, times) {
+  const dist = document.getElementById('hr-zone-distribution');
+  if (!dist) return;
+
+  // Accumulate seconds per zone
+  const zoneSecs = _HR_ZONES.map(() => 0);
+  for (let i = 0; i < hrs.length - 1; i++) {
+    const dt = times[i + 1] - times[i];
+    const zi = _HR_ZONES.findIndex(z => hrs[i] >= z.lo && hrs[i] < z.hi);
+    if (zi >= 0) zoneSecs[zi] += dt;
+  }
+
+  const totalSecs = zoneSecs.reduce((a, b) => a + b, 0);
+  if (totalSecs === 0) return;
+
+  const fmt = s => s >= 60 ? `${Math.floor(s/60)}m${s%60>0?String(s%60).padStart(2,'0')+'s':''}` : `${s}s`;
+  const aerobicSecs = zoneSecs[0] + zoneSecs[1];
+  const aerobicPct  = Math.round(aerobicSecs / totalSecs * 100);
+
+  const barSegs = _HR_ZONES.map((z, i) => {
+    const w = (zoneSecs[i] / totalSecs * 100).toFixed(1);
+    return parseFloat(w) > 0 ? `<div style="width:${w}%;background:${z.color};height:100%"></div>` : '';
+  }).join('');
+
+  const pills = _HR_ZONES.map((z, i) => {
+    if (zoneSecs[i] < 10) return '';
+    return `<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                  style="background:${z.color}15;color:${z.color};border:1px solid ${z.color}30">
+              <span class="font-semibold">${z.name}</span>
+              <span>${fmt(zoneSecs[i])}</span>
+            </span>`;
+  }).filter(Boolean).join('');
+
+  const aerobicNote = aerobicPct >= 60
+    ? `<span class="text-mint text-xs">${aerobicPct}% aerobic — good for strength conditioning</span>`
+    : aerobicPct >= 40
+    ? `<span class="text-amber text-xs">${aerobicPct}% aerobic — high intensity, prioritise recovery</span>`
+    : `<span class="text-coral text-xs">${aerobicPct}% aerobic — very intense session</span>`;
+
+  dist.innerHTML = `
+    <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Time in zone</p>
+    <div class="flex rounded-full overflow-hidden h-3 mb-4">${barSegs}</div>
+    <div class="flex flex-wrap gap-2 mb-3">${pills}</div>
+    <div class="pt-2 border-t border-edge">${aerobicNote}</div>`;
+  dist.classList.remove('hidden');
+}
+
+async function loadHrChart(workoutId) {
+  // Always render zone gauge from summary HR data
+  const avgHr      = {{ workout.average_heartrate | int if workout.average_heartrate else 0 }};
+  const maxHr      = {{ workout.max_heartrate | int if workout.max_heartrate else 0 }};
+  const durationMin = {{ workout.duration_minutes | int }};
+  if (avgHr > 0) _drawHrZoneGauge(avgHr, maxHr || null, durationMin);
+
+  // Try to load time-series from streams
+  try {
+    const res = await fetch(`/activities/detail/${workoutId}/streams`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.has_hr || !data.heartrate?.length) return;
+
+    const hr   = data.heartrate;
+    const time = data.time?.length === hr.length ? data.time : hr.map((_, i) => i);
+    const pts  = hr.map((h, i) => ({ t: time[i], hr: h }));
+
+    // HR drift: compare first 20% vs last 20%
+    const split = Math.floor(pts.length * 0.2);
+    if (split > 5) {
+      const avgFirst = pts.slice(0, split).reduce((s, p) => s + p.hr, 0) / split;
+      const avgLast  = pts.slice(-split).reduce((s, p) => s + p.hr, 0) / split;
+      const drift    = Math.round(avgLast - avgFirst);
+      const badge    = document.getElementById('hr-drift-badge');
+      if (badge && Math.abs(drift) >= 5) {
+        badge.textContent = `${drift > 0 ? '+' : ''}${drift} bpm drift`;
+        badge.style.cssText = drift > 10
+          ? 'background:#F9731620;color:#F97316;border:1px solid #F9731630'
+          : 'background:#34D39920;color:#34D399;border:1px solid #34D39930';
+        badge.classList.remove('hidden');
+      }
+    }
+
+    // Zone time distribution
+    _drawZoneDistribution(hr, time);
+
+    const svgEl = document.getElementById('hr-svg');
+    svgEl.classList.remove('hidden');
+    const svg = d3.select('#hr-svg');
+    const W   = svgEl.getBoundingClientRect().width || 600;
+    const H   = 140;
+    const mL = 44, mR = 16, mTop = 8, mBot = 24;
+    svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+    const minHr2 = Math.min(...hr) - 5;
+    const maxHr2 = Math.max(...hr) + 5;
+    const xScale = d3.scaleLinear().domain([0, time[time.length - 1]]).range([mL, W - mR]);
+    const yScale = d3.scaleLinear().domain([minHr2, maxHr2]).range([H - mBot, mTop]);
+
+    const clipId = 'hr-clip';
+    svg.append('defs').append('clipPath').attr('id', clipId)
+      .append('rect').attr('x', mL).attr('y', mTop).attr('width', W - mL - mR).attr('height', H - mTop - mBot);
+
+    _HR_ZONES.forEach(z => {
+      const y1 = yScale(Math.min(z.hi, maxHr2));
+      const y2 = yScale(Math.max(z.lo, minHr2));
+      if (y2 > y1) {
+        svg.append('rect').attr('x', mL).attr('y', y1)
+          .attr('width', W - mL - mR).attr('height', y2 - y1)
+          .attr('fill', z.color).attr('opacity', 0.07).attr('clip-path', `url(#${clipId})`);
+      }
+    });
+
+    const area = d3.area().x(d => xScale(d.t)).y0(H - mBot).y1(d => yScale(d.hr)).curve(d3.curveBasis);
+    svg.append('path').datum(pts).attr('d', area)
+      .attr('fill', 'var(--color-mint)').attr('opacity', 0.15).attr('clip-path', `url(#${clipId})`);
+
+    const line = d3.line().x(d => xScale(d.t)).y(d => yScale(d.hr)).curve(d3.curveBasis);
+    svg.append('path').datum(pts).attr('d', line).attr('fill', 'none')
+      .attr('stroke', 'var(--color-mint)').attr('stroke-width', 1.5).attr('clip-path', `url(#${clipId})`);
+
+    svg.append('g').attr('transform', `translate(${mL},0)`)
+      .call(d3.axisLeft(yScale).ticks(4))
+      .call(g => g.select('.domain').remove())
+      .call(g => g.selectAll('line').attr('stroke', 'var(--color-edge)'))
+      .call(g => g.selectAll('text').attr('fill', 'var(--color-text-muted)').style('font-size', '10px'));
+
+    svg.append('g').attr('transform', `translate(0,${H - mBot})`)
+      .call(d3.axisBottom(xScale).ticks(5).tickFormat(s => {
+        const m = Math.floor(s / 60);
+        return m >= 60 ? `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}` : `${m}m`;
+      }))
+      .call(g => g.select('.domain').attr('stroke', 'var(--color-edge)'))
+      .call(g => g.selectAll('line').attr('stroke', 'var(--color-edge)'))
+      .call(g => g.selectAll('text').attr('fill', 'var(--color-text-muted)').style('font-size', '10px'));
+
+    const legendEl = document.getElementById('hr-zone-legend');
+    if (legendEl) {
+      const usedZones = _HR_ZONES.filter(z => hr.some(h => h >= z.lo && h < z.hi));
+      legendEl.innerHTML = usedZones.map(z =>
+        `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg" style="background:${z.color}12;border:1px solid ${z.color}30;color:${z.color}">
+          <span class="inline-block w-1.5 h-1.5 rounded-full" style="background:${z.color}"></span>
+          <span class="font-semibold">${z.name}</span>
+          <span style="color:var(--color-text-muted)">${z.label}</span>
+        </span>`
+      ).join('');
+      if (usedZones.length) legendEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    console.warn('HR stream error:', err);
   }
 }
 {% endif %}

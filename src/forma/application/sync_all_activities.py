@@ -32,6 +32,7 @@ class FullStravaSync:
 
         after = None if full or force_update else await self._latest_stored_start_time(athlete_id)
         synced = 0
+        skipped = 0
         page = 1
 
         while True:
@@ -44,11 +45,14 @@ class FullStravaSync:
             logger.debug("page %d: got %d activities", page, len(activities))
             for activity in activities:
                 count = await self._sync_activity(activity, athlete_id, force_update)
-                synced += count
+                if count:
+                    synced += count
+                else:
+                    skipped += 1
 
             page += 1
 
-        logger.info("sync complete: %d activities saved", synced)
+        logger.info("sync complete: %d saved, %d already up-to-date", synced, skipped)
         return synced
 
     async def _latest_stored_start_time(self, athlete_id: str) -> datetime | None:
