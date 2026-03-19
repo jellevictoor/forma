@@ -29,7 +29,7 @@ This document explains how to set up and run the complete forma guided workout s
 │  POST   .../finish                       │
 │                                          │
 │ Domain: ExecutionSession, Exercises      │
-│ Adapters: SQLite + APIClient             │
+│ Adapters: PostgreSQL + APIClient             │
 │ Service: WorkoutExecutionService         │
 └──────────────────────────────────────────┘
 ```
@@ -191,7 +191,7 @@ On first run:
 
 - Zero migrations when exercise fields change
 - Session is ephemeral (not long-term analytics)
-- SQLite adapter handles serialization
+- PostgreSQL adapter handles serialization
 
 ### Why Local Notifications vs Push?
 
@@ -249,7 +249,7 @@ uv run serve
 - `src/fitness_coach/adapters/web/routes/execution.py` — New routes
 - `src/fitness_coach/domain/execution_session.py` — New domain model
 - `src/fitness_coach/ports/execution_session_repository.py` — New port
-- `src/fitness_coach/adapters/sqlite_execution_session.py` — SQLite adapter
+- `src/fitness_coach/adapters/postgres_execution_session.py` — PostgreSQL adapter
 - `src/fitness_coach/application/workout_execution_service.py` — Service
 - `src/fitness_coach/adapters/web/dependencies.py` — DI wiring
 

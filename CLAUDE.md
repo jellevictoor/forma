@@ -26,7 +26,7 @@
 This project follows **Hexagonal Architecture** (Ports & Adapters) with a clear separation between:
 
 - **Application Layer**: Domain logic and use cases (analytics service, sync use cases)
-- **Adapters**: Web (FastAPI routes + Jinja2 templates), Persistence (SQLite)
+- **Adapters**: Web (FastAPI routes + Jinja2 templates), Persistence (PostgreSQL)
 - **Infrastructure**: External services (Strava API)
 
 ## Clean code guidelines

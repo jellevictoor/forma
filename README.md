@@ -29,7 +29,7 @@ App runs at [http://localhost:8080](http://localhost:8080).
 
 | Variable | Description |
 |---|---|
-| `DATABASE_PATH` | SQLite path (default: `data/fitness_coach.db`) |
+| `DATABASE_URL` | PostgreSQL connection string (e.g. `postgresql://forma:forma@localhost:5433/forma`) |
 | `STRAVA_CLIENT_ID` | Strava API client ID |
 | `STRAVA_CLIENT_SECRET` | Strava API client secret |
 | `STRAVA_ACCESS_TOKEN` | OAuth access token |
@@ -55,7 +55,7 @@ uv run ruff check      # lint
 
 ## Stack
 
-- **Backend**: Python, FastAPI, SQLite
+- **Backend**: Python, FastAPI, PostgreSQL
 - **Frontend**: Jinja2 templates, Tailwind CSS, D3.js
 - **AI**: Google Gemini 2.5 Flash
 - **Sync**: Strava API

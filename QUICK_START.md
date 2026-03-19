@@ -43,7 +43,7 @@ iOS App (SwiftUI)
     ↓ HTTP (async/await)
 Backend API (FastAPI)
     ↓ Services
-Domain Models + SQLite
+Domain Models + PostgreSQL
 ```
 
 ---
@@ -53,7 +53,7 @@ Domain Models + SQLite
 ### Backend (7 new files)
 - `domain/execution_session.py` — Data model
 - `ports/execution_session_repository.py` — Storage interface
-- `adapters/sqlite_execution_session.py` — Database
+- `adapters/postgres_execution_session.py` — Database
 - `application/workout_execution_service.py` — Business logic
 - `adapters/web/routes/execution.py` — API endpoints
 - `adapters/web/app.py` — CORS + routing (modified)

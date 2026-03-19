@@ -46,12 +46,11 @@ class ExecutionSessionRepository(ABC):
 ```
 
 ### Adapter Layer
-**File**: `src/fitness_coach/adapters/sqlite_execution_session.py`
+**File**: `src/fitness_coach/adapters/postgres_execution_session.py`
 
-- SQLite table: `execution_sessions (session_id TEXT PK, athlete_id TEXT, data TEXT)`
-- JSON blob storage (zero-migration pattern)
-- Async implementation using sqlite3 connection pooling
-- **Tests**: `tests/adapters/test_sqlite_execution_session.py` (6 tests)
+- PostgreSQL table: `execution_sessions`
+- Async implementation using asyncpg connection pooling
+- **Tests**: `tests/adapters/test_postgres_execution_session.py` (6 tests)
   - ✅ save and retrieve
   - ✅ nonexistent returns None
   - ✅ update existing
@@ -118,7 +117,7 @@ Enables iOS app (simulator or device) to make HTTP requests to backend.
 ```python
 @lru_cache
 def _create_workout_execution_service() → WorkoutExecutionService:
-    session_repo = SQLiteExecutionSession(db_path)
+    session_repo = PostgresExecutionSession(db_path)
     planning_service = _create_workout_planning_service()
     return WorkoutExecutionService(session_repo, planning_service)
 
@@ -343,7 +342,7 @@ Codable structs matching backend JSON:
 |------|-------|---------|
 | `domain/execution_session.py` | 31 | ExecutionExercise, ExecutionSession models |
 | `ports/execution_session_repository.py` | 17 | ABC for persistence |
-| `adapters/sqlite_execution_session.py` | 97 | SQLite JSON blob storage |
+| `adapters/postgres_execution_session.py` | 97 | PostgreSQL storage |
 | `application/workout_execution_service.py` | 67 | Service with start/complete/finish |
 | `adapters/web/routes/execution.py` | 85 | 5 API endpoints |
 | `adapters/web/app.py` | 44 | CORS + router registration (modified) |
@@ -382,7 +381,7 @@ Codable structs matching backend JSON:
 - [x] **Code Quality**: `ruff check` passes, zero issues
 - [x] **Domain Model**: ExecutionSession with complete_exercise method
 - [x] **Port**: ExecutionSessionRepository ABC
-- [x] **Adapter**: SQLiteExecutionSession with 6 tests
+- [x] **Adapter**: PostgresExecutionSession with 6 tests
 - [x] **Service**: WorkoutExecutionService with 9 tests
 - [x] **Routes**: 5 endpoints (/sessions, /active, /{id}, /complete, /finish)
 - [x] **CORS**: Middleware added to allow all origins
