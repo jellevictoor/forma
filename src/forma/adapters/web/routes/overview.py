@@ -1,12 +1,14 @@
 """Overview dashboard routes."""
 
 import asyncio
+import json
 from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from starlette.responses import StreamingResponse
 
 from forma.adapters.web.dependencies import (
     get_analytics_service,
@@ -17,7 +19,7 @@ from forma.adapters.web.dependencies import (
 )
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
-from forma.application.sync_all_activities import FullStravaSync
+from forma.application.sync_all_activities import FullStravaSync, SyncProgress
 from forma.application.weekly_recap import WeeklyRecapService
 
 router = APIRouter()
@@ -94,6 +96,51 @@ async def sync_full_api(
     """Re-fetch and overwrite all activities from Strava, preserving subjective fields."""
     synced = await sync.execute(athlete_id, full=True, force_update=True)
     return {"synced": synced}
+
+
+@router.get("/api/sync/stream")
+async def sync_stream(
+    sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+    async def on_progress(progress: SyncProgress) -> None:
+        event = json.dumps({
+            "synced": progress.synced,
+            "skipped": progress.skipped,
+            "activity": progress.activity_name,
+        })
+        await queue.put(f"data: {event}\n\n")
+
+    async def run_sync() -> None:
+        try:
+            synced = await sync.execute(athlete_id, on_progress=on_progress)
+            done = json.dumps({"done": True, "synced": synced})
+            await queue.put(f"data: {done}\n\n")
+        except Exception as exc:
+            error = json.dumps({"error": str(exc)})
+            await queue.put(f"data: {error}\n\n")
+        finally:
+            await queue.put(None)
+
+    async def event_generator():
+        task = asyncio.create_task(run_sync())
+        try:
+            while True:
+                msg = await queue.get()
+                if msg is None:
+                    break
+                yield msg
+        finally:
+            if not task.done():
+                task.cancel()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/api/overview/weekly-recap/refresh")

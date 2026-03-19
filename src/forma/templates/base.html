@@ -254,7 +254,7 @@
   </script>
 
   <script>
-    async function triggerSync() {
+    function triggerSync() {
       const btn = document.getElementById('sync-btn');
       const icon = document.getElementById('sync-icon');
       const result = document.getElementById('sync-result');
@@ -262,21 +262,37 @@
       btn.disabled = true;
       icon.classList.add('animate-spin');
       result.textContent = '';
-      result.classList.add('hidden');
+      result.classList.remove('hidden');
 
-      try {
-        const data = await fetch('/api/sync', { method: 'POST' }).then(r => r.json());
-        const count = data.synced;
-        result.textContent = count === 0 ? 'Up to date' : `+${count}`;
-        result.classList.remove('hidden');
-        setTimeout(() => result.classList.add('hidden'), 4000);
-      } catch {
+      const es = new EventSource('/api/sync/stream');
+
+      es.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.error) {
+          result.textContent = 'Sync failed';
+          es.close();
+          finish();
+          return;
+        }
+        if (data.done) {
+          result.textContent = data.synced === 0 ? 'Up to date' : `+${data.synced}`;
+          es.close();
+          finish();
+          return;
+        }
+        result.textContent = `${data.synced + data.skipped}`;
+      };
+
+      es.onerror = () => {
         result.textContent = 'Sync failed';
-        result.classList.remove('hidden');
-        setTimeout(() => result.classList.add('hidden'), 4000);
-      } finally {
+        es.close();
+        finish();
+      };
+
+      function finish() {
         btn.disabled = false;
         icon.classList.remove('animate-spin');
+        setTimeout(() => result.classList.add('hidden'), 4000);
       }
     }
   </script>

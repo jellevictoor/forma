@@ -1,6 +1,8 @@
 """Full Strava sync use case — paginates all activity history with cursor support."""
 
 import logging
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime
 
 
@@ -9,6 +11,17 @@ from forma.ports.workout_repository import WorkoutRepository
 logger = logging.getLogger(__name__)
 
 STRAVA_PAGE_SIZE = 200
+
+
+@dataclass(frozen=True)
+class SyncProgress:
+    synced: int
+    skipped: int
+    activity_name: str
+
+
+# Optional callback: receives a SyncProgress after each activity.
+OnProgress = Callable[[SyncProgress], Awaitable[None]]
 
 
 class FullStravaSync:
@@ -25,7 +38,11 @@ class FullStravaSync:
         self._workouts = workout_repo
 
     async def execute(
-        self, athlete_id: str, full: bool = False, force_update: bool = False
+        self,
+        athlete_id: str,
+        full: bool = False,
+        force_update: bool = False,
+        on_progress: OnProgress | None = None,
     ) -> int:
         mode = "force-full" if force_update else ("full" if full else "incremental")
         logger.info("starting %s sync for athlete %s", mode, athlete_id)
@@ -49,6 +66,13 @@ class FullStravaSync:
                     synced += count
                 else:
                     skipped += 1
+
+                if on_progress:
+                    await on_progress(SyncProgress(
+                        synced=synced,
+                        skipped=skipped,
+                        activity_name=activity.get("name", ""),
+                    ))
 
             page += 1
 

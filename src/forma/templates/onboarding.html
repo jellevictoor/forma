@@ -316,7 +316,7 @@
 
   {% if step == 2 %}
   <script>
-    async function runSync() {
+    function runSync() {
       const btn = document.getElementById('sync-btn');
       const icon = document.getElementById('sync-icon');
       const label = document.getElementById('sync-label');
@@ -328,30 +328,51 @@
       icon.classList.add('animate-spin');
       label.textContent = 'Syncing…';
 
-      status.textContent = 'Importing your activities from Strava…';
+      status.textContent = 'Connecting to Strava…';
       status.style.background = 'var(--color-surface-alt)';
       status.style.color = 'var(--color-text-muted)';
       status.classList.remove('hidden');
 
-      try {
-        const res = await fetch('/api/sync', { method: 'POST' });
-        const data = await res.json();
-        const count = data.synced ?? 0;
-        status.textContent = count === 0
-          ? '✓ Already up to date — no new activities.'
-          : `✓ Done! Imported ${count} ${count === 1 ? 'activity' : 'activities'}.`;
-        status.style.background = '#599DA420';
-        status.style.color = '#599DA4';
+      const es = new EventSource('/api/sync/stream');
 
-        continueBtn.style.background = '#599DA4';
-        continueBtn.style.color = 'white';
-        continueBtn.style.borderColor = 'transparent';
-        continueBtn.textContent = 'Continue →';
-      } catch {
+      es.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.error) {
+          status.textContent = 'Sync failed — you can retry from the dashboard.';
+          status.style.background = 'var(--color-amber)20';
+          status.style.color = 'var(--color-amber)';
+          es.close();
+          finish();
+          return;
+        }
+        if (data.done) {
+          const count = data.synced;
+          status.textContent = count === 0
+            ? '✓ Already up to date — no new activities.'
+            : `✓ Done! Imported ${count} ${count === 1 ? 'activity' : 'activities'}.`;
+          status.style.background = '#599DA420';
+          status.style.color = '#599DA4';
+          continueBtn.style.background = '#599DA4';
+          continueBtn.style.color = 'white';
+          continueBtn.style.borderColor = 'transparent';
+          continueBtn.textContent = 'Continue →';
+          es.close();
+          finish();
+          return;
+        }
+        const total = data.synced + data.skipped;
+        status.textContent = `Imported ${total} ${total === 1 ? 'activity' : 'activities'}… ${data.activity}`;
+      };
+
+      es.onerror = () => {
         status.textContent = 'Sync failed — you can retry from the dashboard.';
         status.style.background = 'var(--color-amber)20';
         status.style.color = 'var(--color-amber)';
-      } finally {
+        es.close();
+        finish();
+      };
+
+      function finish() {
         btn.disabled = false;
         btn.style.opacity = '1';
         icon.classList.remove('animate-spin');
