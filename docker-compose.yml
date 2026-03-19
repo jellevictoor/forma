@@ -41,5 +41,36 @@ services:
           path: ./pyproject.toml
           target: /app/pyproject.toml
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: forma_tunnel
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - forma
+    restart: unless-stopped
+
+  backup:
+    image: postgres:16-alpine
+    container_name: forma_backup
+    environment:
+      PGHOST: postgres
+      PGUSER: forma
+      PGPASSWORD: forma
+      PGDATABASE: forma
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "0 3 * * * pg_dump -Fc > /backups/forma_$$(date +%Y%m%d_%H%M%S).dump && find /backups -name '*.dump' -mtime +7 -delete" | crontab -
+        crond -f
+    restart: unless-stopped
+
 volumes:
   postgres_data:
