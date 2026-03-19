@@ -20,7 +20,7 @@ services:
     build: .
     container_name: forma
     ports:
-      - "8080:8080"
+      - "9080:8080"
     volumes:
       - ./.env:/app/.env:ro
     env_file:
