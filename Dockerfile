@@ -11,8 +11,9 @@ COPY pyproject.toml README.md .
 # Install dependencies (without the project itself)
 RUN uv sync --no-dev --no-install-project
 
-# Copy source code
+# Copy source code and migrations
 COPY src/ src/
+COPY migrations/ migrations/
 
 # Install project in editable mode so watch-synced source is used directly
 RUN uv pip install -e . --no-deps
