@@ -44,3 +44,8 @@ class WorkoutRepository(ABC):
     async def get_recent(self, athlete_id: str, count: int = 10) -> list[Workout]:
         """Get the most recent workouts for an athlete."""
         ...
+
+    @abstractmethod
+    async def get_oldest(self, athlete_id: str) -> "Workout | None":
+        """Get the oldest workout for an athlete."""
+        ...

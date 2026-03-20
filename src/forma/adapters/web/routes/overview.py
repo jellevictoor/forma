@@ -110,6 +110,7 @@ async def sync_stream(
             "synced": progress.synced,
             "skipped": progress.skipped,
             "activity": progress.activity_name,
+            "phase": progress.phase,
         })
         await queue.put(f"data: {event}\n\n")
 

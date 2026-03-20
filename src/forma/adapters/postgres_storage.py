@@ -218,6 +218,15 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
     async def get_recent(self, athlete_id: str, count: int = 10) -> list[Workout]:
         return await self.list_workouts_for_athlete(athlete_id, limit=count)
 
+    async def get_oldest(self, athlete_id: str) -> Workout | None:
+        row = await self._pool.fetchrow(
+            "SELECT data FROM workouts WHERE athlete_id = $1 ORDER BY start_time ASC LIMIT 1",
+            athlete_id,
+        )
+        if not row:
+            return None
+        return Workout.model_validate_json(row["data"])
+
     # WeightRepository
 
     async def save_weight_entry(self, entry: WeightEntry) -> None:

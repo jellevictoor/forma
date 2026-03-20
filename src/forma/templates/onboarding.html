@@ -333,6 +333,16 @@
       status.style.color = 'var(--color-text-muted)';
       status.classList.remove('hidden');
 
+      const startTime = Date.now();
+      const timer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(elapsed / 60);
+        const s = elapsed % 60;
+        const timeStr = m > 0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
+        const el = document.getElementById('sync-elapsed');
+        if (el) el.textContent = timeStr;
+      }, 1000);
+
       const es = new EventSource('/api/sync/stream');
 
       es.onmessage = (e) => {
@@ -361,7 +371,8 @@
           return;
         }
         const total = data.synced + data.skipped;
-        status.textContent = `Imported ${total} ${total === 1 ? 'activity' : 'activities'}… ${data.activity}`;
+        const phase = data.phase === 'backfill' ? 'Backfilling older' : 'Imported';
+        status.innerHTML = `${phase} ${total} ${total === 1 ? 'activity' : 'activities'}… <span class="opacity-60">${data.activity}</span> <span id="sync-elapsed" class="tabular-nums opacity-50 ml-1"></span>`;
       };
 
       es.onerror = () => {
@@ -373,6 +384,7 @@
       };
 
       function finish() {
+        clearInterval(timer);
         btn.disabled = false;
         btn.style.opacity = '1';
         icon.classList.remove('animate-spin');

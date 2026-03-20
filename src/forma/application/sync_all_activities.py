@@ -18,6 +18,7 @@ class SyncProgress:
     synced: int
     skipped: int
     activity_name: str
+    phase: str = "new"  # "new" or "backfill"
 
 
 # Optional callback: receives a SyncProgress after each activity.
@@ -48,13 +49,51 @@ class FullStravaSync:
         logger.info("starting %s sync for athlete %s", mode, athlete_id)
 
         after = None if full or force_update else await self._latest_stored_start_time(athlete_id)
+        synced, skipped = await self._paginate(
+            athlete_id, force_update, on_progress, after=after, phase="new",
+        )
+
+        if not full and not force_update:
+            backfill_synced, backfill_skipped = await self._backfill(
+                athlete_id, force_update, on_progress,
+            )
+            synced += backfill_synced
+            skipped += backfill_skipped
+
+        logger.info("sync complete: %d saved, %d already up-to-date", synced, skipped)
+        return synced
+
+    async def _backfill(
+        self,
+        athlete_id: str,
+        force_update: bool,
+        on_progress: OnProgress | None,
+    ) -> tuple[int, int]:
+        oldest = await self._workouts.get_oldest(athlete_id)
+        if not oldest:
+            return 0, 0
+
+        logger.info("backfill pass: fetching activities before %s", oldest.start_time)
+        return await self._paginate(
+            athlete_id, force_update, on_progress, before=oldest.start_time, phase="backfill",
+        )
+
+    async def _paginate(
+        self,
+        athlete_id: str,
+        force_update: bool,
+        on_progress: OnProgress | None,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        phase: str = "new",
+    ) -> tuple[int, int]:
         synced = 0
         skipped = 0
         page = 1
 
         while True:
             activities = await self._strava.get_activities(
-                after=after, page=page, per_page=STRAVA_PAGE_SIZE
+                after=after, before=before, page=page, per_page=STRAVA_PAGE_SIZE,
             )
             if not activities:
                 break
@@ -72,12 +111,12 @@ class FullStravaSync:
                         synced=synced,
                         skipped=skipped,
                         activity_name=activity.get("name", ""),
+                        phase=phase,
                     ))
 
             page += 1
 
-        logger.info("sync complete: %d saved, %d already up-to-date", synced, skipped)
-        return synced
+        return synced, skipped
 
     async def _latest_stored_start_time(self, athlete_id: str) -> datetime | None:
         recent = await self._workouts.get_recent(athlete_id, count=1)
