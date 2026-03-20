@@ -68,6 +68,12 @@
         {% else %}{{ workout.workout_type.value | replace('_', ' ') | title }}{% endif %}
       </p>
       <h1 class="text-3xl font-bold text-primary">{{ workout.name }}</h1>
+      {% if workout.strava_id %}
+      <a href="https://www.strava.com/activities/{{ workout.strava_id }}"
+         target="_blank" rel="noopener"
+         class="text-xs font-bold mt-1 inline-block hover:underline"
+         style="color:#FC5200">View on Strava</a>
+      {% endif %}
     </div>
   </div>
 </div>
