@@ -11,6 +11,7 @@ from forma.domain.athlete import (
     GoalHistoryEntry,
     Injury,
     ScheduleTemplateSlot,
+    SyncState,
 )
 from forma.domain.weight_entry import WeightEntry
 from forma.domain.workout import Workout
@@ -23,7 +24,8 @@ _ATHLETE_COLUMNS = """
     max_hours_per_week, notes, max_heartrate, aerobic_threshold_bpm,
     role, is_blocked, ai_enabled, token_limit_30d,
     strava_athlete_id, strava_access_token, strava_refresh_token, strava_token_expires_at,
-    goals, injuries, goal_history, schedule_template, equipment, preferred_workout_days
+    goals, injuries, goal_history, schedule_template, equipment, preferred_workout_days,
+    sync_state, backfill_cursor
 """
 
 
@@ -52,6 +54,8 @@ def _athlete_from_row(row) -> Athlete:
         schedule_template=[ScheduleTemplateSlot.model_validate(s) for s in json.loads(row["schedule_template"])],
         equipment=json.loads(row["equipment"]),
         preferred_workout_days=json.loads(row["preferred_workout_days"]),
+        sync_state=SyncState(row["sync_state"]),
+        backfill_cursor=row["backfill_cursor"],
     )
 
 
@@ -78,6 +82,7 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
                 $10, $11, $12, $13,
                 $14, $15, $16, $17,
                 $18, $19, $20, $21, $22, $23,
+                $24, $25,
                 CURRENT_TIMESTAMP
             )
             ON CONFLICT (id) DO UPDATE SET
@@ -103,6 +108,8 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
                 schedule_template      = EXCLUDED.schedule_template,
                 equipment              = EXCLUDED.equipment,
                 preferred_workout_days = EXCLUDED.preferred_workout_days,
+                sync_state             = EXCLUDED.sync_state,
+                backfill_cursor        = EXCLUDED.backfill_cursor,
                 updated_at             = CURRENT_TIMESTAMP
             """,
             athlete.id,
@@ -128,6 +135,8 @@ class PostgresStorage(AthleteRepository, WorkoutRepository, WeightRepository):
             json.dumps([s.model_dump(mode="json") for s in athlete.schedule_template]),
             json.dumps(athlete.equipment),
             json.dumps(athlete.preferred_workout_days),
+            athlete.sync_state.value,
+            athlete.backfill_cursor,
         )
 
     async def delete(self, athlete_id: str) -> None:

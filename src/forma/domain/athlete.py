@@ -7,6 +7,16 @@ from pydantic import BaseModel, Field
 from forma.domain.workout import WorkoutType
 
 
+class SyncState(str, Enum):
+    """Strava sync progress — tracks how much history has been imported."""
+
+    NEVER_SYNCED = "never_synced"
+    UP_TO_DATE = "up_to_date"              # recent activities synced
+    BACKFILL_IN_PROGRESS = "backfill_in_progress"
+    BACKFILL_PAUSED = "backfill_paused"    # hit rate limit, will resume
+    COMPLETE = "complete"                   # all history imported
+
+
 class Role(str, Enum):
     """User role — controls access to admin features."""
 
@@ -111,6 +121,10 @@ class Athlete(BaseModel):
     strava_access_token: str | None = None
     strava_refresh_token: str | None = None
     strava_token_expires_at: datetime | None = None
+
+    # Sync state
+    sync_state: SyncState = SyncState.NEVER_SYNCED
+    backfill_cursor: datetime | None = None
 
     @property
     def age(self) -> int | None:

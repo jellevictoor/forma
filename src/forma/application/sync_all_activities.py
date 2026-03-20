@@ -1,16 +1,19 @@
-"""Full Strava sync use case — paginates all activity history with cursor support."""
+"""Strava sync use case — progressive sync with on-demand detail fetching."""
 
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-
-from forma.ports.strava import StravaClient
+from forma.domain.athlete import SyncState
+from forma.ports.athlete_repository import AthleteRepository
+from forma.ports.strava import StravaClient, StravaRateLimitError
 from forma.ports.workout_repository import WorkoutRepository
+
 logger = logging.getLogger(__name__)
 
 STRAVA_PAGE_SIZE = 200
+RECENT_WEEKS = 12
 
 
 @dataclass(frozen=True)
@@ -28,15 +31,22 @@ OnProgress = Callable[[SyncProgress], Awaitable[None]]
 class FullStravaSync:
     """Syncs Strava activity history into the local DB.
 
-    Uses a cursor (latest stored activity start_time) so re-runs only
-    fetch new activities. Pass full=True to ignore the cursor and
-    re-fetch from the beginning. Pass force_update=True to overwrite
-    already-stored activities with fresh data from Strava.
+    Saves from list-endpoint summaries (no detail API call per activity).
+    Detail is fetched on demand when the user views an activity.
+
+    Incremental sync fetches new activities, then backfills older ones.
+    Backfill saves a cursor so it can resume after rate limits or restarts.
     """
 
-    def __init__(self, strava_client: StravaClient, workout_repo: WorkoutRepository) -> None:
+    def __init__(
+        self,
+        strava_client: StravaClient,
+        workout_repo: WorkoutRepository,
+        athlete_repo: AthleteRepository,
+    ) -> None:
         self._strava = strava_client
         self._workouts = workout_repo
+        self._athletes = athlete_repo
 
     async def execute(
         self,
@@ -53,9 +63,11 @@ class FullStravaSync:
             athlete_id, force_update, on_progress, after=after, phase="new",
         )
 
+        # Update sync state after the forward pass
         if not full and not force_update:
+            await self._update_sync_state(athlete_id, SyncState.UP_TO_DATE)
             backfill_synced, backfill_skipped = await self._backfill(
-                athlete_id, force_update, on_progress,
+                athlete_id, on_progress,
             )
             synced += backfill_synced
             skipped += backfill_skipped
@@ -66,7 +78,6 @@ class FullStravaSync:
     async def _backfill(
         self,
         athlete_id: str,
-        force_update: bool,
         on_progress: OnProgress | None,
     ) -> tuple[int, int]:
         oldest = await self._workouts.get_oldest(athlete_id)
@@ -74,9 +85,39 @@ class FullStravaSync:
             return 0, 0
 
         logger.info("backfill pass: fetching activities before %s", oldest.start_time)
-        return await self._paginate(
-            athlete_id, force_update, on_progress, before=oldest.start_time, phase="backfill",
+        await self._update_sync_state(
+            athlete_id, SyncState.BACKFILL_IN_PROGRESS, cursor=oldest.start_time,
         )
+
+        try:
+            synced, skipped = await self._paginate(
+                athlete_id, False, on_progress, before=oldest.start_time, phase="backfill",
+            )
+        except StravaRateLimitError:
+            # Save cursor so we can resume later
+            new_oldest = await self._workouts.get_oldest(athlete_id)
+            cursor = new_oldest.start_time if new_oldest else oldest.start_time
+            await self._update_sync_state(athlete_id, SyncState.BACKFILL_PAUSED, cursor=cursor)
+            logger.warning("backfill paused due to rate limit for athlete %s", athlete_id)
+            return 0, 0
+
+        await self._update_sync_state(athlete_id, SyncState.COMPLETE)
+        return synced, skipped
+
+    async def resume_backfill(
+        self,
+        athlete_id: str,
+        on_progress: OnProgress | None = None,
+    ) -> int:
+        """Resume a paused backfill from the stored cursor."""
+        athlete = await self._athletes.get(athlete_id)
+        if not athlete or athlete.sync_state not in (
+            SyncState.BACKFILL_PAUSED, SyncState.BACKFILL_IN_PROGRESS, SyncState.UP_TO_DATE,
+        ):
+            return 0
+
+        synced, _ = await self._backfill(athlete_id, on_progress)
+        return synced
 
     async def _paginate(
         self,
@@ -133,8 +174,11 @@ class FullStravaSync:
             logger.debug("skipping existing activity %s (%s)", activity["id"], activity.get("name", ""))
             return 0
 
-        full_activity = await self._strava.get_activity(activity["id"])
-        workout = self._strava.activity_to_workout(full_activity, athlete_id)
+        if force_update:
+            full_activity = await self._strava.get_activity(activity["id"])
+            workout = self._strava.activity_to_workout(full_activity, athlete_id)
+        else:
+            workout = self._strava.activity_to_workout_from_summary(activity, athlete_id)
 
         if existing:
             workout = workout.model_copy(update={
@@ -142,6 +186,7 @@ class FullStravaSync:
                 "perceived_effort": existing.perceived_effort,
                 "mood": existing.mood,
                 "sleep_quality": existing.sleep_quality,
+                "detail_fetched": existing.detail_fetched,
             })
             logger.debug("updated activity %s (%s)", activity["id"], workout.name)
         else:
@@ -149,3 +194,14 @@ class FullStravaSync:
 
         await self._workouts.save_workout(workout)
         return 1
+
+    async def _update_sync_state(
+        self, athlete_id: str, state: SyncState, cursor: datetime | None = None,
+    ) -> None:
+        athlete = await self._athletes.get(athlete_id)
+        if not athlete:
+            return
+        updates: dict = {"sync_state": state}
+        if cursor is not None:
+            updates["backfill_cursor"] = cursor
+        await self._athletes.save(athlete.model_copy(update=updates))

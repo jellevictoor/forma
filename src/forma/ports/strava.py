@@ -6,6 +6,14 @@ from datetime import datetime
 from forma.domain.workout import Workout
 
 
+class StravaRateLimitError(Exception):
+    """Raised when Strava returns 429 Too Many Requests."""
+
+    def __init__(self, retry_after: int = 900):
+        self.retry_after = retry_after
+        super().__init__(f"Strava rate limited, retry after {retry_after}s")
+
+
 class StravaClient(ABC):
     """Abstract Strava API client."""
 
@@ -52,5 +60,10 @@ class StravaClient(ABC):
 
     @abstractmethod
     def activity_to_workout(self, activity: dict, athlete_id: str) -> Workout:
-        """Convert a Strava activity to a Workout domain entity."""
+        """Convert a Strava detail-endpoint activity to a Workout (detail_fetched=True)."""
+        ...
+
+    @abstractmethod
+    def activity_to_workout_from_summary(self, activity: dict, athlete_id: str) -> Workout:
+        """Convert a Strava list-endpoint summary to a Workout (detail_fetched=False)."""
         ...

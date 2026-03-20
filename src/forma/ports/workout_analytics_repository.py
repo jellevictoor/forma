@@ -142,6 +142,18 @@ class WorkoutAnalyticsRepository(ABC):
         """Return all distinct workout_type values for the athlete, ordered by frequency."""
 
     @abstractmethod
+    async def runs_with_hr(
+        self,
+        athlete_id: str,
+        since: date,
+        until: date,
+    ) -> list[dict]:
+        """Return runs with HR data in a date range.
+
+        Each dict has: moving_time_seconds (int), average_heartrate (float).
+        """
+
+    @abstractmethod
     async def recent_same_type_summary(
         self,
         athlete_id: str,

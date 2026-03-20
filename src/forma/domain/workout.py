@@ -69,6 +69,9 @@ class Workout(BaseModel):
     # Full Strava API response — stored verbatim so no field is ever lost
     strava_raw: dict | None = None
 
+    # Whether the full Strava detail endpoint has been fetched for this workout
+    detail_fetched: bool = False
+
     # Calculated fields
     @property
     def duration_minutes(self) -> float:

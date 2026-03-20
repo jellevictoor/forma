@@ -10,6 +10,7 @@ from forma.adapters.web.app import create_app
 from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
+from forma.application.workout_enrichment import WorkoutEnrichmentService
 from forma.domain.athlete import Athlete
 from forma.domain.workout import Workout, WorkoutType
 from forma.ports.activity_analysis_repository import ActivityAnalysis, CachedActivityAnalysis
@@ -73,12 +74,18 @@ def client():
         get_analytics_service,
         get_athlete_id,
         get_athlete_profile_service,
+        get_workout_enrichment_service,
         get_workout_repo,
     )
+
+    mock_enrichment = AsyncMock(spec=WorkoutEnrichmentService)
+    mock_enrichment.ensure_detail = AsyncMock(return_value=make_workout())
+
     app.dependency_overrides[get_analytics_service] = lambda: make_mock_analytics_service([make_workout()], 1)
     app.dependency_overrides[get_workout_repo] = lambda: make_mock_workout_repo(make_workout())
     app.dependency_overrides[get_activity_analysis_service] = lambda: make_mock_analysis_service()
     app.dependency_overrides[get_athlete_profile_service] = lambda: make_mock_profile_service()
+    app.dependency_overrides[get_workout_enrichment_service] = lambda: mock_enrichment
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
     return TestClient(app, follow_redirects=True)
 

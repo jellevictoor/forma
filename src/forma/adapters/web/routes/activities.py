@@ -14,8 +14,10 @@ from forma.adapters.web.dependencies import (
     get_analytics_service,
     get_athlete_id,
     get_athlete_profile_service,
+    get_workout_enrichment_service,
     get_workout_repo,
 )
+from forma.application.workout_enrichment import WorkoutEnrichmentService
 from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.activity_stream_service import ActivityStreamService
 from forma.application.analytics_service import AnalyticsService
@@ -42,11 +44,13 @@ async def activity_detail(
     request: Request,
     activity_id: str,
     workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
+    enrichment_service: Annotated[WorkoutEnrichmentService, Depends(get_workout_enrichment_service)],
     analysis_service: Annotated[ActivityAnalysisService, Depends(get_activity_analysis_service)],
     athlete_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    workout = await workout_repo.get_workout(activity_id)
+    # Lazy-fetch detail from Strava if not yet fetched
+    workout = await enrichment_service.ensure_detail(activity_id)
     if workout and workout.strava_raw:
         updates = {}
         if workout.average_heartrate is None and workout.strava_raw.get("average_heartrate"):

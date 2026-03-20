@@ -424,6 +424,33 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
         )
         return [{"date": str(row["day"]), "effort": row["effort"]} for row in rows]
 
+    async def runs_with_hr(
+        self,
+        athlete_id: str,
+        since: date,
+        until: date,
+    ) -> list[dict]:
+        rows = await self._pool.fetch(
+            f"""
+            SELECT {_MOVING_TIME} AS moving_time_seconds,
+                   {_HEARTRATE} AS average_heartrate
+            FROM workouts
+            WHERE athlete_id = $1
+              AND workout_type = 'run'
+              AND start_time >= $2
+              AND start_time <= $3
+              AND {_HEARTRATE} IS NOT NULL
+              AND {_MOVING_TIME} IS NOT NULL
+            """,
+            athlete_id,
+            since,
+            until,
+        )
+        return [
+            {"moving_time_seconds": row["moving_time_seconds"], "average_heartrate": row["average_heartrate"]}
+            for row in rows
+        ]
+
     async def recent_same_type_summary(
         self,
         athlete_id: str,
