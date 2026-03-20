@@ -225,9 +225,9 @@ def test_sync_status_reflects_athlete_state():
     assert response.json()["sync_state"] == "backfill_paused"
 
 
-def test_resume_backfill_returns_synced_count(client):
+def test_resume_backfill_returns_started(client):
     response = client.post("/api/sync/resume-backfill")
 
-    assert "synced" in response.json()
+    assert response.json()["status"] == "started"
 
 

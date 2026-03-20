@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from datetime import date
 from typing import Annotated
 
@@ -142,8 +143,16 @@ async def resume_backfill_api(
     sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    synced = await sync.resume_backfill(athlete_id)
-    return {"synced": synced}
+    asyncio.create_task(_run_backfill(sync, athlete_id))
+    return {"status": "started"}
+
+
+async def _run_backfill(sync: FullStravaSync, athlete_id: str) -> None:
+    try:
+        await sync.resume_backfill(athlete_id)
+    except Exception:
+        logger = logging.getLogger(__name__)
+        logger.exception("background backfill failed for athlete %s", athlete_id)
 
 
 @router.post("/api/overview/weekly-recap/refresh")
