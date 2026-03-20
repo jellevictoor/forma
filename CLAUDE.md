@@ -7,7 +7,7 @@
 - **Hexagonal Architecture**: Domain → Ports → Adapters (dependencies point inward)
 - **TDD**: Write failing test → minimal code → refactor
 - **Dependency Inversion**: Domain never depends on Adapters
-- Use `dataclasses` for models, not dicts
+- Use Pydantic `BaseModel` for domain models, not dicts
 - prefer small clean methods that are understandable, follow SOLID principles
 - prefer guard clauses. fail fast with return statements and avoid else in if statements
 
