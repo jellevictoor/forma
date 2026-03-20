@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -153,6 +153,25 @@ async def _run_backfill(sync: FullStravaSync, athlete_id: str) -> None:
     except Exception:
         logger = logging.getLogger(__name__)
         logger.exception("background backfill failed for athlete %s", athlete_id)
+
+
+@router.get("/api/overview/zone2-compliance")
+async def zone2_compliance_api(
+    analytics: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    athlete_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    athlete = await athlete_service.get_profile(athlete_id)
+    max_hr = athlete.max_heartrate or (220 - athlete.age if athlete.age else 185)
+
+    today = date.today()
+    dow = (today.weekday())  # 0=Monday
+    monday = today - timedelta(days=dow)
+    sunday = monday + timedelta(days=6)
+
+    return await analytics.zone2_compliance(
+        athlete_id, max_hr, athlete.aerobic_threshold_bpm, monday, sunday,
+    )
 
 
 @router.post("/api/overview/weekly-recap/refresh")

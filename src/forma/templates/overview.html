@@ -57,6 +57,16 @@
   </div>
 </div>
 
+{# ── Backfill status banner ───────────────────────────────── #}
+<div id="backfill-banner" class="hidden px-4 py-3 bg-amber/10 border border-amber/30 rounded-lg text-sm text-amber flex items-center gap-2 mb-4">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+  </svg>
+  <span id="backfill-text" class="flex-1">Loading your training history…</span>
+  <button id="backfill-resume-btn" class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer bg-amber/20 hover:bg-amber/30 transition-colors">Resume</button>
+</div>
+
 {# ── Form widget ──────────────────────────────────────────── #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Your form today</p>
@@ -186,6 +196,29 @@
     <p class="text-xs mt-1.5 font-medium text-muted" id="kpi-streak-sub"></p>
   </div>
 
+</div>
+
+{# ── Zone 2 compliance ───────────────────────────────────────── #}
+<div id="zone2-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Zone 2 compliance</h2>
+    <span id="zone2-range" class="text-xs text-muted tabular-nums"></span>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="flex-1">
+      <div class="flex items-baseline gap-2 mb-2">
+        <span id="zone2-pct" class="text-3xl font-bold tabular-nums text-primary">—</span>
+        <span class="text-sm text-muted">of running time</span>
+      </div>
+      <div class="h-2 rounded-full overflow-hidden bg-surface-alt">
+        <div id="zone2-bar" class="h-full rounded-full transition-all duration-700" style="width:0%;background:var(--color-mint)"></div>
+      </div>
+    </div>
+    <div class="text-right shrink-0">
+      <p id="zone2-runs" class="text-xs text-muted"></p>
+    </div>
+  </div>
+  <p id="zone2-tip" class="text-xs text-muted mt-2"></p>
 </div>
 
 {# ── Training calendar ────────────────────────────────────────── #}
@@ -1025,6 +1058,93 @@ function renderSparkline(containerId, values, color) {
         cell.style('fill', 'var(--color-surface-alt)').style('fill-opacity', 1);
       }
     }
+  }
+})();
+
+// ── Zone 2 compliance ────────────────────────────────────────────────
+(async function() {
+  try {
+    const data = await fetchCached('/api/overview/zone2-compliance');
+    if (!data.run_count) return;
+
+    const card = document.getElementById('zone2-card');
+    card.classList.remove('hidden');
+
+    const pct = data.zone2_pct;
+    document.getElementById('zone2-pct').textContent = `${pct}%`;
+    document.getElementById('zone2-bar').style.width = `${Math.min(pct, 100)}%`;
+    document.getElementById('zone2-range').textContent = `${data.zone2_lower}–${data.zone2_upper} bpm`;
+    document.getElementById('zone2-runs').textContent = `${data.run_count} ${data.run_count === 1 ? 'run' : 'runs'}`;
+
+    const bar = document.getElementById('zone2-bar');
+    const tip = document.getElementById('zone2-tip');
+    if (pct >= 70) {
+      bar.style.background = 'var(--color-mint)';
+      tip.textContent = 'Great aerobic base work — most of your running is in the right zone.';
+      tip.style.color = 'var(--color-mint)';
+    } else if (pct >= 40) {
+      bar.style.background = 'var(--color-amber)';
+      tip.textContent = 'Some runs are too fast for Zone 2. Slow down on easy days — it should feel conversational.';
+      tip.style.color = 'var(--color-amber)';
+    } else {
+      bar.style.background = 'var(--color-negative)';
+      tip.textContent = 'Most runs are above Zone 2. Slow down significantly — true Zone 2 often feels embarrassingly easy.';
+      tip.style.color = 'var(--color-negative)';
+    }
+  } catch { /* fail silently */ }
+})();
+
+// ── Backfill status banner ───────────────────────────────────────
+(async function() {
+  const banner = document.getElementById('backfill-banner');
+  const text = document.getElementById('backfill-text');
+  const resumeBtn = document.getElementById('backfill-resume-btn');
+
+  async function checkStatus() {
+    try {
+      const data = await fetch('/api/sync/status').then(r => r.json());
+      const state = data.sync_state;
+
+      if (state === 'complete' || state === 'never_synced') {
+        banner.classList.add('hidden');
+        return false;
+      }
+
+      banner.classList.remove('hidden');
+
+      if (state === 'backfill_paused') {
+        const cursor = data.backfill_cursor ? new Date(data.backfill_cursor).toLocaleDateString('en', {month: 'long', year: 'numeric'}) : '';
+        text.textContent = cursor ? `History before ${cursor} not yet imported — paused due to rate limit.` : 'History import paused due to rate limit.';
+        resumeBtn.classList.remove('hidden');
+      } else if (state === 'backfill_in_progress') {
+        const cursor = data.backfill_cursor ? new Date(data.backfill_cursor).toLocaleDateString('en', {month: 'long', year: 'numeric'}) : '';
+        text.textContent = cursor ? `Loading training history before ${cursor}…` : 'Loading your training history…';
+        resumeBtn.classList.add('hidden');
+      } else if (state === 'up_to_date') {
+        text.textContent = 'Older training history will be imported in the background.';
+        resumeBtn.classList.add('hidden');
+      }
+      return true;
+    } catch { return false; }
+  }
+
+  resumeBtn.addEventListener('click', async () => {
+    resumeBtn.disabled = true;
+    resumeBtn.textContent = 'Resuming…';
+    try {
+      await fetch('/api/sync/resume-backfill', {method: 'POST'});
+    } catch { /* ignore */ }
+    resumeBtn.disabled = false;
+    resumeBtn.textContent = 'Resume';
+    checkStatus();
+  });
+
+  const shouldPoll = await checkStatus();
+  if (shouldPoll) {
+    const interval = setInterval(async () => {
+      const active = await checkStatus();
+      if (!active) clearInterval(interval);
+    }, 15000);
   }
 })();
 </script>

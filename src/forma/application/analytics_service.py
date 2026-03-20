@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
+from forma.domain.hr_zones import compute_zone2_bounds
 from forma.domain.workout import Workout
 from forma.ports.workout_analytics_repository import (
     PersonalRecord,
@@ -318,3 +319,34 @@ class AnalyticsService:
         since = today - timedelta(days=days + CTL_SEED_DAYS)
         daily_efforts = await self._analytics.daily_effort(athlete_id, since)
         return compute_fitness_freshness(daily_efforts, days)
+
+    async def zone2_compliance(
+        self,
+        athlete_id: str,
+        max_hr: int,
+        aerobic_threshold_bpm: int | None,
+        since: date,
+        until: date,
+    ) -> dict:
+        """Compute % of running time with average HR in Zone 2."""
+        bounds = compute_zone2_bounds(max_hr, aerobic_threshold_bpm)
+        runs = await self._analytics.runs_with_hr(athlete_id, since, until)
+
+        total_seconds = 0
+        zone2_seconds = 0
+        for run in runs:
+            secs = run["moving_time_seconds"]
+            hr = run["average_heartrate"]
+            total_seconds += secs
+            if bounds.lower <= hr < bounds.upper:
+                zone2_seconds += secs
+
+        pct = (zone2_seconds / total_seconds * 100) if total_seconds > 0 else 0
+        return {
+            "zone2_pct": round(pct, 1),
+            "zone2_seconds": zone2_seconds,
+            "total_seconds": total_seconds,
+            "run_count": len(runs),
+            "zone2_lower": round(bounds.lower),
+            "zone2_upper": round(bounds.upper),
+        }
