@@ -11,7 +11,7 @@ from forma.application.analytics_service import AnalyticsService, OverviewStats
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
 from forma.application.weekly_recap import WeeklyRecapService
-from forma.domain.athlete import Athlete
+from forma.domain.athlete import Athlete, SyncState
 from forma.ports.recap_cache_repository import CachedRecap
 from forma.ports.workout_analytics_repository import SportSummary
 
@@ -58,6 +58,7 @@ def make_mock_workout_repo():
 def make_mock_strava_sync(synced: int = 3) -> FullStravaSync:
     service = AsyncMock(spec=FullStravaSync)
     service.execute = AsyncMock(return_value=synced)
+    service.resume_backfill = AsyncMock(return_value=0)
     return service
 
 
@@ -186,5 +187,47 @@ def test_weekly_recap_refresh_returns_summary(client):
     response = client.post("/api/overview/weekly-recap/refresh")
 
     assert "summary" in response.json()
+
+
+def test_sync_status_returns_sync_state(client):
+    response = client.get("/api/sync/status")
+
+    assert response.json()["sync_state"] == "never_synced"
+
+
+def test_sync_status_returns_null_cursor_by_default(client):
+    response = client.get("/api/sync/status")
+
+    assert response.json()["backfill_cursor"] is None
+
+
+def test_sync_status_reflects_athlete_state():
+    app = create_app()
+    from forma.adapters.web.dependencies import (
+        get_athlete_id,
+        get_athlete_profile_service,
+    )
+    profile_service = AsyncMock(spec=AthleteProfileService)
+    profile_service.get_profile = AsyncMock(
+        return_value=Athlete(
+            id="athlete1",
+            name="Test",
+            sync_state=SyncState.BACKFILL_PAUSED,
+            backfill_cursor=datetime(2025, 6, 1, tzinfo=timezone.utc),
+        )
+    )
+    app.dependency_overrides[get_athlete_profile_service] = lambda: profile_service
+    app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
+    client = TestClient(app)
+
+    response = client.get("/api/sync/status")
+
+    assert response.json()["sync_state"] == "backfill_paused"
+
+
+def test_resume_backfill_returns_synced_count(client):
+    response = client.post("/api/sync/resume-backfill")
+
+    assert "synced" in response.json()
 
 
