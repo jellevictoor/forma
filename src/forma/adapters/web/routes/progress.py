@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from forma.adapters.web.dependencies import get_analytics_service, get_athlete_id
+from forma.adapters.web.dependencies import get_analytics_service, get_athlete_id, get_athlete_profile_service
 from forma.application.analytics_service import AnalyticsService
+from forma.application.athlete_profile_service import AthleteProfileService
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/forma/templates")
@@ -59,6 +60,9 @@ async def monthly_comparison_api(
 @router.get("/api/progress/fitness-freshness")
 async def fitness_freshness_api(
     service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    athlete_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
-    return await service.fitness_freshness_chart_data(athlete_id)
+    athlete = await athlete_service.get_profile(athlete_id)
+    max_hr = athlete.max_heartrate or (220 - athlete.age if athlete and athlete.age else 185)
+    return await service.fitness_freshness_chart_data(athlete_id, max_hr=max_hr)

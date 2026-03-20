@@ -314,10 +314,11 @@ class AnalyticsService:
         self,
         athlete_id: str,
         days: int = 90,
+        max_hr: int = 185,
     ) -> list[dict]:
         today = date.today()
         since = today - timedelta(days=days + CTL_SEED_DAYS)
-        daily_efforts = await self._analytics.daily_effort(athlete_id, since)
+        daily_efforts = await self._analytics.daily_effort(athlete_id, since, max_hr)
         return compute_fitness_freshness(daily_efforts, days)
 
     async def zone2_compliance(

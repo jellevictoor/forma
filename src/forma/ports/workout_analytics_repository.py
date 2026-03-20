@@ -130,11 +130,12 @@ class WorkoutAnalyticsRepository(ABC):
         """
 
     @abstractmethod
-    async def daily_effort(self, athlete_id: str, since: date) -> list[dict]:
+    async def daily_effort(self, athlete_id: str, since: date, max_hr: int = 185) -> list[dict]:
         """Return daily total effort scores since the given date.
 
         Each dict has 'date' (str ISO) and 'effort' (float).
-        Effort uses HR-based TRIMP when heart rate is available, else duration in minutes.
+        Effort uses HR-based TRIMP normalised to the athlete's max HR
+        when heart rate is available, else duration in minutes.
         """
 
     @abstractmethod

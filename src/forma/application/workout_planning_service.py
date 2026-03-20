@@ -126,8 +126,9 @@ class WorkoutPlanningService:
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
+        max_hr = athlete.max_heartrate or (220 - athlete.age if athlete.age else 185)
         recent_workouts = await self._workouts.get_recent(athlete_id, count=20)
-        ff = await self._current_fitness_freshness(athlete_id)
+        ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
         return self._call_gemini_for_plan(prompt, athlete_id)
@@ -140,9 +141,9 @@ class WorkoutPlanningService:
         )
         return {w.start_time.date() for w in window_workouts}
 
-    async def _current_fitness_freshness(self, athlete_id: str) -> dict:
+    async def _current_fitness_freshness(self, athlete_id: str, max_hr: int = 185) -> dict:
         since = date.today() - timedelta(days=CTL_SEED_DAYS + 7)
-        daily_efforts = await self._analytics.daily_effort(athlete_id, since)
+        daily_efforts = await self._analytics.daily_effort(athlete_id, since, max_hr)
         ff = compute_fitness_freshness(daily_efforts, display_days=1)
         return ff[-1] if ff else {"fitness": 0.0, "fatigue": 0.0, "form": 0.0}
 

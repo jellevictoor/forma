@@ -399,7 +399,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             for row in rows
         ]
 
-    async def daily_effort(self, athlete_id: str, since: date) -> list[dict]:
+    async def daily_effort(self, athlete_id: str, since: date, max_hr: int = 185) -> list[dict]:
         _duration_hours = f"({_DURATION})::float / 3600.0"
         rows = await self._pool.fetch(
             f"""
@@ -409,7 +409,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
                     CASE
                         WHEN {_HEARTRATE} IS NOT NULL
                         THEN ({_duration_hours})
-                             * (({_HEARTRATE} / 150.0) * ({_HEARTRATE} / 150.0))
+                             * (({_HEARTRATE} / $3::float) * ({_HEARTRATE} / $3::float))
                              * 100.0
                         ELSE ({_DURATION})::float / 60.0
                     END
@@ -421,6 +421,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             """,
             athlete_id,
             since,
+            max_hr,
         )
         return [{"date": str(row["day"]), "effort": row["effort"]} for row in rows]
 

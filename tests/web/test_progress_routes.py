@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 
 from forma.adapters.web.app import create_app
 from forma.application.analytics_service import AnalyticsService
+from forma.application.athlete_profile_service import AthleteProfileService
+from forma.domain.athlete import Athlete
 from forma.ports.workout_analytics_repository import PersonalRecord
 
 
@@ -38,8 +40,13 @@ def client():
     async def override_service():
         return make_mock_service()
 
-    from forma.adapters.web.dependencies import get_analytics_service, get_athlete_id
+    from forma.adapters.web.dependencies import get_analytics_service, get_athlete_id, get_athlete_profile_service
+
+    mock_profile = AsyncMock(spec=AthleteProfileService)
+    mock_profile.get_profile = AsyncMock(return_value=Athlete(id="athlete1", name="Test", max_heartrate=185))
+
     app.dependency_overrides[get_analytics_service] = override_service
+    app.dependency_overrides[get_athlete_profile_service] = lambda: mock_profile
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
     return TestClient(app)
 

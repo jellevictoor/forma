@@ -66,8 +66,9 @@ class ActivityAnalysisService:
 
         logger.info("generating analysis for workout %s (%s)", workout_id, workout.name)
         athlete = await self._athletes.get(athlete_id)
+        max_hr = athlete.max_heartrate or (220 - athlete.age if athlete and athlete.age else 185)
         recent_similar = await self._recent_similar_workouts(athlete_id, workout)
-        ff = await self._fitness_freshness_at(athlete_id, workout.start_time.date())
+        ff = await self._fitness_freshness_at(athlete_id, workout.start_time.date(), max_hr)
 
         prompt = self._build_prompt(workout, athlete, recent_similar, ff)
         analysis = self._call_gemini(prompt, athlete_id)
@@ -95,11 +96,11 @@ class ActivityAnalysisService:
         return same_sport[:10]
 
     async def _fitness_freshness_at(
-        self, athlete_id: str, on_date: date
+        self, athlete_id: str, on_date: date, max_hr: int = 185
     ) -> dict:
         display_days = max(1, (date.today() - on_date).days + 1)
         since = on_date - timedelta(days=CTL_SEED_DAYS + 7)
-        daily_efforts = await self._analytics.daily_effort(athlete_id, since)
+        daily_efforts = await self._analytics.daily_effort(athlete_id, since, max_hr)
         ff = compute_fitness_freshness(daily_efforts, display_days)
         if not ff:
             return {"fitness": 0.0, "fatigue": 0.0, "form": 0.0, "effort": 0.0}
