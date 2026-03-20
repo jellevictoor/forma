@@ -188,19 +188,3 @@ def test_weekly_recap_refresh_returns_summary(client):
     assert "summary" in response.json()
 
 
-def test_sync_returns_200(client):
-    response = client.post("/api/sync")
-
-    assert response.status_code == 200
-
-
-def test_sync_returns_synced_count(client):
-    response = client.post("/api/sync")
-
-    assert "synced" in response.json()
-
-
-def test_sync_returns_integer_count(client):
-    response = client.post("/api/sync")
-
-    assert isinstance(response.json()["synced"], int)

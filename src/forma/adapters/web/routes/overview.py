@@ -79,25 +79,6 @@ async def weekly_recap_api(
     }
 
 
-@router.post("/api/sync")
-async def sync_api(
-    sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
-    athlete_id: Annotated[str, Depends(get_athlete_id)],
-):
-    synced = await sync.execute(athlete_id)
-    return {"synced": synced}
-
-
-@router.post("/api/sync/full")
-async def sync_full_api(
-    sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
-    athlete_id: Annotated[str, Depends(get_athlete_id)],
-):
-    """Re-fetch and overwrite all activities from Strava, preserving subjective fields."""
-    synced = await sync.execute(athlete_id, full=True, force_update=True)
-    return {"synced": synced}
-
-
 @router.get("/api/sync/stream")
 async def sync_stream(
     sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
@@ -142,6 +123,27 @@ async def sync_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/api/sync/status")
+async def sync_status(
+    athlete_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    athlete = await athlete_service.get_profile(athlete_id)
+    return {
+        "sync_state": athlete.sync_state.value if athlete else "never_synced",
+        "backfill_cursor": athlete.backfill_cursor.isoformat() if athlete and athlete.backfill_cursor else None,
+    }
+
+
+@router.post("/api/sync/resume-backfill")
+async def resume_backfill_api(
+    sync: Annotated[FullStravaSync, Depends(get_strava_sync)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    synced = await sync.resume_backfill(athlete_id)
+    return {"synced": synced}
 
 
 @router.post("/api/overview/weekly-recap/refresh")
