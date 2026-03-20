@@ -23,6 +23,7 @@ from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
 from forma.application.training_insights import TrainingInsightsService
+from forma.application.workout_enrichment import WorkoutEnrichmentService
 from forma.application.weekly_recap import WeeklyRecapService
 from forma.application.weight_tracking_service import WeightTrackingService
 from forma.application.workout_execution_service import WorkoutExecutionService
@@ -159,7 +160,7 @@ async def get_strava_sync(request: Request) -> AsyncIterator[FullStravaSync]:
         refresh_token=refresh_token,
     )
     try:
-        yield FullStravaSync(client, storage)
+        yield FullStravaSync(client, storage, storage)
     finally:
         await client.close()
 
@@ -195,7 +196,8 @@ async def get_workout_execution_service() -> WorkoutExecutionService:
     return _create_workout_execution_service()
 
 
-async def get_activity_stream_service(request: Request) -> ActivityStreamService:
+async def get_workout_enrichment_service(request: Request) -> AsyncIterator[WorkoutEnrichmentService]:
+    """Create a WorkoutEnrichmentService with Strava tokens for on-demand detail fetching."""
     settings = get_settings()
     pool = get_pool()
     storage = PostgresStorage(pool)
@@ -219,7 +221,40 @@ async def get_activity_stream_service(request: Request) -> ActivityStreamService
         access_token=access_token,
         refresh_token=refresh_token,
     )
-    return ActivityStreamService(storage, PostgresStreamRepository(pool), client)
+    try:
+        yield WorkoutEnrichmentService(client, storage)
+    finally:
+        await client.close()
+
+
+async def get_activity_stream_service(request: Request) -> AsyncIterator[ActivityStreamService]:
+    settings = get_settings()
+    pool = get_pool()
+    storage = PostgresStorage(pool)
+
+    access_token = settings.strava_access_token
+    refresh_token = settings.strava_refresh_token
+
+    token = request.cookies.get("session")
+    if token:
+        session_repo = PostgresSessionRepository(pool)
+        session = await session_repo.get_by_token(token)
+        if session:
+            athlete = await storage.get(session.athlete_id)
+            if athlete and athlete.strava_access_token:
+                access_token = athlete.strava_access_token
+                refresh_token = athlete.strava_refresh_token
+
+    client = StravaClient(
+        client_id=settings.strava_client_id,
+        client_secret=settings.strava_client_secret,
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+    try:
+        yield ActivityStreamService(storage, PostgresStreamRepository(pool), client)
+    finally:
+        await client.close()
 
 
 async def get_athlete_id(request: Request) -> str:
