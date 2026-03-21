@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -10,9 +11,7 @@ from forma.adapters.web.app import create_app
 from forma.application.analytics_service import AnalyticsService, OverviewStats
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
-from forma.application.weekly_recap import WeeklyRecapService
 from forma.domain.athlete import Athlete, SyncState
-from forma.ports.recap_cache_repository import CachedRecap
 from forma.ports.workout_analytics_repository import SportSummary
 
 
@@ -30,23 +29,6 @@ def make_mock_analytics_service() -> AnalyticsService:
     service.training_log_data = AsyncMock(return_value=[])
     return service
 
-
-def make_cached_recap() -> CachedRecap:
-    return CachedRecap(
-        summary="Solid week.",
-        highlight="New PR.",
-        form_note="Fresh.",
-        focus=["Add tempo run"],
-        generated_at=datetime.now(tz=timezone.utc),
-        latest_activity_at=None,
-    )
-
-
-def make_mock_recap_service(cached: CachedRecap | None = None) -> WeeklyRecapService:
-    service = AsyncMock(spec=WeeklyRecapService)
-    service.get_cached = AsyncMock(return_value=cached)
-    service.generate_and_cache = AsyncMock(return_value=make_cached_recap())
-    return service
 
 
 def make_mock_workout_repo():
@@ -68,17 +50,15 @@ def make_mock_profile_service() -> AthleteProfileService:
     return service
 
 
-def _apply_overrides(app, *, cached_recap):
+def _apply_overrides(app):
     from forma.adapters.web.dependencies import (
         get_analytics_service,
         get_athlete_id,
         get_athlete_profile_service,
         get_strava_sync,
-        get_weekly_recap_service,
         get_workout_repo,
     )
     app.dependency_overrides[get_analytics_service] = lambda: make_mock_analytics_service()
-    app.dependency_overrides[get_weekly_recap_service] = lambda: make_mock_recap_service(cached=cached_recap)
     app.dependency_overrides[get_workout_repo] = lambda: make_mock_workout_repo()
     app.dependency_overrides[get_strava_sync] = lambda: make_mock_strava_sync()
     app.dependency_overrides[get_athlete_profile_service] = lambda: make_mock_profile_service()
@@ -88,14 +68,7 @@ def _apply_overrides(app, *, cached_recap):
 @pytest.fixture
 def client(tmp_path):
     app = create_app()
-    _apply_overrides(app, cached_recap=make_cached_recap())
-    return TestClient(app)
-
-
-@pytest.fixture
-def client_no_cache(tmp_path):
-    app = create_app()
-    _apply_overrides(app, cached_recap=None)
+    _apply_overrides(app)
     return TestClient(app)
 
 
@@ -134,59 +107,6 @@ def test_training_log_api_returns_list(client):
 
     assert isinstance(response.json(), list)
 
-
-def test_weekly_recap_api_returns_200_when_cached(client):
-    response = client.get("/api/overview/weekly-recap")
-
-    assert response.status_code == 200
-
-
-def test_weekly_recap_api_returns_cached_true_when_recap_exists(client):
-    response = client.get("/api/overview/weekly-recap")
-
-    assert response.json()["cached"] is True
-
-
-def test_weekly_recap_api_returns_cached_false_when_no_recap(client_no_cache):
-    response = client_no_cache.get("/api/overview/weekly-recap")
-
-    assert response.json()["cached"] is False
-
-
-def test_weekly_recap_api_returns_summary_when_cached(client):
-    response = client.get("/api/overview/weekly-recap")
-
-    assert "summary" in response.json()
-
-
-def test_weekly_recap_api_returns_focus_list_when_cached(client):
-    response = client.get("/api/overview/weekly-recap")
-
-    assert isinstance(response.json()["focus"], list)
-
-
-def test_weekly_recap_api_returns_stale_flag(client):
-    response = client.get("/api/overview/weekly-recap")
-
-    assert "stale" in response.json()
-
-
-def test_weekly_recap_refresh_returns_200(client):
-    response = client.post("/api/overview/weekly-recap/refresh")
-
-    assert response.status_code == 200
-
-
-def test_weekly_recap_refresh_returns_stale_false(client):
-    response = client.post("/api/overview/weekly-recap/refresh")
-
-    assert response.json()["stale"] is False
-
-
-def test_weekly_recap_refresh_returns_summary(client):
-    response = client.post("/api/overview/weekly-recap/refresh")
-
-    assert "summary" in response.json()
 
 
 def test_sync_status_returns_sync_state(client):

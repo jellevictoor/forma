@@ -277,33 +277,6 @@
     {% endif %}
   </div>
 
-  {# Weekly focus #}
-  <div class="md:col-span-2 bg-surface rounded-2xl border border-edge shadow-sm p-6 flex flex-col">
-    <div class="flex items-center justify-between mb-4">
-      <p class="text-xs font-medium uppercase tracking-widest text-muted">This week's focus</p>
-      <button id="recap-stale-badge"
-              class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-opacity hover:opacity-75 flex items-center gap-1.5"
-              class="bg-amber/10 border border-amber/30 text-amber"
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-        Refresh
-      </button>
-    </div>
-    <div id="recap-focus-content" class="flex-1 min-h-[80px]">
-      <div class="animate-pulse space-y-2.5">
-        <div class="h-2 bg-surface-alt rounded w-4/5"></div>
-        <div class="h-2 bg-surface-alt rounded w-3/5"></div>
-        <div class="h-2 bg-surface-alt rounded w-4/5"></div>
-      </div>
-    </div>
-    <div class="mt-4 pt-4 border-t border-edge space-y-2">
-      <p id="recap-summary-text" class="text-sm text-secondary leading-relaxed"></p>
-      <button id="recap-generate-btn"
-              class="hidden text-xs text-muted hover:text-secondary transition-colors cursor-pointer">
-        Generate weekly recap
-      </button>
-    </div>
-  </div>
-
 </div>
 
 {# ── 12-week volume ───────────────────────────────────────────── #}
@@ -739,64 +712,6 @@ function renderSparkline(containerId, values, color) {
   }
 })();
 
-// ── Weekly recap ─────────────────────────────────────────────────
-(function() {
-  const focusEl    = document.getElementById('recap-focus-content');
-  const summaryEl  = document.getElementById('recap-summary-text');
-  const staleBadge = document.getElementById('recap-stale-badge');
-  const genBtn     = document.getElementById('recap-generate-btn');
-
-  function renderFocus(focus) {
-    if (!focus || !focus.length) {
-      focusEl.innerHTML = '<p class="text-sm text-muted">No focus items in this recap.</p>';
-      return;
-    }
-    focusEl.innerHTML = `<ul class="space-y-2.5">${focus.map(tip =>
-      `<li class="flex gap-2.5 items-start text-sm text-secondary leading-snug">
-         <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 sport-run"></span>${tip}
-       </li>`
-    ).join('')}</ul>`;
-  }
-
-  function showSkeleton() {
-    focusEl.innerHTML = `<div class="animate-pulse space-y-2.5">
-      <div class="h-2 bg-surface-alt rounded w-4/5"></div>
-      <div class="h-2 bg-surface-alt rounded w-3/5"></div>
-      <div class="h-2 bg-surface-alt rounded w-4/5"></div>
-    </div>`;
-    summaryEl.textContent = '';
-  }
-
-  async function refresh() {
-    staleBadge.disabled = true; staleBadge.classList.add('hidden'); showSkeleton();
-    try {
-      const r = await fetch('/api/overview/weekly-recap/refresh', {method:'POST'}).then(r => r.json());
-      renderFocus(r.focus); summaryEl.textContent = r.summary || ''; genBtn.classList.add('hidden');
-    } catch { focusEl.innerHTML = '<p class="text-sm text-muted">Could not generate recap.</p>'; }
-    finally { staleBadge.disabled = false; }
-  }
-
-  staleBadge.addEventListener('click', refresh);
-  genBtn.addEventListener('click', refresh);
-
-  (async function load() {
-    try {
-      const r = await fetch('/api/overview/weekly-recap').then(r => r.json());
-      if (!r.cached) {
-        focusEl.innerHTML = `
-          <div class="flex flex-col items-center gap-3 py-4 text-center">
-            <p class="text-xs text-muted max-w-[18rem]">Generate a recap to see AI-powered focus points and a summary of your week.</p>
-            <button onclick="document.getElementById('recap-generate-btn').click()"
-                    class="text-xs px-3 py-1.5 rounded-lg font-medium text-white cursor-pointer transition-opacity hover:opacity-90"
-                    style="background:var(--color-nav)">Generate weekly recap</button>
-          </div>`;
-        genBtn.classList.add('hidden'); return;
-      }
-      renderFocus(r.focus); summaryEl.textContent = r.summary || '';
-      if (r.stale) staleBadge.classList.remove('hidden');
-    } catch { focusEl.innerHTML = '<p class="text-sm text-muted">Could not load recap.</p>'; }
-  })();
-})();
 
 // ── 12-week stacked volume chart ─────────────────────────────────
 (async function() {

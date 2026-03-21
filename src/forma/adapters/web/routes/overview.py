@@ -16,12 +16,10 @@ from forma.adapters.web.dependencies import (
     get_athlete_id,
     get_athlete_profile_service,
     get_strava_sync,
-    get_weekly_recap_service,
 )
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync, SyncProgress
-from forma.application.weekly_recap import WeeklyRecapService
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/forma/templates")
@@ -60,24 +58,6 @@ async def training_log_api(
 ):
     return await service.training_log_data(athlete_id)
 
-
-@router.get("/api/overview/weekly-recap")
-async def weekly_recap_api(
-    recap_service: Annotated[WeeklyRecapService, Depends(get_weekly_recap_service)],
-    athlete_id: Annotated[str, Depends(get_athlete_id)],
-):
-    cached = await recap_service.get_cached(athlete_id)
-    if not cached:
-        return {"cached": False}
-
-    return {
-        "cached": True,
-        "stale": cached.is_stale,
-        "summary": cached.summary,
-        "highlight": cached.highlight,
-        "form_note": cached.form_note,
-        "focus": cached.focus,
-    }
 
 
 @router.get("/api/sync/stream")
@@ -174,17 +154,3 @@ async def zone2_compliance_api(
     )
 
 
-@router.post("/api/overview/weekly-recap/refresh")
-async def weekly_recap_refresh_api(
-    recap_service: Annotated[WeeklyRecapService, Depends(get_weekly_recap_service)],
-    athlete_id: Annotated[str, Depends(get_athlete_id)],
-):
-    cached = await recap_service.generate_and_cache(athlete_id)
-    return {
-        "cached": True,
-        "stale": False,
-        "summary": cached.summary,
-        "highlight": cached.highlight,
-        "form_note": cached.form_note,
-        "focus": cached.focus,
-    }

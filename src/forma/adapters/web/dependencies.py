@@ -12,7 +12,7 @@ from forma.adapters.postgres_execution_session import PostgresExecutionSession
 from forma.adapters.postgres_insights_cache import PostgresInsightsCache
 from forma.adapters.postgres_plan_cache import PostgresPlanCache
 from forma.adapters.postgres_pool import get_pool
-from forma.adapters.postgres_recap_cache import PostgresRecapCache
+
 from forma.adapters.postgres_session_repository import PostgresSessionRepository
 from forma.adapters.postgres_storage import PostgresStorage
 from forma.adapters.postgres_stream_repository import PostgresStreamRepository
@@ -24,7 +24,7 @@ from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
 from forma.application.training_insights import TrainingInsightsService
 from forma.application.workout_enrichment import WorkoutEnrichmentService
-from forma.application.weekly_recap import WeeklyRecapService
+
 from forma.application.weight_tracking_service import WeightTrackingService
 from forma.application.workout_execution_service import WorkoutExecutionService
 from forma.application.goal_coaching_service import GoalCoachingService
@@ -51,25 +51,11 @@ def _create_insights_service() -> TrainingInsightsService:
     )
 
 
-@lru_cache
-def _create_weekly_recap_service() -> WeeklyRecapService:
-    settings = get_settings()
-    pool = get_pool()
-    return WeeklyRecapService(
-        PostgresAnalyticsRepository(pool),
-        PostgresStorage(pool),
-        settings.gemini_api_key,
-        PostgresRecapCache(pool),
-    )
-
 
 @lru_cache
 def _create_workout_repo() -> WorkoutRepository:
     return PostgresStorage(get_pool())
 
-
-async def get_weekly_recap_service() -> WeeklyRecapService:
-    return _create_weekly_recap_service()
 
 
 async def get_insights_service() -> TrainingInsightsService:
