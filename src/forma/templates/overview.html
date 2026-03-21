@@ -230,11 +230,10 @@
   <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
 
-{# ── Recent activities + Coach focus ──────────────────────── #}
-<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+{# ── Recent activities ────────────────────────────────────── #}
+<div class="mb-6">
 
-  {# Recent activities timeline #}
-  <div class="md:col-span-3 bg-surface rounded-2xl border border-edge shadow-sm p-6">
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Recent activities</h2>
 
     {% if stats.recent_workouts %}
