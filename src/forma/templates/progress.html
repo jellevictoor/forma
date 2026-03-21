@@ -25,6 +25,7 @@
     </div>
   </div>
   <p class="text-xs text-muted mb-5">Fitness = 42-day load · Fatigue = 7-day load · Form = Fitness − Fatigue</p>
+  <div id="ff-trajectory" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
   <div id="ff-chart" class="chart-loading" style="min-height:320px"></div>
   <details class="mt-5 group">
     <summary class="text-xs text-muted cursor-pointer select-none hover:text-secondary transition-colors list-none flex items-center gap-1">
@@ -201,6 +202,38 @@
   if (!ffData.length) {
     ffContainer.innerHTML = '<p class="text-center text-muted py-8 text-sm">No training data yet</p>';
     return;
+  }
+
+  // Fitness trajectory summary
+  if (ffData.length >= 14) {
+    const traj = document.getElementById('ff-trajectory');
+    const first = ffData[0];
+    const last = ffData[ffData.length - 1];
+    const peak = ffData.reduce((a, b) => b.fitness > a.fitness ? b : a);
+    const dayCount = ffData.length;
+
+    const fitnessChange = last.fitness - first.fitness;
+    const changePct = first.fitness > 0 ? ((fitnessChange / first.fitness) * 100).toFixed(0) : '—';
+    const changeColor = fitnessChange > 0 ? 'text-mint' : fitnessChange < 0 ? 'text-coral' : 'text-muted';
+    const changeDir = fitnessChange > 0 ? '↑' : fitnessChange < 0 ? '↓' : '→';
+
+    const trainingDays = ffData.filter(d => d.effort > 0).length;
+
+    function trajCard(label, value, sub) {
+      return `<div class="bg-surface-alt rounded-xl border border-edge p-3">
+        <p class="text-xs text-muted mb-1">${label}</p>
+        <p class="text-lg font-bold text-primary tabular-nums">${value}</p>
+        <p class="text-xs text-muted mt-0.5">${sub}</p>
+      </div>`;
+    }
+
+    traj.innerHTML = [
+      trajCard('Fitness now', last.fitness.toFixed(1), `<span class="${changeColor} font-medium">${changeDir} ${Math.abs(changePct)}%</span> over ${dayCount} days`),
+      trajCard('Peak fitness', peak.fitness.toFixed(1), peak.date),
+      trajCard('Current form', (last.form >= 0 ? '+' : '') + last.form.toFixed(1), last.form > 0 ? 'Fresh' : last.form > -10 ? 'Training' : 'Building'),
+      trajCard('Training days', trainingDays, `of ${dayCount} days (${Math.round(trainingDays/dayCount*100)}%)`)
+    ].join('');
+    traj.classList.remove('hidden');
   }
 
   const parseDate = d3.timeParse('%Y-%m-%d');
