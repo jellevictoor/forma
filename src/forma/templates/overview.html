@@ -67,6 +67,9 @@
   <button id="backfill-resume-btn" class="hidden text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer bg-amber/20 hover:bg-amber/30 transition-colors">Resume</button>
 </div>
 
+{# ── Training alerts ────────────────────────────────────────── #}
+<div id="alerts-container" class="hidden space-y-2 mb-4"></div>
+
 {# ── Form widget ──────────────────────────────────────────── #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Your form today</p>
@@ -711,6 +714,27 @@ function renderSparkline(containerId, values, color) {
   }
 })();
 
+
+// ── Training alerts ──────────────────────────────────────────────
+(async function() {
+  try {
+    const r = await fetch('/api/overview/alerts').then(r => r.json());
+    if (!r.alerts || !r.alerts.length) return;
+    const container = document.getElementById('alerts-container');
+    container.classList.remove('hidden');
+    const icons = {
+      warning: `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+      info: `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+    };
+    container.innerHTML = r.alerts.map(a => {
+      const color = a.severity === 'critical' ? 'coral' : 'amber';
+      return `<div class="px-4 py-3 bg-${color}/10 border border-${color}/30 rounded-lg text-sm text-${color} flex items-center gap-2">
+        ${icons[a.severity] || icons.warning}
+        <span>${a.message}</span>
+      </div>`;
+    }).join('');
+  } catch {}
+})();
 
 // ── 12-week stacked volume chart ─────────────────────────────────
 (async function() {

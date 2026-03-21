@@ -11,6 +11,7 @@ from forma.adapters.web.app import create_app
 from forma.application.analytics_service import AnalyticsService, OverviewStats
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
+from forma.application.training_alerts import TrainingAlertsService
 from forma.domain.athlete import Athlete, SyncState
 from forma.ports.workout_analytics_repository import SportSummary
 
@@ -50,18 +51,26 @@ def make_mock_profile_service() -> AthleteProfileService:
     return service
 
 
+def make_mock_alerts_service() -> TrainingAlertsService:
+    service = AsyncMock(spec=TrainingAlertsService)
+    service.check = AsyncMock(return_value=[])
+    return service
+
+
 def _apply_overrides(app):
     from forma.adapters.web.dependencies import (
         get_analytics_service,
         get_athlete_id,
         get_athlete_profile_service,
         get_strava_sync,
+        get_training_alerts_service,
         get_workout_repo,
     )
     app.dependency_overrides[get_analytics_service] = lambda: make_mock_analytics_service()
     app.dependency_overrides[get_workout_repo] = lambda: make_mock_workout_repo()
     app.dependency_overrides[get_strava_sync] = lambda: make_mock_strava_sync()
     app.dependency_overrides[get_athlete_profile_service] = lambda: make_mock_profile_service()
+    app.dependency_overrides[get_training_alerts_service] = lambda: make_mock_alerts_service()
     app.dependency_overrides[get_athlete_id] = lambda: "athlete1"
 
 
@@ -149,5 +158,17 @@ def test_resume_backfill_returns_started(client):
     response = client.post("/api/sync/resume-backfill")
 
     assert response.json()["status"] == "started"
+
+
+def test_alerts_api_returns_200(client):
+    response = client.get("/api/overview/alerts")
+
+    assert response.status_code == 200
+
+
+def test_alerts_api_returns_list(client):
+    response = client.get("/api/overview/alerts")
+
+    assert isinstance(response.json()["alerts"], list)
 
 

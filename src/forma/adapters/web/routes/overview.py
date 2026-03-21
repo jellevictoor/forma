@@ -16,10 +16,12 @@ from forma.adapters.web.dependencies import (
     get_athlete_id,
     get_athlete_profile_service,
     get_strava_sync,
+    get_training_alerts_service,
 )
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync, SyncProgress
+from forma.application.training_alerts import TrainingAlertsService
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/forma/templates")
@@ -154,3 +156,10 @@ async def zone2_compliance_api(
     )
 
 
+@router.get("/api/overview/alerts")
+async def training_alerts_api(
+    alerts_service: Annotated[TrainingAlertsService, Depends(get_training_alerts_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    alerts = await alerts_service.check(athlete_id)
+    return {"alerts": [a.model_dump() for a in alerts]}
