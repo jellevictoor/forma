@@ -501,12 +501,36 @@ document.getElementById('plan-generate-btn').addEventListener('click', refreshPl
     if (plan.stale) {
       document.getElementById('plan-stale-badge').classList.remove('hidden');
     }
+    loadAdherence();
   } catch {
     document.getElementById('plan-skeleton').classList.add('hidden');
     document.getElementById('plan-content').innerHTML = `<p class="text-sm text-muted">Could not load plan.</p>`;
     document.getElementById('plan-content').classList.remove('hidden');
   }
 })();
+
+async function loadAdherence() {
+  try {
+    const { days } = await fetch('/api/plan/adherence').then(r => r.json());
+    const statusConfig = {
+      completed: { label: 'Done', color: 'mint', icon: '✓' },
+      missed:    { label: 'Missed', color: 'coral', icon: '✗' },
+      swapped:   { label: 'Swapped', color: 'amber', icon: '↔' },
+      upcoming:  { label: '', color: '', icon: '' },
+    };
+    for (const day of days) {
+      const card = document.querySelector(`[data-date="${day.date}"]`);
+      if (!card) continue;
+      const cfg = statusConfig[day.status];
+      if (!cfg || !cfg.label) continue;
+      const badge = document.createElement('span');
+      badge.className = `text-xs font-medium px-2 py-0.5 rounded-full bg-${cfg.color}/10 text-${cfg.color}`;
+      badge.textContent = `${cfg.icon} ${cfg.label}`;
+      const header = card.querySelector('.flex.items-start .flex-1 .flex.flex-wrap');
+      if (header) header.appendChild(badge);
+    }
+  } catch {}
+}
 
 async function deleteSlot(index) {
   try {

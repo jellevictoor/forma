@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from forma.adapters.web.app import create_app
 from forma.application.athlete_profile_service import AthleteProfileService
+from forma.application.plan_adherence import PlanAdherenceService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.domain.athlete import Athlete
 from forma.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay
@@ -57,6 +58,14 @@ def make_mock_profile_service() -> AthleteProfileService:
     return service
 
 
+def make_mock_adherence_service() -> PlanAdherenceService:
+    service = AsyncMock(spec=PlanAdherenceService)
+    service.get_adherence = AsyncMock(return_value=[
+        {"date": date.today().isoformat(), "planned_type": "run", "status": "upcoming"},
+    ])
+    return service
+
+
 @pytest.fixture
 def client():
     app = create_app()
@@ -64,6 +73,7 @@ def client():
     from forma.adapters.web.dependencies import (
         get_athlete_id,
         get_athlete_profile_service,
+        get_plan_adherence_service,
         get_workout_planning_service,
     )
 
@@ -72,6 +82,7 @@ def client():
     app.dependency_overrides[get_workout_planning_service] = lambda: make_mock_planning_service(
         cached=make_cached_plan()
     )
+    app.dependency_overrides[get_plan_adherence_service] = lambda: make_mock_adherence_service()
 
     return TestClient(app)
 
@@ -209,3 +220,15 @@ def test_delete_template_slot_returns_ok(client):
     response = client.delete("/plan/template/0")
 
     assert response.json()["status"] == "ok"
+
+
+def test_adherence_api_returns_200(client):
+    response = client.get("/api/plan/adherence")
+
+    assert response.status_code == 200
+
+
+def test_adherence_api_returns_days_list(client):
+    response = client.get("/api/plan/adherence")
+
+    assert isinstance(response.json()["days"], list)

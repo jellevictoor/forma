@@ -12,9 +12,11 @@ from fastapi.templating import Jinja2Templates
 from forma.adapters.web.dependencies import (
     get_athlete_id,
     get_athlete_profile_service,
+    get_plan_adherence_service,
     get_workout_planning_service,
 )
 from forma.application.athlete_profile_service import AthleteProfileService
+from forma.application.plan_adherence import PlanAdherenceService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.domain.athlete import ScheduleTemplateSlot
 from forma.domain.workout import WorkoutType
@@ -145,3 +147,12 @@ async def refresh_day_exercises(
         athlete_id, day_date, workout_type, body.description
     )
     return JSONResponse({"exercises": exercises})
+
+
+@router.get("/api/plan/adherence")
+async def plan_adherence_api(
+    adherence_service: Annotated[PlanAdherenceService, Depends(get_plan_adherence_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    adherence = await adherence_service.get_adherence(athlete_id)
+    return JSONResponse({"days": adherence})

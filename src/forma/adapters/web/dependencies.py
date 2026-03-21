@@ -22,6 +22,7 @@ from forma.application.activity_stream_service import ActivityStreamService
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync
+from forma.application.plan_adherence import PlanAdherenceService
 from forma.application.training_alerts import TrainingAlertsService
 from forma.application.training_insights import TrainingInsightsService
 from forma.application.workout_enrichment import WorkoutEnrichmentService
@@ -128,6 +129,16 @@ def _create_workout_planning_service() -> WorkoutPlanningService:
 
 async def get_workout_planning_service() -> WorkoutPlanningService:
     return _create_workout_planning_service()
+
+
+@lru_cache
+def _create_plan_adherence_service() -> PlanAdherenceService:
+    pool = get_pool()
+    return PlanAdherenceService(PostgresPlanCache(pool), PostgresStorage(pool))
+
+
+async def get_plan_adherence_service() -> PlanAdherenceService:
+    return _create_plan_adherence_service()
 
 
 async def _create_strava_client(request: Request) -> tuple[StravaClient, PostgresStorage]:
