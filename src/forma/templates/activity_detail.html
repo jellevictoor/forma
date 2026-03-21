@@ -132,6 +132,36 @@
   {% endif %}
 </div>
 
+<!-- Perceived effort -->
+{% set _effort_levels = [
+  ("very_easy", "Very easy", "var(--color-sky)"),
+  ("easy",      "Easy",      "var(--color-mint)"),
+  ("moderate",  "Moderate",  "var(--color-amber)"),
+  ("hard",      "Hard",      "var(--color-coral)"),
+  ("very_hard", "Very hard", "var(--color-coral)"),
+  ("maximum",   "Maximum",   "var(--color-coral)"),
+] %}
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">How did it feel?</h2>
+    <span id="effort-saved" class="hidden text-xs text-mint font-medium">Saved</span>
+  </div>
+  <div class="flex gap-2" id="effort-picker">
+    {% for value, label, color in _effort_levels %}
+    <button data-effort="{{ value }}"
+            onclick="setEffort('{{ value }}')"
+            class="effort-btn flex-1 py-2 px-1 rounded-xl text-xs font-medium text-center cursor-pointer transition-all border border-transparent hover:scale-105"
+            {% if workout.perceived_effort and workout.perceived_effort.value == value %}
+            style="background:{{ color }}20;border-color:{{ color }};color:{{ color }}"
+            {% else %}
+            style="background:var(--color-surface-alt);color:var(--color-text-muted)"
+            {% endif %}>
+      {{ label }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
 <!-- Plan linkage card — populated by JS if workout date matches a planned day -->
 <div id="plan-match-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
   <div class="flex items-center justify-between mb-3">
@@ -1276,6 +1306,54 @@ async function runAnalysis(workoutId) {
     spinner.classList.add('hidden');
   }
 }
+</script>
+<script>
+const effortColors = {
+  very_easy: 'var(--color-sky)',
+  easy: 'var(--color-mint)',
+  moderate: 'var(--color-amber)',
+  hard: 'var(--color-coral)',
+  very_hard: 'var(--color-coral)',
+  maximum: 'var(--color-coral)',
+};
+
+async function setEffort(value) {
+  const btns = document.querySelectorAll('.effort-btn');
+  const saved = document.getElementById('effort-saved');
+  const current = document.querySelector('.effort-btn[data-effort="' + value + '"]');
+  const wasActive = current.dataset.active === 'true';
+  const newValue = wasActive ? null : value;
+
+  btns.forEach(b => {
+    b.style.background = 'var(--color-surface-alt)';
+    b.style.borderColor = 'transparent';
+    b.style.color = 'var(--color-text-muted)';
+    b.dataset.active = 'false';
+  });
+
+  if (!wasActive) {
+    const c = effortColors[value];
+    current.style.background = c.replace(')', '') + '20)';
+    current.style.borderColor = c;
+    current.style.color = c;
+    current.dataset.active = 'true';
+  }
+
+  try {
+    await fetch('/activities/detail/{{ workout.id }}/effort', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({effort: newValue}),
+    });
+    saved.classList.remove('hidden');
+    setTimeout(() => saved.classList.add('hidden'), 1500);
+  } catch {}
+}
+
+// Mark the initially selected button as active
+document.querySelectorAll('.effort-btn').forEach(b => {
+  b.dataset.active = b.style.borderColor !== 'transparent' ? 'true' : 'false';
+});
 </script>
 {% endif %}
 {% endblock %}

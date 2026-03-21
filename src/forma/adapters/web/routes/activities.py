@@ -22,6 +22,7 @@ from forma.application.activity_analysis_service import ActivityAnalysisService
 from forma.application.activity_stream_service import ActivityStreamService
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
+from forma.domain.workout import PerceivedEffort
 from forma.ports.workout_repository import WorkoutRepository
 
 router = APIRouter()
@@ -32,6 +33,10 @@ VALID_SPORTS = {"all", "run", "strength", "climbing"}
 
 class ChatRequest(BaseModel):
     message: str
+
+
+class EffortRequest(BaseModel):
+    effort: PerceivedEffort | None
 
 
 @router.get("/activities", response_class=RedirectResponse)
@@ -107,6 +112,20 @@ async def chat_about_activity(
         return JSONResponse({"response": response})
     except ValueError:
         return JSONResponse({"error": "Workout not found"}, status_code=404)
+
+
+@router.post("/activities/detail/{activity_id}/effort")
+async def set_perceived_effort(
+    activity_id: str,
+    body: EffortRequest,
+    workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
+):
+    workout = await workout_repo.get_workout(activity_id)
+    if not workout:
+        return JSONResponse({"error": "Workout not found"}, status_code=404)
+    updated = workout.model_copy(update={"perceived_effort": body.effort})
+    await workout_repo.save_workout(updated)
+    return JSONResponse({"effort": body.effort.value if body.effort else None})
 
 
 @router.get("/activities/detail/{activity_id}/context")

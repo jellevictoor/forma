@@ -142,3 +142,39 @@ def test_analyse_endpoint_returns_all_fields(client):
     assert "training_load_context" in data
     assert "goal_relevance" in data
     assert "comparison_to_recent" in data
+
+
+def test_set_perceived_effort_returns_200(client):
+    response = client.post(
+        "/activities/detail/w1/effort",
+        json={"effort": "moderate"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_set_perceived_effort_returns_saved_value(client):
+    response = client.post(
+        "/activities/detail/w1/effort",
+        json={"effort": "hard"},
+    )
+
+    assert response.json()["effort"] == "hard"
+
+
+def test_set_perceived_effort_rejects_invalid_value(client):
+    response = client.post(
+        "/activities/detail/w1/effort",
+        json={"effort": "banana"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_clear_perceived_effort(client):
+    response = client.post(
+        "/activities/detail/w1/effort",
+        json={"effort": None},
+    )
+
+    assert response.json()["effort"] is None
