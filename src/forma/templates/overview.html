@@ -99,6 +99,7 @@
           <span id="form-fatigue" class="text-xs font-semibold tabular-nums text-secondary w-8 text-right">—</span>
         </div>
       </div>
+      <p id="form-fitness-trend" class="hidden text-xs text-muted mt-3 pt-3 border-t border-edge"></p>
     </div>
 
     {# 30-day TSB sparkline #}
@@ -470,9 +471,39 @@ function countUp(el, target, decimals = 0, duration = 700) {
     tsbEl.textContent = (form >= 0 ? '+' : '') + form.toFixed(1);
     tsbEl.style.color = color;
 
+    // Count consecutive days in current form zone (from most recent backwards)
+    let streakDays = 0;
+    for (let i = data.length - 1; i >= 0; i--) {
+      const f = data[i].form;
+      const sameZone = (form > 10 && f > 10) || (form > 0 && form <= 10 && f > 0 && f <= 10)
+        || (form > -10 && form <= 0 && f > -10 && f <= 0) || (form > -20 && form <= -10 && f > -20 && f <= -10)
+        || (form <= -20 && f <= -20);
+      if (!sameZone) break;
+      streakDays++;
+    }
+    if (streakDays > 3) {
+      interp += ` (${streakDays} days in this zone)`;
+    }
+
     document.getElementById('form-interpretation').textContent = interp;
     document.getElementById('form-fitness').textContent = fitness.toFixed(1);
     document.getElementById('form-fatigue').textContent = fatigue.toFixed(1);
+
+    // 30-day fitness trend
+    if (data.length >= 30) {
+      const f30 = data[data.length - 30].fitness;
+      const fNow = fitness;
+      if (f30 > 0) {
+        const pctChange = ((fNow - f30) / f30 * 100);
+        const trendEl = document.getElementById('form-fitness-trend');
+        if (Math.abs(pctChange) >= 5) {
+          const dir = pctChange > 0 ? 'up' : 'down';
+          const color = pctChange > 0 ? 'text-mint' : 'text-coral';
+          trendEl.innerHTML = `Fitness <span class="${color} font-medium">${dir} ${Math.abs(pctChange).toFixed(0)}%</span> over 30 days`;
+          trendEl.classList.remove('hidden');
+        }
+      }
+    }
 
     const scale = Math.max(fitness, fatigue, 50);
     document.getElementById('form-fitness-bar').style.width = `${Math.min((fitness / scale) * 100, 100)}%`;
