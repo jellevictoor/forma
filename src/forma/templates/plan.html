@@ -513,10 +513,10 @@ async function loadAdherence() {
   try {
     const { days } = await fetch('/api/plan/adherence').then(r => r.json());
     const statusConfig = {
-      completed: { label: 'Done', color: 'mint', icon: '✓' },
-      missed:    { label: 'Missed', color: 'coral', icon: '✗' },
-      swapped:   { label: 'Swapped', color: 'amber', icon: '↔' },
-      upcoming:  { label: '', color: '', icon: '' },
+      completed: { label: 'Done', color: 'mint' },
+      missed:    { label: 'Missed', color: 'coral' },
+      swapped:   { label: 'Swapped', color: 'amber' },
+      upcoming:  { label: '', color: '' },
     };
     for (const day of days) {
       const card = document.querySelector(`[data-date="${day.date}"]`);
@@ -525,7 +525,11 @@ async function loadAdherence() {
       if (!cfg || !cfg.label) continue;
       const badge = document.createElement('span');
       badge.className = `text-xs font-medium px-2 py-0.5 rounded-full bg-${cfg.color}/10 text-${cfg.color}`;
-      badge.textContent = `${cfg.icon} ${cfg.label}`;
+      badge.setAttribute('role', 'status');
+      badge.textContent = cfg.label;
+      if (day.actual_type && day.status === 'swapped') {
+        badge.textContent += ` (${day.actual_type})`;
+      }
       const header = card.querySelector('.flex.items-start .flex-1 .flex.flex-wrap');
       if (header) header.appendChild(badge);
     }

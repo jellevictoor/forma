@@ -150,7 +150,9 @@
     {% for value, label, color in _effort_levels %}
     <button data-effort="{{ value }}"
             onclick="setEffort('{{ value }}')"
-            class="effort-btn flex-1 py-2 px-1 rounded-xl text-xs font-medium text-center cursor-pointer transition-all border border-transparent hover:scale-105"
+            aria-label="Rate effort as {{ label }}"
+            aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
+            class="effort-btn flex-1 py-2.5 px-1 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border border-transparent hover:opacity-80 min-h-[44px]"
             {% if workout.perceived_effort and workout.perceived_effort.value == value %}
             style="background:{{ color }}20;border-color:{{ color }};color:{{ color }}"
             {% else %}
@@ -1329,6 +1331,7 @@ async function setEffort(value) {
     b.style.borderColor = 'transparent';
     b.style.color = 'var(--color-text-muted)';
     b.dataset.active = 'false';
+    b.setAttribute('aria-pressed', 'false');
   });
 
   if (!wasActive) {
@@ -1337,6 +1340,7 @@ async function setEffort(value) {
     current.style.borderColor = c;
     current.style.color = c;
     current.dataset.active = 'true';
+    current.setAttribute('aria-pressed', 'true');
   }
 
   try {

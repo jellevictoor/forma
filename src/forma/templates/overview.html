@@ -68,7 +68,7 @@
 </div>
 
 {# ── Training alerts ────────────────────────────────────────── #}
-<div id="alerts-container" class="hidden space-y-2 mb-4"></div>
+<div id="alerts-container" class="hidden space-y-2 mb-4" role="alert" aria-live="polite"></div>
 
 {# ── Form widget ──────────────────────────────────────────── #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
@@ -264,6 +264,11 @@
           <p class="text-sm font-semibold text-secondary">{{ "%.1f"|format(w.distance_km) }} km</p>
           {% endif %}
           <p class="text-xs text-muted">{{ "%.0f"|format(w.duration_minutes) }} min</p>
+          {% if w.perceived_effort %}
+          {% set _effort_labels = {'very_easy': 'Very easy', 'easy': 'Easy', 'moderate': 'Moderate', 'hard': 'Hard', 'very_hard': 'Very hard', 'maximum': 'Maximum'} %}
+          {% set _effort_colors = {'very_easy': 'sky', 'easy': 'mint', 'moderate': 'amber', 'hard': 'coral', 'very_hard': 'coral', 'maximum': 'coral'} %}
+          <p class="text-xs text-{{ _effort_colors.get(w.perceived_effort.value, 'muted') }}">{{ _effort_labels.get(w.perceived_effort.value, '') }}</p>
+          {% endif %}
         </div>
       </a>
       {% endfor %}
