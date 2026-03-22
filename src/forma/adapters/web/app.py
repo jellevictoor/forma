@@ -2,6 +2,7 @@
 
 import logging
 import logging.config
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -61,11 +62,29 @@ async def _lifespan(app: FastAPI):
     logger.info("forma shutting down")
 
 
+def _get_git_hash() -> str:
+    """Return short git commit hash, or 'dev' if not available."""
+    try:
+        import subprocess
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        return "dev"
+
+
+_COMMIT_HASH = _get_git_hash()
+_DEV_MODE = bool(os.environ.get("DEV_ATHLETE_ID"))
+
+
 class _SuperadminMiddleware(BaseHTTPMiddleware):
     """Injects request.state.is_superadmin for use in templates."""
 
     async def dispatch(self, request: Request, call_next):
         request.state.is_superadmin = False
+        request.state.commit_hash = _COMMIT_HASH
+        request.state.dev_mode = _DEV_MODE
         token = request.cookies.get("session")
         if token:
             try:
