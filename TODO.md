@@ -46,8 +46,8 @@
 - [ ] **Predicted race times** — derived from pace trend + recent efforts
 
 ### Recovery & readiness
-- [ ] **Daily readiness number** — single 1-100 score wrapping CTL/ATL/Form
-- [ ] **Recovery time recommendation** — post-workout suggestion based on effort + form
+- [x] **Daily readiness number** — 0-100 score on dashboard (60% form + 40% fitness)
+- [x] **Recovery time recommendation** — shown on activity detail page (~Xh + suggestion)
 
 ### Coaching
 - [ ] **Schedule adjustment suggestions** — when a user skips the same day 3+ weeks in a row, suggest moving that workout to a different day. Needs: skip history tracking + a simple rule-based check.
