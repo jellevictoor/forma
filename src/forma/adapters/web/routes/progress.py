@@ -10,6 +10,7 @@ from forma.adapters.web.dependencies import get_analytics_service, get_athlete_i
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.domain.long_run import long_run_summary
+from forma.domain.race_predictor import predict_race_times
 from forma.ports.workout_repository import WorkoutRepository
 
 router = APIRouter()
@@ -119,6 +120,29 @@ async def zone_trend_api(
             "z5_pct": round(zone_seconds[5] / total * 100),
         })
     return result
+
+
+@router.get("/api/progress/race-predictions")
+async def race_predictions_api(
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    """Predict race times from the athlete's best PR."""
+    records = await service.personal_records(athlete_id)
+    if not records:
+        return {"predictions": [], "based_on": None}
+
+    # Use the longest distance PR for the most reliable prediction
+    best = max(records, key=lambda r: r.distance_meters)
+    predictions = predict_race_times(best.distance_meters, best.duration_seconds)
+    return {
+        "predictions": predictions,
+        "based_on": {
+            "distance_m": best.distance_meters,
+            "time_seconds": best.duration_seconds,
+            "date": best.achieved_on.isoformat(),
+        },
+    }
 
 
 @router.get("/api/progress/long-runs")

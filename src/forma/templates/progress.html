@@ -94,6 +94,15 @@
   </table>
 </div>
 
+{# Race predictions — hidden until data loads #}
+<div id="race-predictions-section" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+  <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Predicted race times</h2>
+    <span id="race-pred-basis" class="text-xs text-muted"></span>
+  </div>
+  <div id="race-predictions-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+</div>
+
 {# Strength frequency — hidden until data confirms strength sessions exist #}
 <div id="strength-section" class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6 hidden">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Strength session frequency</h2>
@@ -476,6 +485,28 @@ const DISTANCE_LABELS = {
       </tr>
     `).join('');
   }
+
+  // Race predictions
+  try {
+    const pred = await fetch('/api/progress/race-predictions').then(r => r.json());
+    if (pred.predictions && pred.predictions.length) {
+      document.getElementById('race-predictions-section').classList.remove('hidden');
+      const grid = document.getElementById('race-predictions-grid');
+      grid.innerHTML = pred.predictions.map(p => `
+        <div class="bg-surface-alt rounded-xl border border-edge p-4 text-center">
+          <p class="text-xs text-muted mb-1">${p.distance_label}</p>
+          <p class="text-xl font-bold text-primary tabular-nums">${p.predicted_time}</p>
+          <p class="text-xs text-muted mt-1">${p.predicted_pace}</p>
+        </div>
+      `).join('');
+      if (pred.based_on) {
+        const dist = pred.based_on.distance_m >= 10000
+          ? (pred.based_on.distance_m / 1000).toFixed(0) + ' km'
+          : (pred.based_on.distance_m / 1000).toFixed(1) + ' km';
+        document.getElementById('race-pred-basis').textContent = `Based on ${dist} PR`;
+      }
+    }
+  } catch {}
 
   const strengthRaw = await fetch('/api/progress/strength-frequency').then(r => r.json());
   const strengthContainer = document.getElementById('strength-chart');
