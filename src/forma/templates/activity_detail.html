@@ -152,11 +152,9 @@
             onclick="setEffort('{{ value }}')"
             aria-label="Rate effort as {{ label }}"
             aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
-            class="effort-btn flex-1 py-2.5 px-1 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border border-transparent hover:opacity-80 min-h-[44px]"
+            class="effort-btn flex-1 py-2.5 px-1 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border hover:opacity-80 min-h-[44px] {% if workout.perceived_effort and workout.perceived_effort.value == value %}border-current{% else %}border-transparent bg-surface-alt text-muted{% endif %}"
             {% if workout.perceived_effort and workout.perceived_effort.value == value %}
-            style="background:{{ color }}20;border-color:{{ color }};color:{{ color }}"
-            {% else %}
-            style="background:var(--color-surface-alt);color:var(--color-text-muted)"
+            style="background:{{ color }}20;color:{{ color }}"
             {% endif %}>
       {{ label }}
     </button>
@@ -1327,17 +1325,19 @@ async function setEffort(value) {
   const newValue = wasActive ? null : value;
 
   btns.forEach(b => {
-    b.style.background = 'var(--color-surface-alt)';
-    b.style.borderColor = 'transparent';
-    b.style.color = 'var(--color-text-muted)';
+    b.style.removeProperty('background');
+    b.style.removeProperty('color');
+    b.classList.add('bg-surface-alt', 'text-muted', 'border-transparent');
+    b.classList.remove('border-current');
     b.dataset.active = 'false';
     b.setAttribute('aria-pressed', 'false');
   });
 
   if (!wasActive) {
     const c = effortColors[value];
+    current.classList.remove('bg-surface-alt', 'text-muted', 'border-transparent');
+    current.classList.add('border-current');
     current.style.background = c.replace(')', '') + '20)';
-    current.style.borderColor = c;
     current.style.color = c;
     current.dataset.active = 'true';
     current.setAttribute('aria-pressed', 'true');

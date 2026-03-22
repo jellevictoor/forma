@@ -349,9 +349,9 @@ function dayCard(day) {
                 ${day.workout_type === 'run' ? hrTargetBadge(day.intensity) : ''}
                 <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>
                 <button type="button" onclick="toggleExercises(this)"
-                        class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer">${hasExercises ? 'Hide' : 'Details'}</button>
+                        class="text-xs px-2.5 py-2 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer min-h-[44px]">${hasExercises ? 'Hide' : 'Details'}</button>
                 <button type="button" onclick="skipDay('${day.date}')"
-                        class="skip-btn text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:text-coral hover:border-coral/30 cursor-pointer"
+                        class="skip-btn text-xs px-2.5 py-2 rounded-lg border border-edge text-muted transition-colors hover:text-coral hover:border-coral/30 cursor-pointer min-h-[44px]"
                         aria-label="Not today — move this workout">Not today</button>
               ` : `<span class="text-xs italic text-muted">Rest day</span>`}
             </div>
@@ -566,7 +566,7 @@ async function loadAdherence() {
       const cfg = statusConfig[day.status];
       if (!cfg || !cfg.label) continue;
       const badge = document.createElement('span');
-      badge.className = `text-xs font-medium px-2 py-0.5 rounded-full bg-${cfg.color}/10 text-${cfg.color}`;
+      badge.className = `text-xs font-medium px-2 py-0.5 rounded-full bg-${cfg.color}/10 border border-${cfg.color}/30 text-${cfg.color}`;
       badge.setAttribute('role', 'status');
       badge.textContent = cfg.label;
       if (day.actual_type && day.status === 'swapped') {
@@ -584,7 +584,7 @@ async function deleteSlot(index) {
     if (!res.ok) throw new Error('Request failed');
     window.location.reload();
   } catch {
-    alert('Could not remove slot. Please try again.');
+    showToast('Could not remove slot. Please try again.', 'coral');
   }
 }
 </script>

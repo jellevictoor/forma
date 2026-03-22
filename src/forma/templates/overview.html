@@ -763,7 +763,7 @@ function renderSparkline(containerId, values, color) {
       info: `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
     };
     container.innerHTML = r.alerts.map(a => {
-      const color = a.severity === 'critical' ? 'coral' : 'amber';
+      const color = a.severity === 'critical' ? 'coral' : a.severity === 'info' ? 'sky' : 'amber';
       return `<div class="px-4 py-3 bg-${color}/10 border border-${color}/30 rounded-lg text-sm text-${color} flex items-center gap-2">
         ${icons[a.severity] || icons.warning}
         <span>${a.message}</span>
