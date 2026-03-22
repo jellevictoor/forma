@@ -568,30 +568,23 @@ async function removeGoal() {
   if (res.ok) window.location.reload();
 }
 
-// Load opening message on page load
-(async function startCoaching() {
-  try {
-    const res = await fetch('/goal/start', { method: 'POST' });
-    const data = await res.json();
+// Show static welcome — no AI call until user engages
+(function initCoach() {
+  const hasGoal = {{ 'true' if athlete and athlete.primary_goal else 'false' }};
+  const welcome = hasGoal
+    ? "Here's your current goal. Tell me if you'd like to adjust it, set a new target, or talk through your progress."
+    : "Tell me what you're training for — a race, a personal best, general fitness — and I'll help you shape a goal with milestones.";
 
-    document.getElementById('coach-thinking').remove();
-    const msgRow = appendMessage('model', data.message);
+  document.getElementById('coach-thinking').remove();
+  appendMessage('model', welcome);
 
-    document.getElementById('coach-status').innerHTML = `
-      <span class="w-1.5 h-1.5 rounded-full" style="background:var(--color-mint)"></span>
-      Ready
-    `;
-    document.getElementById('chat-input').disabled = false;
-    document.getElementById('send-btn').disabled = false;
-    document.getElementById('chat-input').focus();
-  } catch {
-    document.getElementById('coach-thinking').querySelector('div').innerHTML =
-      '<p class="text-sm text-muted">Could not connect to coach. Reload to try again.</p>';
-    document.getElementById('coach-status').innerHTML = `
-      <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-      Offline
-    `;
-  }
+  document.getElementById('coach-status').innerHTML = `
+    <span class="w-1.5 h-1.5 rounded-full" style="background:var(--color-mint)"></span>
+    Ready
+  `;
+  document.getElementById('chat-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('chat-input').focus();
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
