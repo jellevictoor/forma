@@ -1,4 +1,4 @@
-.PHONY: test lint smoke deploy build run stop restart logs status backup dev
+.PHONY: test lint smoke deploy build stop restart logs status backup dev update
 
 # ── Local development ─────────────────────────────────────────
 lint:
@@ -17,6 +17,36 @@ dev:
 	uv run uvicorn forma.adapters.web.app:create_app --factory --port 8080 --reload
 
 # ── Production lifecycle ──────────────────────────────────────
+#
+# make update   — the one command to rule them all:
+#   1. git pull
+#   2. lint + test (if fail → old version keeps running)
+#   3. docker build (if fail → old version keeps running)
+#   4. docker up -d (swaps container)
+#   5. health check (if fail → rolls back to previous image)
+#
+update:
+	@echo "── Pulling latest code..."
+	git pull
+	@echo "── Running tests..."
+	$(MAKE) test
+	@echo "── Building new image..."
+	@docker tag forma-forma:latest forma-forma:rollback 2>/dev/null || true
+	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose build
+	@echo "── Starting new container..."
+	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d
+	@echo "── Checking health..."
+	@sleep 3
+	@if docker exec forma curl -sf http://localhost:8080/ > /dev/null 2>&1; then \
+		echo "✓ Deployed $$(git rev-parse --short HEAD) — healthy"; \
+	else \
+		echo "✗ New container unhealthy — rolling back..."; \
+		docker tag forma-forma:rollback forma-forma:latest 2>/dev/null; \
+		docker compose up -d; \
+		echo "✗ Rolled back to previous version"; \
+		exit 1; \
+	fi
+
 deploy: test build
 	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d
 	@echo "✓ Deployed $$(git rev-parse --short HEAD)"
@@ -31,10 +61,6 @@ restart:
 stop:
 	docker compose down
 	@echo "✓ All containers stopped"
-
-update:
-	git pull
-	$(MAKE) deploy
 
 # ── Operations ────────────────────────────────────────────────
 logs:
