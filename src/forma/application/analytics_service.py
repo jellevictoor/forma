@@ -303,8 +303,18 @@ class AnalyticsService:
         }
 
     async def training_log_data(self, athlete_id: str, year: int | None = None) -> list[dict]:
-        year = year or current_year()
-        return await self._analytics.training_log(athlete_id, year)
+        # Use rolling 12 months for the activity heatmap (GitHub-style)
+        today = date.today()
+        rolling_year = today.year if today.month > 1 else today.year - 1
+        data = await self._analytics.training_log(athlete_id, rolling_year)
+        if rolling_year != today.year:
+            data += await self._analytics.training_log(athlete_id, today.year)
+        else:
+            # Also include last year's tail for the rolling window
+            cutoff = (today - timedelta(days=365)).isoformat()
+            prev_data = await self._analytics.training_log(athlete_id, rolling_year - 1)
+            data = [d for d in prev_data if d["date"] >= cutoff] + data
+        return data
 
     async def workouts_with_notes(self, athlete_id: str, year: int | None = None) -> list[dict]:
         year = year or current_year()
