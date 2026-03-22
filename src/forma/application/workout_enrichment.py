@@ -31,8 +31,6 @@ class WorkoutEnrichmentService:
 
         enriched = enriched.model_copy(update={
             "id": workout.id,
-            "mood": workout.mood,
-            "sleep_quality": workout.sleep_quality,
         })
 
         await self._workouts.save_workout(enriched)

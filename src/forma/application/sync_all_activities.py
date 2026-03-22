@@ -184,8 +184,6 @@ class FullStravaSync:
             workout = workout.model_copy(update={
                 "id": existing.id,
                 "perceived_effort": existing.perceived_effort,
-                "mood": existing.mood,
-                "sleep_quality": existing.sleep_quality,
                 "detail_fetched": existing.detail_fetched,
             })
             logger.debug("updated activity %s (%s)", activity["id"], workout.name)

@@ -60,11 +60,9 @@ class Workout(BaseModel):
     # Elevation
     elevation_gain_meters: float | None = None
 
-    # Subjective feedback (from Strava private notes)
+    # Subjective feedback
     private_note: str = ""
     perceived_effort: PerceivedEffort | None = None
-    mood: str = ""
-    sleep_quality: str = ""
 
     # Full Strava API response — stored verbatim so no field is ever lost
     strava_raw: dict | None = None
