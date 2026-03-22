@@ -70,6 +70,57 @@ async def fitness_freshness_api(
     return await service.fitness_freshness_chart_data(athlete_id, max_hr=max_hr)
 
 
+@router.get("/api/progress/zone-trend")
+async def zone_trend_api(
+    workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
+    athlete_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    """Weekly HR zone distribution for the last 12 weeks."""
+    from datetime import date, timedelta
+    from forma.domain.workout import WorkoutType
+
+    athlete = await athlete_service.get_profile(athlete_id)
+    max_hr = athlete.max_heartrate or (220 - athlete.age if athlete and athlete.age else 185)
+
+    since = date.today() - timedelta(weeks=12)
+    workouts = await workout_repo.list_workouts_for_athlete(athlete_id, start_date=since, limit=500)
+    runs = [w for w in workouts if w.workout_type == WorkoutType.RUN and w.average_heartrate]
+
+    # Group by week
+    weeks: dict[date, list] = {}
+    for w in runs:
+        week_start = w.start_time.date() - timedelta(days=w.start_time.weekday())
+        weeks.setdefault(week_start, []).append(w)
+
+    result = []
+    for week_start in sorted(weeks):
+        zone_seconds = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        for w in weeks[week_start]:
+            pct = w.average_heartrate / max_hr * 100
+            if pct < 60:
+                zone = 1
+            elif pct < 70:
+                zone = 2
+            elif pct < 80:
+                zone = 3
+            elif pct < 90:
+                zone = 4
+            else:
+                zone = 5
+            zone_seconds[zone] += w.moving_time_seconds or w.duration_seconds
+        total = sum(zone_seconds.values()) or 1
+        result.append({
+            "week": week_start.isoformat(),
+            "z1_pct": round(zone_seconds[1] / total * 100),
+            "z2_pct": round(zone_seconds[2] / total * 100),
+            "z3_pct": round(zone_seconds[3] / total * 100),
+            "z4_pct": round(zone_seconds[4] / total * 100),
+            "z5_pct": round(zone_seconds[5] / total * 100),
+        })
+    return result
+
+
 @router.get("/api/progress/long-runs")
 async def long_runs_api(
     workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],

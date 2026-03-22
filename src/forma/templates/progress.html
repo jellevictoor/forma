@@ -64,6 +64,20 @@
   </details>
 </div>
 
+{# HR zone trend #}
+<div id="zone-trend-section" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+  <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Heart rate zones — 12 weeks</h2>
+    <div class="flex gap-3 text-xs text-muted flex-wrap">
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm" style="background:var(--color-sky)"></span>Z1 Recovery</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm" style="background:var(--color-mint)"></span>Z2 Endurance</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm" style="background:var(--color-amber)"></span>Z3 Aerobic</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-sm" style="background:var(--color-coral)"></span>Z4-5 Threshold</span>
+    </div>
+  </div>
+  <div id="zone-trend-chart" style="min-height:180px"></div>
+</div>
+
 {# Running PRs — hidden until data confirms runs exist #}
 <div id="running-pr-section" class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6 hidden">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Running personal records</h2>
@@ -398,6 +412,55 @@ const DISTANCE_LABELS = {
   1000: '1 km', 5000: '5 km', 10000: '10 km',
   21097: 'Half marathon', 42195: 'Marathon'
 };
+
+// ── Zone trend chart ─────────────────────────────────────────
+(async function() {
+  const data = await fetch('/api/progress/zone-trend').then(r => r.json());
+  if (!data.length) return;
+  const section = document.getElementById('zone-trend-section');
+  section.classList.remove('hidden');
+  const el = document.getElementById('zone-trend-chart');
+  const W = el.clientWidth || 600;
+  const H = 180;
+  const margin = {top: 8, right: 8, bottom: 28, left: 36};
+  const w = W - margin.left - margin.right;
+  const h = H - margin.top - margin.bottom;
+
+  const parseDate = d3.timeParse('%Y-%m-%d');
+  const weeks = data.map(d => ({...d, date: parseDate(d.week)}));
+  const x = d3.scaleBand().domain(weeks.map(d => d.date)).range([0, w]).padding(0.25);
+  const y = d3.scaleLinear().domain([0, 100]).range([h, 0]);
+  const colors = {z1: 'var(--color-sky)', z2: 'var(--color-mint)', z3: 'var(--color-amber)', z45: 'var(--color-coral)'};
+
+  const svg = d3.select(el).append('svg')
+    .attr('viewBox', `0 0 ${W} ${H}`).style('width', '100%').style('height', '100%');
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  weeks.forEach(d => {
+    let cumY = 0;
+    const zones = [
+      {key: 'z1', pct: d.z1_pct, color: colors.z1},
+      {key: 'z2', pct: d.z2_pct, color: colors.z2},
+      {key: 'z3', pct: d.z3_pct, color: colors.z3},
+      {key: 'z45', pct: d.z4_pct + d.z5_pct, color: colors.z45},
+    ];
+    zones.forEach(z => {
+      g.append('rect')
+        .attr('x', x(d.date)).attr('y', y(cumY + z.pct))
+        .attr('width', x.bandwidth()).attr('height', y(0) - y(z.pct))
+        .attr('rx', 2).style('fill', z.color);
+      cumY += z.pct;
+    });
+  });
+
+  const tickValues = weeks.filter((_, i) => i % 2 === 0 || i === weeks.length - 1).map(d => d.date);
+  g.append('g').attr('transform', `translate(0,${h})`)
+    .call(d3.axisBottom(x).tickValues(tickValues).tickFormat(d3.timeFormat('%-d %b')))
+    .selectAll('text').style('fill', 'var(--color-text-muted)').style('font-size', '10px');
+  g.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(d => d + '%'))
+    .selectAll('text').style('fill', 'var(--color-text-muted)').style('font-size', '10px');
+  g.selectAll('.domain, .tick line').style('stroke', 'var(--color-edge)');
+})();
 
 (async function() {
   const prs = await fetch('/api/progress/personal-records').then(r => r.json());
