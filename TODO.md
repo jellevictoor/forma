@@ -41,7 +41,7 @@
 ## Still relevant (not done yet)
 
 ### Analytics
-- [ ] **Pace / HR zones trend chart** — weekly zone distribution over time (Z1–Z5)
+- [x] **HR zones trend chart** — weekly Z1-Z5 stacked bar chart on progress page
 - [x] **Long run detection** — domain logic + API endpoint, >=60min or >=10km
 - [ ] **Predicted race times** — derived from pace trend + recent efforts
 
