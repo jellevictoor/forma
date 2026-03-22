@@ -42,7 +42,7 @@
 
 ### Analytics
 - [ ] **Pace / HR zones trend chart** — weekly zone distribution over time (Z1–Z5)
-- [ ] **Long run detection** — auto-tag runs above threshold, track separately
+- [x] **Long run detection** — domain logic + API endpoint, >=60min or >=10km
 - [ ] **Predicted race times** — derived from pace trend + recent efforts
 
 ### Recovery & readiness
@@ -54,3 +54,8 @@
 
 ### Infrastructure
 - [ ] **Strava webhook** — register a webhook subscription at `https://www.strava.com/api/v3/push_subscriptions`. Strava sends POST to a callback URL on every new activity. Needs: a public endpoint (Cloudflare tunnel handles this), a `POST /api/strava/webhook` route that verifies the subscription and triggers a single-activity sync. Replaces manual sync for new activities; backfill still needed for history.
+
+### UI fixes
+- [x] Weekly volume chart — most recent week highlighted (was oldest)
+- [x] Goal milestone timeline — solid circle backgrounds hide the line
+- [x] Admin model selection — dropdown per service on Prompts tab
