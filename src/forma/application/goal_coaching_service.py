@@ -175,6 +175,7 @@ class GoalCoachingService:
         self._workouts = workout_repo
         self._chat = chat_repo
         self._prompts = prompt_repo
+        self._snapshot_cache: dict[str, tuple] = {}
 
     async def _get_system_instruction(self) -> str:
         if self._prompts:
