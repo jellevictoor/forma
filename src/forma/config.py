@@ -21,9 +21,6 @@ class Settings(BaseSettings):
     strava_access_token: str = ""
     strava_refresh_token: str = ""
 
-    # Google Gemini
-    gemini_api_key: str = ""
-
     # Auth
     base_url: str = "http://localhost:8080"
     session_lifetime_days: int = 30
