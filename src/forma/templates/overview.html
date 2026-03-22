@@ -677,7 +677,7 @@ function renderSparkline(containerId, values, color) {
   const next = data.days.find(d => d.workout_type !== 'rest' && d.date >= todayStr);
 
   if (!next) {
-    skeleton.outerHTML = `<p class="text-sm text-muted">Rest week — enjoy the recovery! 🛋️</p>`;
+    skeleton.outerHTML = `<p class="text-sm text-muted">Rest week — enjoy the recovery.</p>`;
     return;
   }
 
@@ -702,10 +702,34 @@ function renderSparkline(containerId, values, color) {
           <span class="text-xs text-muted ml-auto">${next.duration_minutes} min</span>
         </div>
         <p class="text-xs text-secondary leading-relaxed line-clamp-2">${next.description}</p>
-        <a href="/plan" class="text-xs font-medium text-muted hover:text-primary transition-colors mt-2 inline-block">View full plan →</a>
+        <div class="flex items-center gap-3 mt-2">
+          <a href="/plan" class="text-xs font-medium text-muted hover:text-primary transition-colors">View plan →</a>
+          <button onclick="skipFromDashboard('${next.date}')"
+                  class="text-xs font-medium text-muted hover:text-coral transition-colors cursor-pointer"
+                  id="next-skip-btn">Not today</button>
+        </div>
       </div>
     </div>`;
 })();
+
+async function skipFromDashboard(dayDate) {
+  const btn = document.getElementById('next-skip-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Moving…'; }
+  try {
+    const result = await fetch(`/api/plan/day/${dayDate}/skip`, { method: 'POST' }).then(r => r.json());
+    if (result.swapped_with) {
+      const swapDate = new Date(result.swapped_with + 'T00:00:00');
+      const swapName = swapDate.toLocaleDateString('en-GB', { weekday: 'long' });
+      if (btn) btn.textContent = `Moved to ${swapName}`;
+      // Reload the "Up next" card after a brief pause
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Not today'; }
+    }
+  } catch {
+    if (btn) { btn.disabled = false; btn.textContent = 'Not today'; }
+  }
+}
 
 // ── Streak (week-based) ───────────────────────────────────────────
 (async function() {
@@ -762,11 +786,20 @@ function renderSparkline(containerId, values, color) {
       warning: `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
       info: `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
     };
+    const alertLinks = {
+      goal_drift: '/plan',
+      volume_spike: '/progress',
+      no_rest_day: '/plan',
+      consecutive_hard_days: '/plan',
+    };
     container.innerHTML = r.alerts.map(a => {
       const color = a.severity === 'critical' ? 'coral' : a.severity === 'info' ? 'sky' : 'amber';
+      const link = alertLinks[a.alert_type];
+      const action = link ? `<a href="${link}" class="text-xs font-medium text-${color} hover:underline ml-auto shrink-0">View →</a>` : '';
       return `<div class="px-4 py-3 bg-${color}/10 border border-${color}/30 rounded-lg text-sm text-${color} flex items-center gap-2">
         ${icons[a.severity] || icons.warning}
-        <span>${a.message}</span>
+        <span class="flex-1">${a.message}</span>
+        ${action}
       </div>`;
     }).join('');
   } catch {}
