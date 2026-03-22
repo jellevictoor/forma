@@ -1,6 +1,6 @@
 """PostgreSQL read-side adapter for workout analytics queries."""
 
-from datetime import date
+from datetime import date, timedelta
 
 from asyncpg import Pool
 
@@ -370,8 +370,7 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
             for row in rows
         ]
 
-    async def training_log(self, athlete_id: str, year: int) -> list[dict]:
-        year_start, year_end = self._year_range(year)
+    async def training_log(self, athlete_id: str, since: date, until: date) -> list[dict]:
         rows = await self._pool.fetch(
             """
             SELECT id, start_time, workout_type,
@@ -379,13 +378,13 @@ class PostgresAnalyticsRepository(WorkoutAnalyticsRepository):
                    data::jsonb->>'name' AS name
             FROM workouts
             WHERE athlete_id = $1
-              AND start_time >= $2 AND start_time <= $3
+              AND start_time >= $2 AND start_time < $3
               AND workout_type IS NOT NULL
             ORDER BY start_time ASC
             """,
             athlete_id,
-            year_start,
-            year_end,
+            since,
+            until + timedelta(days=1),
         )
         return [
             {

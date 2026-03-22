@@ -221,7 +221,7 @@ async def test_training_log_data_delegates_to_repo():
 
     await service.training_log_data("athlete1")
 
-    assert analytics_repo.training_log.call_count >= 1
+    analytics_repo.training_log.assert_called_once()
 
 
 async def test_fitness_freshness_returns_list_of_dicts():

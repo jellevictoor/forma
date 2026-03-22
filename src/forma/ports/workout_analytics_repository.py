@@ -122,8 +122,8 @@ class WorkoutAnalyticsRepository(ABC):
         """
 
     @abstractmethod
-    async def training_log(self, athlete_id: str, year: int) -> list[dict]:
-        """Return all workouts for the year as lightweight dicts for the calendar heatmap.
+    async def training_log(self, athlete_id: str, since: date, until: date) -> list[dict]:
+        """Return all workouts in date range as lightweight dicts for the calendar heatmap.
 
         Each dict has: id, date (ISO str), workout_type, duration_seconds,
         distance_meters, name.
