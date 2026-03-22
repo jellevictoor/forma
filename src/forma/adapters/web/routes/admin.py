@@ -10,6 +10,8 @@ from fastapi.templating import Jinja2Templates
 
 from forma.adapters.postgres_pool import get_pool
 from forma.adapters.postgres_storage import PostgresStorage
+from forma.adapters.postgres_system_prompts import PostgresSystemPrompts
+from forma.ports.system_prompt_repository import SystemPrompt
 from forma.adapters.web.dependencies import get_athlete_id
 from forma.domain.athlete import Role
 
@@ -107,6 +109,10 @@ async def admin_page(
     # Name lookup for recent calls
     athlete_names = {a.id: a.name for a, _ in athletes}
 
+    # System prompts
+    prompt_repo = PostgresSystemPrompts(pool)
+    system_prompts = await prompt_repo.list_all()
+
     return templates.TemplateResponse(
         request,
         "admin.html",
@@ -118,6 +124,7 @@ async def admin_page(
             "stats": dict(stats),
             "athlete_names": athlete_names,
             "current_athlete_id": athlete_id,
+            "system_prompts": system_prompts,
         },
     )
 
@@ -219,3 +226,20 @@ async def delete_athlete(
     pool = get_pool()
     await PostgresStorage(pool).delete(target_id)
     return JSONResponse({"status": "deleted"})
+
+
+@router.post("/prompts/{service}")
+async def save_prompt(
+    service: str,
+    athlete_id: Annotated[str, Depends(_require_admin)],
+    payload: dict,
+):
+    text = payload.get("text", "").strip()
+    if not text:
+        return JSONResponse({"error": "Prompt text cannot be empty"}, status_code=400)
+    pool = get_pool()
+    repo = PostgresSystemPrompts(pool)
+    existing = await repo.get(service)
+    label = existing.label if existing else service
+    await repo.save(SystemPrompt(service=service, label=label, text=text))
+    return JSONResponse({"status": "saved"})
