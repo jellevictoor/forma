@@ -138,13 +138,6 @@
 
     </nav>
 
-    <!-- Bauhaus color strip -->
-    <div class="shrink-0 flex h-3">
-      <div class="flex-1" style="background:#599DA4"></div>
-      <div class="flex-1" style="background:#EFB74C"></div>
-      <div class="flex-1" style="background:#E46B47"></div>
-    </div>
-
     <!-- Sync progress strip (hidden by default) -->
     <div id="sync-strip" class="hidden shrink-0 px-4 py-3" style="border-top:1px solid var(--color-nav-divider)">
       <div class="flex items-center gap-2 mb-1.5">
@@ -158,18 +151,15 @@
       <div class="text-xs truncate" id="sync-strip-detail" style="color:var(--color-nav-text);opacity:0.6"></div>
     </div>
 
-    <!-- Version + dev mode -->
-    <div class="shrink-0 px-4 py-1.5 flex items-center gap-2" style="border-top:1px solid var(--color-nav-divider)">
-      {% if request.state.dev_mode %}
-      <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-amber/20 text-amber">dev</span>
-      {% endif %}
-      <span class="text-xs font-mono opacity-40" style="color:var(--color-nav-text)" title="Commit {{ request.state.commit_hash }}">{{ request.state.commit_hash }}</span>
-    </div>
-
-    <!-- Sidebar footer: year + sync + theme + logout -->
-    <div class="shrink-0 px-4 py-4" style="border-top:1px solid var(--color-nav-divider)">
-      <div class="flex items-center justify-between">
-        <span id="nav-year" class="text-xs font-medium tracking-widest" style="color:var(--color-nav-text)" title="Current year"></span>
+    <!-- Sidebar footer: version + actions -->
+    <div class="shrink-0 px-4 py-3" style="border-top:1px solid var(--color-nav-divider)">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          {% if request.state.dev_mode %}
+          <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-amber/20 text-amber">dev</span>
+          {% endif %}
+          <span class="text-xs font-mono opacity-40" style="color:var(--color-nav-text)" title="Commit {{ request.state.commit_hash }}">{{ request.state.commit_hash }}</span>
+        </div>
         <div class="flex items-center gap-0.5">
           <button id="sync-btn" onclick="triggerSync()"
                   class="nav-btn w-7 h-7 flex items-center justify-center rounded-full cursor-pointer" style="color:var(--color-nav-text)"
@@ -260,8 +250,6 @@
           link.classList.add('nav-link-active');
         }
       });
-      const yearEl = document.getElementById('nav-year');
-      if (yearEl) yearEl.textContent = new Date().getFullYear();
     })();
 
     function toggleSidebar() {
