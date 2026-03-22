@@ -11,6 +11,22 @@ logger = logging.getLogger("forma.llm")
 litellm.suppress_debug_info = True
 
 DEFAULT_MODEL = "gemini/gemini-2.5-flash"
+GLOBAL_DEFAULT_SERVICE = "_default"
+
+
+async def get_global_default_model() -> str:
+    """Read the global default model from DB, or fall back to hardcoded."""
+    try:
+        from forma.adapters.postgres_pool import get_pool
+        from forma.adapters.postgres_system_prompts import PostgresSystemPrompts
+        pool = get_pool()
+        repo = PostgresSystemPrompts(pool)
+        prompt = await repo.get(GLOBAL_DEFAULT_SERVICE)
+        if prompt and prompt.model:
+            return prompt.model
+    except Exception:
+        pass
+    return DEFAULT_MODEL
 
 
 class AIQuotaExceeded(Exception):

@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
+from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
 
 from forma.domain.athlete import Athlete, Goal, GoalMilestone, GoalType
 from forma.ports.athlete_repository import AthleteRepository
@@ -181,8 +181,8 @@ class GoalCoachingService:
         if self._prompts:
             prompt = await self._prompts.get("goal-coach")
             if prompt:
-                return prompt.text, prompt.model or DEFAULT_MODEL
-        return _SYSTEM_INSTRUCTION, DEFAULT_MODEL
+                return prompt.text, prompt.model or await get_global_default_model()
+        return _SYSTEM_INSTRUCTION, await get_global_default_model()
         self._snapshot_cache: dict[str, tuple[TrainingSnapshot, datetime]] = {}
 
     async def build_snapshot(self, athlete_id: str) -> TrainingSnapshot:

@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
+from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.system_prompt_repository import SystemPromptRepository
@@ -51,8 +51,8 @@ class WorkoutPlanningService:
         if self._prompts:
             prompt = await self._prompts.get("plan")
             if prompt:
-                return prompt.text, prompt.model or DEFAULT_MODEL
-        return _SYSTEM_INSTRUCTION, DEFAULT_MODEL
+                return prompt.text, prompt.model or await get_global_default_model()
+        return _SYSTEM_INSTRUCTION, await get_global_default_model()
 
     async def get_fitness_state(self, athlete_id: str) -> dict:
         """Return current CTL/ATL/form for display."""

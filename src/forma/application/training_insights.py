@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import dataclass
 
-from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
+from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
 
 from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
 from forma.ports.system_prompt_repository import SystemPromptRepository
@@ -51,8 +51,9 @@ class TrainingInsightsService:
         if self._prompts:
             prompt = await self._prompts.get("insights")
             if prompt:
-                return prompt.text, prompt.model or DEFAULT_MODEL
-        return _SYSTEM_INSTRUCTION, DEFAULT_MODEL
+                model = prompt.model or await get_global_default_model()
+                return prompt.text, model
+        return _SYSTEM_INSTRUCTION, await get_global_default_model()
 
     async def get_cached(self, athlete_id: str, year: int) -> CachedInsights | None:
         return await self._cache.get(athlete_id, year)

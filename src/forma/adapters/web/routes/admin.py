@@ -100,7 +100,16 @@ async def admin_page(
             (SELECT COUNT(*) FROM llm_usage) AS total_llm_calls,
             (SELECT SUM(input_tokens) + SUM(output_tokens) FROM llm_usage
              WHERE created_at >= NOW() - INTERVAL '30 days') AS tokens_30d,
-            (SELECT SUM(input_tokens * 0.15 + output_tokens * 0.60) / 1000000.0
+            (SELECT SUM(
+                CASE
+                    WHEN model LIKE 'anthropic/claude-sonnet%' THEN input_tokens * 3.0 + output_tokens * 15.0
+                    WHEN model LIKE 'anthropic/claude-haiku%' THEN input_tokens * 0.8 + output_tokens * 4.0
+                    WHEN model LIKE 'openai/gpt-4o-mini%' THEN input_tokens * 0.15 + output_tokens * 0.60
+                    WHEN model LIKE 'openai/gpt-4o%' THEN input_tokens * 2.5 + output_tokens * 10.0
+                    WHEN model LIKE 'gemini%pro%' THEN input_tokens * 1.25 + output_tokens * 5.0
+                    ELSE input_tokens * 0.15 + output_tokens * 0.60
+                END
+             ) / 1000000.0
              FROM llm_usage
              WHERE created_at >= NOW() - INTERVAL '30 days') AS cost_30d
         """
@@ -113,7 +122,16 @@ async def admin_page(
     daily_cost_rows = await pool.fetch(
         """
         SELECT DATE(created_at) AS day,
-               SUM(input_tokens * 0.15 + output_tokens * 0.60) / 1000000.0 AS cost,
+               SUM(
+                CASE
+                    WHEN model LIKE 'anthropic/claude-sonnet%' THEN input_tokens * 3.0 + output_tokens * 15.0
+                    WHEN model LIKE 'anthropic/claude-haiku%' THEN input_tokens * 0.8 + output_tokens * 4.0
+                    WHEN model LIKE 'openai/gpt-4o-mini%' THEN input_tokens * 0.15 + output_tokens * 0.60
+                    WHEN model LIKE 'openai/gpt-4o%' THEN input_tokens * 2.5 + output_tokens * 10.0
+                    WHEN model LIKE 'gemini%pro%' THEN input_tokens * 1.25 + output_tokens * 5.0
+                    ELSE input_tokens * 0.15 + output_tokens * 0.60
+                END
+               ) / 1000000.0 AS cost,
                SUM(input_tokens + output_tokens) AS tokens,
                COUNT(*) AS calls
         FROM llm_usage
@@ -160,9 +178,13 @@ async def admin_page(
         for r in user_health_rows
     }
 
-    # System prompts
+    # System prompts + global default model
     prompt_repo = PostgresSystemPrompts(pool)
     system_prompts = await prompt_repo.list_all()
+    # Filter out the _default entry from the service list
+    global_default_entry = next((p for p in system_prompts if p.service == "_default"), None)
+    system_prompts = [p for p in system_prompts if p.service != "_default"]
+    global_default_model = global_default_entry.model if global_default_entry else ""
 
     return templates.TemplateResponse(
         request,
@@ -179,6 +201,7 @@ async def admin_page(
             "daily_active_json": daily_active,
             "user_health": user_health,
             "system_prompts": system_prompts,
+            "global_default_model": global_default_model,
         },
     )
 
@@ -297,4 +320,16 @@ async def save_prompt(
     existing = await repo.get(service)
     label = existing.label if existing else service
     await repo.save(SystemPrompt(service=service, label=label, text=text, model=model))
+    return JSONResponse({"status": "saved"})
+
+
+@router.post("/default-model")
+async def save_default_model(
+    athlete_id: Annotated[str, Depends(_require_admin)],
+    payload: dict,
+):
+    model = payload.get("model", "").strip()
+    pool = get_pool()
+    repo = PostgresSystemPrompts(pool)
+    await repo.save(SystemPrompt(service="_default", label="Global default", text="", model=model))
     return JSONResponse({"status": "saved"})

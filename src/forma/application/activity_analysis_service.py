@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
+from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
 
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.domain.workout import Workout
@@ -53,8 +53,8 @@ class ActivityAnalysisService:
         if self._prompts:
             prompt = await self._prompts.get("activity-analysis")
             if prompt:
-                return prompt.text, prompt.model or DEFAULT_MODEL
-        return _SYSTEM_INSTRUCTION, DEFAULT_MODEL
+                return prompt.text, prompt.model or await get_global_default_model()
+        return _SYSTEM_INSTRUCTION, await get_global_default_model()
 
     async def get_cached(self, workout_id: str) -> CachedActivityAnalysis | None:
         return await self._cache.get(workout_id)
