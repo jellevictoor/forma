@@ -73,7 +73,7 @@
         {% endif %}
         <div class="w-6 h-6 rounded-full shrink-0 z-10 flex items-center justify-center border-2
           {% if is_past %}border-mint{% else %}border-edge{% endif %}"
-             style="{% if is_past %}background:rgba(45,212,170,0.15);border-color:var(--color-mint){% elif is_next %}background:var(--color-surface-alt);border-color:var(--color-mint){% else %}background:var(--color-surface);border-color:var(--color-edge){% endif %}">
+             style="{% if is_past %}background:var(--color-surface);border-color:var(--color-mint){% elif is_next %}background:var(--color-surface);border-color:var(--color-mint){% else %}background:var(--color-surface);border-color:var(--color-edge){% endif %}">
           {% if is_past %}
           <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"
                style="color:var(--color-mint)">
@@ -372,7 +372,7 @@
     rect.setAttribute('width', barW);
     rect.setAttribute('height', barH);
     rect.setAttribute('rx', 3);
-    rect.setAttribute('fill', i === 0 ? 'var(--color-mint)' : 'var(--color-edge)');
+    rect.setAttribute('fill', i === volumes.length - 1 ? 'var(--color-mint)' : 'var(--color-edge)');
     svg.appendChild(rect);
 
     if (i % 2 === 0) {
@@ -393,7 +393,7 @@
       lbl.setAttribute('y', y - 3);
       lbl.setAttribute('text-anchor','middle');
       lbl.setAttribute('font-size','8');
-      lbl.setAttribute('fill', i === 0 ? 'var(--color-mint)' : 'var(--color-text-muted)');
+      lbl.setAttribute('fill', i === volumes.length - 1 ? 'var(--color-mint)' : 'var(--color-text-muted)');
       lbl.textContent = v.toFixed(0);
       svg.appendChild(lbl);
     }
