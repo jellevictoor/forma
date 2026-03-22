@@ -15,9 +15,12 @@ from forma.adapters.web.dependencies import (
     get_plan_adherence_service,
     get_plan_skip_service,
     get_workout_planning_service,
+    get_workout_repo,
 )
+from forma.ports.workout_repository import WorkoutRepository
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.plan_adherence import PlanAdherenceService
+from forma.domain.schedule_suggestions import suggest_schedule_changes
 from forma.application.plan_skip_service import PlanSkipService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.domain.athlete import ScheduleTemplateSlot
@@ -168,3 +171,19 @@ async def plan_adherence_api(
 ):
     adherence = await adherence_service.get_adherence(athlete_id)
     return JSONResponse({"days": adherence})
+
+
+@router.get("/api/plan/suggestions")
+async def schedule_suggestions_api(
+    profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    workout_repo: Annotated[WorkoutRepository, Depends(get_workout_repo)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    from datetime import date, timedelta
+    athlete = await profile_service.get_profile(athlete_id)
+    if not athlete or not athlete.schedule_template:
+        return JSONResponse({"suggestions": []})
+    since = date.today() - timedelta(weeks=4)
+    workouts = await workout_repo.list_workouts_for_athlete(athlete_id, start_date=since, limit=200)
+    suggestions = suggest_schedule_changes(athlete.schedule_template, workouts)
+    return JSONResponse({"suggestions": suggestions})

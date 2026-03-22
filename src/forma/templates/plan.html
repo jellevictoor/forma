@@ -63,6 +63,9 @@
     </form>
   </div>
 
+  <!-- Schedule suggestions -->
+  <div id="schedule-suggestions" class="hidden space-y-2 mb-4"></div>
+
   <!-- 7-day plan -->
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
     <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
@@ -510,7 +513,7 @@ document.getElementById('plan-generate-btn').addEventListener('click', refreshPl
     if (plan.stale) {
       document.getElementById('plan-stale-badge').classList.remove('hidden');
     }
-    loadAdherence();
+    loadAdherence(); loadSuggestions();
   } catch {
     document.getElementById('plan-skeleton').classList.add('hidden');
     document.getElementById('plan-content').innerHTML = `<p class="text-sm text-muted">Could not load plan.</p>`;
@@ -535,7 +538,7 @@ async function skipDay(dayDate) {
     // Re-render the plan with swapped days
     const content = document.getElementById('plan-content');
     content.innerHTML = result.days.map(dayCard).join('');
-    loadAdherence();
+    loadAdherence(); loadSuggestions();
 
     const swapDate = new Date(result.swapped_with + 'T00:00:00');
     const swapName = swapDate.toLocaleDateString('en-GB', { weekday: 'long' });
@@ -555,6 +558,21 @@ function showToast(message, color) {
   toast.textContent = message;
   document.body.appendChild(toast);
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+async function loadSuggestions() {
+  try {
+    const { suggestions } = await fetch('/api/plan/suggestions').then(r => r.json());
+    if (!suggestions || !suggestions.length) return;
+    const container = document.getElementById('schedule-suggestions');
+    container.classList.remove('hidden');
+    container.innerHTML = suggestions.map(s =>
+      `<div class="px-4 py-3 bg-amber/10 border border-amber/30 rounded-lg text-sm text-amber flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="flex-1">${s.suggestion}</span>
+      </div>`
+    ).join('');
+  } catch {}
 }
 
 async function loadAdherence() {
