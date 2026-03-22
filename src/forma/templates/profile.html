@@ -250,7 +250,7 @@
     {% endif %}
 
     <!-- Add weight form -->
-    <form method="post" action="/profile/weight" class="flex items-end gap-3 mb-6">
+    <form method="post" action="/profile/weight" class="flex flex-wrap sm:flex-nowrap items-end gap-3 mb-6">
       <div>
         <label class="block text-xs text-secondary mb-1" for="weight_kg">Weight (kg)</label>
         <input
@@ -261,7 +261,7 @@
           min="20"
           max="300"
           required
-          class="w-32 px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
+          class="w-full sm:w-32 px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary"
         />
       </div>
       <div class="flex-1">

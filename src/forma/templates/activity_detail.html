@@ -146,13 +146,13 @@
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">How did it feel?</h2>
     <span id="effort-saved" class="hidden text-xs text-mint font-medium">Saved</span>
   </div>
-  <div class="flex gap-2" id="effort-picker">
+  <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="effort-picker">
     {% for value, label, color in _effort_levels %}
     <button data-effort="{{ value }}"
             onclick="setEffort('{{ value }}')"
             aria-label="Rate effort as {{ label }}"
             aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
-            class="effort-btn flex-1 py-2.5 px-1 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border hover:opacity-80 min-h-[44px] {% if workout.perceived_effort and workout.perceived_effort.value == value %}border-current{% else %}border-transparent bg-surface-alt text-muted{% endif %}"
+            class="effort-btn py-2.5 px-2 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border hover:opacity-80 min-h-[44px] {% if workout.perceived_effort and workout.perceived_effort.value == value %}border-current{% else %}border-transparent bg-surface-alt text-muted{% endif %}"
             {% if workout.perceived_effort and workout.perceived_effort.value == value %}
             style="background:{{ color }}20;color:{{ color }}"
             {% endif %}>
@@ -293,7 +293,7 @@
     {% for msg in chat_messages %}
     <div class="flex {% if msg.role == 'user' %}justify-end{% else %}justify-start{% endif %}">
       <div class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed
-        {% if msg.role == 'user' %}bg-nav text-white{% else %}bg-surface-alt text-secondary prose-chat{% endif %}"
+        {% if msg.role == 'user' %}bg-accent text-white{% else %}bg-surface-alt text-secondary prose-chat{% endif %}"
         {% if msg.role == 'model' %}data-markdown="{{ msg.content | e }}"{% endif %}>
         {% if msg.role == 'user' %}{{ msg.content }}{% endif %}
       </div>
@@ -314,8 +314,10 @@
     <button
       type="submit"
       id="chat-send-btn"
-      class="px-4 py-2.5 bg-nav text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
-    >Send</button>
+      class="px-3.5 py-2.5 bg-accent text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+    >Send
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+    </button>
   </form>
 </div>
 
@@ -351,7 +353,7 @@ function appendMessage(container, role, text) {
   const wrapper = document.createElement('div');
   wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
   const bubble = document.createElement('div');
-  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-nav text-white' : 'bg-surface-alt text-secondary prose-chat'}`;
+  bubble.className = `max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role === 'user' ? 'bg-accent text-white' : 'bg-surface-alt text-secondary prose-chat'}`;
   if (role === 'model') {
     bubble.innerHTML = renderMarkdown(text);
   } else {

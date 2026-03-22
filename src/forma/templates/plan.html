@@ -65,10 +65,10 @@
 
   <!-- 7-day plan -->
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
-    <div class="flex items-center justify-between mb-5">
+    <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
       <h2 class="text-xs font-medium uppercase tracking-widest text-muted">7-day plan</h2>
-      <div class="flex items-center gap-3">
-        <span id="plan-stale-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-amber/10 border border-amber/30 text-amber">New activity — refresh to update</span>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="plan-stale-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-amber/10 border border-amber/30 text-amber">New activity — refresh</span>
         <button id="plan-generate-btn" class="hidden text-xs text-mint flex items-center gap-1 hover:opacity-75 transition-opacity cursor-pointer" type="button">
           Generate plan
         </button>
@@ -84,7 +84,7 @@
 
       <!-- Goal row -->
       <div class="flex gap-3 px-4 py-3 items-start">
-        <span class="text-xs font-medium uppercase tracking-wider text-muted w-24 shrink-0 pt-0.5">Goal</span>
+        <span class="text-xs font-medium uppercase tracking-wider text-muted w-16 sm:w-24 shrink-0 pt-0.5">Goal</span>
         {% if athlete and athlete.primary_goal %}
         <div class="min-w-0">
           <p class="text-primary">{{ athlete.primary_goal.description }}</p>
@@ -108,7 +108,7 @@
 
       <!-- Weekly cap row -->
       <div class="flex gap-3 px-4 py-3 items-baseline">
-        <span class="text-xs font-medium uppercase tracking-wider text-muted w-24 shrink-0">Weekly cap</span>
+        <span class="text-xs font-medium uppercase tracking-wider text-muted w-16 sm:w-24 shrink-0">Weekly cap</span>
         <p class="text-primary">
           {% if athlete and athlete.max_hours_per_week %}{{ athlete.max_hours_per_week }} hrs/week{% else %}<span class="text-muted">not set</span>{% endif %}
         </p>
@@ -117,7 +117,7 @@
       {% if athlete and athlete.active_injuries %}
       <!-- Injuries row -->
       <div class="flex gap-3 px-4 py-3 items-start">
-        <span class="text-xs font-medium uppercase tracking-wider text-muted w-24 shrink-0 pt-0.5">Injuries</span>
+        <span class="text-xs font-medium uppercase tracking-wider text-muted w-16 sm:w-24 shrink-0 pt-0.5">Injuries</span>
         <div class="space-y-0.5">
           {% for injury in athlete.active_injuries %}
           <p class="text-amber">{{ injury.affected_area }}: {{ injury.description }}</p>
@@ -129,14 +129,14 @@
       {% if athlete and athlete.notes %}
       <!-- Notes row -->
       <div class="flex gap-3 px-4 py-3 items-start">
-        <span class="text-xs font-medium uppercase tracking-wider text-muted w-24 shrink-0 pt-0.5">Notes</span>
+        <span class="text-xs font-medium uppercase tracking-wider text-muted w-16 sm:w-24 shrink-0 pt-0.5">Notes</span>
         <p class="text-secondary leading-relaxed">{{ athlete.notes }}</p>
       </div>
       {% endif %}
 
       <!-- Fitness/form row — populated by JS when plan loads -->
       <div id="plan-fitness-row" class="hidden flex gap-3 px-4 py-3 items-baseline">
-        <span class="text-xs font-medium uppercase tracking-wider text-muted w-24 shrink-0">Fitness</span>
+        <span class="text-xs font-medium uppercase tracking-wider text-muted w-16 sm:w-24 shrink-0">Fitness</span>
         <p id="plan-fitness-text" class="text-primary tabular-nums"></p>
       </div>
 
@@ -338,13 +338,13 @@ function dayCard(day) {
       <div class="flex items-start gap-3">
         ${sportDot(day.workout_type)}
         <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
               <span class="font-semibold text-sm text-primary">${dayName}</span>
               <span class="text-xs text-muted">${dateStr}</span>
             </div>
             ${!isRest ? `
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-medium capitalize" style="color:${intensityColor}">${day.intensity}</span>
                 ${day.workout_type === 'run' ? hrTargetBadge(day.intensity) : ''}
                 <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>

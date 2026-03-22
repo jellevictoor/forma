@@ -82,8 +82,8 @@
           <tr class="text-xs text-muted font-medium border-b border-edge">
             <th class="text-left py-2 pr-4">Service</th>
             <th class="text-right py-2 pr-4">Calls</th>
-            <th class="text-right py-2 pr-4">Input</th>
-            <th class="text-right py-2 pr-4">Output</th>
+            <th class="text-right py-2 pr-4 hidden sm:table-cell">Input</th>
+            <th class="text-right py-2 pr-4 hidden sm:table-cell">Output</th>
             <th class="text-right py-2">Est. cost</th>
           </tr>
         </thead>
@@ -93,8 +93,8 @@
           <tr class="border-b border-edge">
             <td class="py-2 pr-4 font-mono text-xs text-secondary">{{ row.service }}</td>
             <td class="py-2 pr-4 text-right tabular-nums text-muted text-xs">{{ row.calls }}</td>
-            <td class="py-2 pr-4 text-right tabular-nums text-xs text-secondary">{{ "{:,}".format(row.input_tokens or 0).replace(",", "\u00a0") }}</td>
-            <td class="py-2 pr-4 text-right tabular-nums text-xs text-secondary">{{ "{:,}".format(row.output_tokens or 0).replace(",", "\u00a0") }}</td>
+            <td class="py-2 pr-4 text-right tabular-nums text-xs text-secondary hidden sm:table-cell">{{ "{:,}".format(row.input_tokens or 0).replace(",", "\u00a0") }}</td>
+            <td class="py-2 pr-4 text-right tabular-nums text-xs text-secondary hidden sm:table-cell">{{ "{:,}".format(row.output_tokens or 0).replace(",", "\u00a0") }}</td>
             <td class="py-2 text-right tabular-nums text-xs text-muted">
               {% if row_cost < 0.001 %}< $0.001{% else %}${{ "%.4f"|format(row_cost) }}{% endif %}
             </td>
