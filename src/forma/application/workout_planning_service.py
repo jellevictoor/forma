@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 from forma.application.llm import check_ai_access, generate as llm_generate
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.ports.athlete_repository import AthleteRepository
+from forma.ports.system_prompt_repository import SystemPromptRepository
 from forma.ports.plan_cache_repository import (
     CachedWeeklyPlan,
     PlannedDay,
@@ -38,11 +39,20 @@ class WorkoutPlanningService:
         workout_repo: WorkoutRepository,
         analytics_repo: WorkoutAnalyticsRepository,
         plan_cache_repo: PlanCacheRepository,
+        prompt_repo: SystemPromptRepository | None = None,
     ) -> None:
         self._athletes = athlete_repo
         self._workouts = workout_repo
         self._analytics = analytics_repo
         self._cache = plan_cache_repo
+        self._prompts = prompt_repo
+
+    async def _get_system_instruction(self) -> str:
+        if self._prompts:
+            prompt = await self._prompts.get("plan")
+            if prompt:
+                return prompt.text
+        return _SYSTEM_INSTRUCTION
 
     async def get_fitness_state(self, athlete_id: str) -> dict:
         """Return current CTL/ATL/form for display."""
@@ -111,7 +121,8 @@ class WorkoutPlanningService:
         )
         workouts_with_notes = [w for w in recent_workouts if w.private_note]
         prompt = self._build_exercises_prompt(athlete, day, workout_type, description, workouts_with_notes)
-        exercises = self._call_llm_for_exercises(prompt, athlete_id)
+        system = await self._get_system_instruction()
+        exercises = self._call_llm_for_exercises(prompt, system, athlete_id)
         await self._cache.update_day_exercises(athlete_id, day, exercises)
         return exercises
 
@@ -124,7 +135,8 @@ class WorkoutPlanningService:
         ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
-        return self._call_llm_for_plan(prompt, athlete_id)
+        system = await self._get_system_instruction()
+        return self._call_llm_for_plan(prompt, system, athlete_id)
 
     async def _completed_dates_in_window(self, athlete_id: str) -> set[date]:
         today = date.today()
@@ -315,12 +327,12 @@ Respond with a JSON object with three sections:
 Each item is a concise exercise string (e.g. "3×10 goblet squat @ 24\u202fkg", "5\u202fmin easy jog").
 Respond with only the JSON object, no other text."""
 
-    def _call_llm_for_plan(self, prompt: str, athlete_id: str) -> WeeklyPlan:
-        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="plan", athlete_id=athlete_id)
+    def _call_llm_for_plan(self, prompt: str, system: str, athlete_id: str) -> WeeklyPlan:
+        text = llm_generate(system=system, prompt=prompt, service="plan", athlete_id=athlete_id)
         return self._parse_plan_response(text)
 
-    def _call_llm_for_exercises(self, prompt: str, athlete_id: str) -> dict[str, list[str]]:
-        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="exercises", athlete_id=athlete_id)
+    def _call_llm_for_exercises(self, prompt: str, system: str, athlete_id: str) -> dict[str, list[str]]:
+        text = llm_generate(system=system, prompt=prompt, service="exercises", athlete_id=athlete_id)
         return self._parse_exercises_response(text)
 
     def _parse_plan_response(self, text: str) -> WeeklyPlan:

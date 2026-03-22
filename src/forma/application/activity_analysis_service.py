@@ -15,6 +15,7 @@ from forma.ports.activity_analysis_repository import (
 )
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.chat_repository import ChatMessage, ChatRepository
+from forma.ports.system_prompt_repository import SystemPromptRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
 logger = logging.getLogger(__name__)
@@ -39,12 +40,21 @@ class ActivityAnalysisService:
         athlete_repo: AthleteRepository,
         cache_repo: ActivityAnalysisRepository,
         chat_repo: ChatRepository,
+        prompt_repo: SystemPromptRepository | None = None,
     ) -> None:
         self._workouts = workout_repo
         self._analytics = analytics_repo
         self._athletes = athlete_repo
         self._cache = cache_repo
         self._chat = chat_repo
+        self._prompts = prompt_repo
+
+    async def _get_system_instruction(self) -> str:
+        if self._prompts:
+            prompt = await self._prompts.get("activity-analysis")
+            if prompt:
+                return prompt.text
+        return _SYSTEM_INSTRUCTION
 
     async def get_cached(self, workout_id: str) -> CachedActivityAnalysis | None:
         return await self._cache.get(workout_id)
@@ -64,7 +74,8 @@ class ActivityAnalysisService:
         ff = await self._fitness_freshness_at(athlete_id, workout.start_time.date(), max_hr)
 
         prompt = self._build_prompt(workout, athlete, recent_similar, ff)
-        analysis = self._call_llm(prompt, athlete_id)
+        system = await self._get_system_instruction()
+        analysis = self._call_llm(prompt, system, athlete_id)
 
         await self._cache.save(workout_id, analysis)
         logger.info("analysis saved for workout %s", workout_id)
@@ -210,7 +221,8 @@ Respond with only the JSON, no other text."""
         athlete = await self._athletes.get(athlete_id)
         history = await self._chat.list_messages(workout_id)
         context = self._build_chat_context(workout, athlete)
-        response = self._call_llm_chat(context, history, message, athlete_id)
+        system = await self._get_system_instruction()
+        response = self._call_llm_chat(context, history, message, system, athlete_id)
 
         await self._chat.append_message(workout_id, "user", message)
         await self._chat.append_message(workout_id, "model", response)
@@ -234,7 +246,7 @@ THE WORKOUT:
 Answer their questions about this workout: how it went, what it means for their training, comparisons, recommendations, etc. Be direct and coaching. Keep answers concise."""
 
     def _call_llm_chat(
-        self, context: str, history: list[ChatMessage], message: str, athlete_id: str
+        self, context: str, history: list[ChatMessage], message: str, system: str, athlete_id: str
     ) -> str:
         messages = [
             {"role": "user", "content": context},
@@ -245,10 +257,10 @@ Answer their questions about this workout: how it went, what it means for their 
             messages.append({"role": role, "content": msg.content})
         messages.append({"role": "user", "content": message})
 
-        return llm_generate(system=_SYSTEM_INSTRUCTION, messages=messages, service="activity-chat", athlete_id=athlete_id)
+        return llm_generate(system=system, messages=messages, service="activity-chat", athlete_id=athlete_id)
 
-    def _call_llm(self, prompt: str, athlete_id: str) -> ActivityAnalysis:
-        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="activity-analysis", athlete_id=athlete_id)
+    def _call_llm(self, prompt: str, system: str, athlete_id: str) -> ActivityAnalysis:
+        text = llm_generate(system=system, prompt=prompt, service="activity-analysis", athlete_id=athlete_id)
         return self._parse_response(text)
 
     def _parse_response(self, text: str) -> ActivityAnalysis:

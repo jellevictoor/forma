@@ -12,6 +12,7 @@ from forma.adapters.postgres_execution_session import PostgresExecutionSession
 from forma.adapters.postgres_insights_cache import PostgresInsightsCache
 from forma.adapters.postgres_plan_cache import PostgresPlanCache
 from forma.adapters.postgres_pool import get_pool
+from forma.adapters.postgres_system_prompts import PostgresSystemPrompts
 
 from forma.adapters.postgres_session_repository import PostgresSessionRepository
 from forma.adapters.postgres_storage import PostgresStorage
@@ -49,6 +50,7 @@ def _create_insights_service() -> TrainingInsightsService:
         PostgresAnalyticsRepository(pool),
         PostgresStorage(pool),
         PostgresInsightsCache(pool),
+        PostgresSystemPrompts(pool),
     )
 
 
@@ -89,7 +91,7 @@ async def get_workout_repo() -> WorkoutRepository:
 def _create_goal_coaching_service() -> GoalCoachingService:
     pool = get_pool()
     storage = PostgresStorage(pool)
-    return GoalCoachingService(storage, storage, PostgresChat(pool))
+    return GoalCoachingService(storage, storage, PostgresChat(pool), PostgresSystemPrompts(pool))
 
 
 async def get_goal_coaching_service() -> GoalCoachingService:
@@ -124,6 +126,7 @@ def _create_workout_planning_service() -> WorkoutPlanningService:
         PostgresStorage(pool),
         PostgresAnalyticsRepository(pool),
         PostgresPlanCache(pool),
+        PostgresSystemPrompts(pool),
     )
 
 
@@ -197,6 +200,7 @@ def _create_activity_analysis_service() -> ActivityAnalysisService:
         PostgresStorage(pool),
         PostgresActivityAnalysis(pool),
         PostgresChat(pool),
+        PostgresSystemPrompts(pool),
     )
 
 

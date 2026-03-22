@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from forma.application.llm import check_ai_access, generate as llm_generate
 
 from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
+from forma.ports.system_prompt_repository import SystemPromptRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
 
@@ -38,10 +39,19 @@ class TrainingInsightsService:
         analytics_repo: WorkoutAnalyticsRepository,
         workout_repo: WorkoutRepository,
         cache_repo: InsightsCacheRepository,
+        prompt_repo: SystemPromptRepository | None = None,
     ) -> None:
         self._analytics = analytics_repo
         self._workouts = workout_repo
         self._cache = cache_repo
+        self._prompts = prompt_repo
+
+    async def _get_system_instruction(self) -> str:
+        if self._prompts:
+            prompt = await self._prompts.get("insights")
+            if prompt:
+                return prompt.text
+        return _SYSTEM_INSTRUCTION
 
     async def get_cached(self, athlete_id: str, year: int) -> CachedInsights | None:
         return await self._cache.get(athlete_id, year)
@@ -70,7 +80,8 @@ class TrainingInsightsService:
 
         logger.info("calling LLM for insights (%d noted workouts)", len(noted_workouts))
         prompt = self._build_prompt(noted_workouts, all_recent)
-        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="insights", athlete_id=athlete_id)
+        system = await self._get_system_instruction()
+        text = llm_generate(system=system, prompt=prompt, service="insights", athlete_id=athlete_id)
         return self._parse_response(text, len(noted_workouts))
 
     def _build_prompt(self, noted_workouts: list[dict], recent_workouts: list) -> str:
