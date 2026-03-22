@@ -281,6 +281,23 @@
           {% endif %}
         </div>
       </div>
+      <div class="flex items-center gap-3 mb-3">
+        <label class="text-xs text-muted shrink-0">Model</label>
+        <select id="prompt-model-{{ prompt.service }}"
+                class="text-sm px-3 py-2 border border-edge rounded-lg bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-mint/40">
+          {% for m in [
+            ("", "Default (gemini-2.5-flash)"),
+            ("gemini/gemini-2.5-flash", "Gemini 2.5 Flash"),
+            ("gemini/gemini-2.5-pro", "Gemini 2.5 Pro"),
+            ("anthropic/claude-sonnet-4-5-20250514", "Claude Sonnet 4.5"),
+            ("anthropic/claude-haiku-4-5-20251001", "Claude Haiku 4.5"),
+            ("openai/gpt-4o", "GPT-4o"),
+            ("openai/gpt-4o-mini", "GPT-4o Mini"),
+          ] %}
+          <option value="{{ m[0] }}" {% if prompt.model == m[0] %}selected{% endif %}>{{ m[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <textarea
         id="prompt-text-{{ prompt.service }}"
         rows="6"
@@ -463,12 +480,13 @@ function switchTab(name) {
 
 async function savePrompt(service) {
   const text = document.getElementById('prompt-text-' + service).value;
+  const model = document.getElementById('prompt-model-' + service).value;
   const status = document.getElementById('prompt-status-' + service);
   try {
     const res = await fetch('/admin/prompts/' + service, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, model }),
     });
     if (!res.ok) throw new Error();
     status.classList.remove('hidden');

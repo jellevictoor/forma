@@ -291,9 +291,10 @@ async def save_prompt(
     text = payload.get("text", "").strip()
     if not text:
         return JSONResponse({"error": "Prompt text cannot be empty"}, status_code=400)
+    model = payload.get("model", "").strip()
     pool = get_pool()
     repo = PostgresSystemPrompts(pool)
     existing = await repo.get(service)
     label = existing.label if existing else service
-    await repo.save(SystemPrompt(service=service, label=label, text=text))
+    await repo.save(SystemPrompt(service=service, label=label, text=text, model=model))
     return JSONResponse({"status": "saved"})

@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import dataclass
 
-from forma.application.llm import check_ai_access, generate as llm_generate
+from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
 
 from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
 from forma.ports.system_prompt_repository import SystemPromptRepository
@@ -46,12 +46,13 @@ class TrainingInsightsService:
         self._cache = cache_repo
         self._prompts = prompt_repo
 
-    async def _get_system_instruction(self) -> str:
+    async def _resolve_llm_config(self) -> tuple[str, str]:
+        """Return (system_instruction, model) from DB or defaults."""
         if self._prompts:
             prompt = await self._prompts.get("insights")
             if prompt:
-                return prompt.text
-        return _SYSTEM_INSTRUCTION
+                return prompt.text, prompt.model or DEFAULT_MODEL
+        return _SYSTEM_INSTRUCTION, DEFAULT_MODEL
 
     async def get_cached(self, athlete_id: str, year: int) -> CachedInsights | None:
         return await self._cache.get(athlete_id, year)
@@ -80,8 +81,8 @@ class TrainingInsightsService:
 
         logger.info("calling LLM for insights (%d noted workouts)", len(noted_workouts))
         prompt = self._build_prompt(noted_workouts, all_recent)
-        system = await self._get_system_instruction()
-        text = llm_generate(system=system, prompt=prompt, service="insights", athlete_id=athlete_id)
+        system, model = await self._resolve_llm_config()
+        text = llm_generate(model=model, system=system, prompt=prompt, service="insights", athlete_id=athlete_id)
         return self._parse_response(text, len(noted_workouts))
 
     def _build_prompt(self, noted_workouts: list[dict], recent_workouts: list) -> str:

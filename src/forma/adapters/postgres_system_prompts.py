@@ -12,7 +12,7 @@ class PostgresSystemPrompts(SystemPromptRepository):
 
     async def get(self, service: str) -> SystemPrompt | None:
         row = await self._pool.fetchrow(
-            "SELECT service, label, text, updated_at FROM system_prompts WHERE service = $1",
+            "SELECT service, label, text, model, updated_at FROM system_prompts WHERE service = $1",
             service,
         )
         if row is None:
@@ -21,33 +21,37 @@ class PostgresSystemPrompts(SystemPromptRepository):
             service=row["service"],
             label=row["label"],
             text=row["text"],
+            model=row["model"] or "",
             updated_at=row["updated_at"],
         )
 
     async def save(self, prompt: SystemPrompt) -> None:
         await self._pool.execute(
             """
-            INSERT INTO system_prompts (service, label, text, updated_at)
-            VALUES ($1, $2, $3, NOW())
+            INSERT INTO system_prompts (service, label, text, model, updated_at)
+            VALUES ($1, $2, $3, $4, NOW())
             ON CONFLICT (service) DO UPDATE SET
                 label = EXCLUDED.label,
                 text = EXCLUDED.text,
+                model = EXCLUDED.model,
                 updated_at = NOW()
             """,
             prompt.service,
             prompt.label,
             prompt.text,
+            prompt.model or "",
         )
 
     async def list_all(self) -> list[SystemPrompt]:
         rows = await self._pool.fetch(
-            "SELECT service, label, text, updated_at FROM system_prompts ORDER BY service"
+            "SELECT service, label, text, model, updated_at FROM system_prompts ORDER BY service"
         )
         return [
             SystemPrompt(
                 service=r["service"],
                 label=r["label"],
                 text=r["text"],
+                model=r["model"] or "",
                 updated_at=r["updated_at"],
             )
             for r in rows
@@ -57,11 +61,12 @@ class PostgresSystemPrompts(SystemPromptRepository):
         for d in defaults:
             await self._pool.execute(
                 """
-                INSERT INTO system_prompts (service, label, text)
-                VALUES ($1, $2, $3)
+                INSERT INTO system_prompts (service, label, text, model)
+                VALUES ($1, $2, $3, $4)
                 ON CONFLICT (service) DO NOTHING
                 """,
                 d.service,
                 d.label,
                 d.text,
+                d.model or "",
             )

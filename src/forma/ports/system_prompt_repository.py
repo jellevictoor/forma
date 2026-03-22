@@ -10,6 +10,7 @@ class SystemPrompt:
     service: str
     label: str
     text: str
+    model: str = ""
     updated_at: datetime | None = None
 
 

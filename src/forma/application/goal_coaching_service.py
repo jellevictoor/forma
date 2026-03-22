@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import check_ai_access, generate as llm_generate
+from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
 
 from forma.domain.athlete import Athlete, Goal, GoalMilestone, GoalType
 from forma.ports.athlete_repository import AthleteRepository
@@ -177,12 +177,12 @@ class GoalCoachingService:
         self._prompts = prompt_repo
         self._snapshot_cache: dict[str, tuple] = {}
 
-    async def _get_system_instruction(self) -> str:
+    async def _resolve_llm_config(self) -> tuple[str, str]:
         if self._prompts:
             prompt = await self._prompts.get("goal-coach")
             if prompt:
-                return prompt.text
-        return _SYSTEM_INSTRUCTION
+                return prompt.text, prompt.model or DEFAULT_MODEL
+        return _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         self._snapshot_cache: dict[str, tuple[TrainingSnapshot, datetime]] = {}
 
     async def build_snapshot(self, athlete_id: str) -> TrainingSnapshot:
@@ -241,8 +241,9 @@ class GoalCoachingService:
         await self._chat.clear_messages(conv_key)
 
         logger.info("goal coaching: generating opening message for %s", athlete_id)
-        system = await self._get_system_instruction()
+        system, model = await self._resolve_llm_config()
         opening = llm_generate(
+            model=model,
             system=system,
             prompt=athlete_data + "\n\n" + _START_PROMPT,
             service="goal-coach-open",
@@ -272,8 +273,9 @@ class GoalCoachingService:
         messages.append({"role": "user", "content": message})
 
         logger.info("goal coaching: chat turn for %s (history len %d)", athlete_id, len(history))
-        system = await self._get_system_instruction()
+        system, model = await self._resolve_llm_config()
         reply = llm_generate(
+            model=model,
             system=system,
             messages=messages,
             service="goal-coach-chat",
