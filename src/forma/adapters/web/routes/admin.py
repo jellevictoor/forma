@@ -109,6 +109,57 @@ async def admin_page(
     # Name lookup for recent calls
     athlete_names = {a.id: a.name for a, _ in athletes}
 
+    # Daily AI cost — last 30 days
+    daily_cost_rows = await pool.fetch(
+        """
+        SELECT DATE(created_at) AS day,
+               SUM(input_tokens * 0.15 + output_tokens * 0.60) / 1000000.0 AS cost,
+               SUM(input_tokens + output_tokens) AS tokens,
+               COUNT(*) AS calls
+        FROM llm_usage
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE(created_at)
+        ORDER BY day
+        """
+    )
+    daily_cost = [
+        {"date": r["day"].isoformat(), "cost": float(r["cost"] or 0), "tokens": int(r["tokens"] or 0), "calls": int(r["calls"])}
+        for r in daily_cost_rows
+    ]
+
+    # Daily active users — last 30 days (users who synced or had AI calls)
+    dau_rows = await pool.fetch(
+        """
+        SELECT day, COUNT(DISTINCT athlete_id) AS users FROM (
+            SELECT DATE(start_time) AS day, athlete_id FROM workouts
+            WHERE start_time >= NOW() - INTERVAL '30 days'
+            UNION ALL
+            SELECT DATE(created_at) AS day, athlete_id FROM llm_usage
+            WHERE created_at >= NOW() - INTERVAL '30 days' AND athlete_id IS NOT NULL
+        ) t
+        GROUP BY day ORDER BY day
+        """
+    )
+    daily_active = [{"date": r["day"].isoformat(), "users": int(r["users"])} for r in dau_rows]
+
+    # Per-user last activity date + workout count
+    user_health_rows = await pool.fetch(
+        """
+        SELECT athlete_id,
+               MAX(start_time) AS last_activity,
+               COUNT(*) AS workout_count
+        FROM workouts
+        GROUP BY athlete_id
+        """
+    )
+    user_health = {
+        r["athlete_id"]: {
+            "last_activity": r["last_activity"].isoformat() if r["last_activity"] else None,
+            "workout_count": int(r["workout_count"]),
+        }
+        for r in user_health_rows
+    }
+
     # System prompts
     prompt_repo = PostgresSystemPrompts(pool)
     system_prompts = await prompt_repo.list_all()
@@ -124,6 +175,9 @@ async def admin_page(
             "stats": dict(stats),
             "athlete_names": athlete_names,
             "current_athlete_id": athlete_id,
+            "daily_cost_json": daily_cost,
+            "daily_active_json": daily_active,
+            "user_health": user_health,
             "system_prompts": system_prompts,
         },
     )

@@ -41,6 +41,7 @@
     <div class="bg-surface rounded-xl border border-edge p-4">
       <p class="text-xs text-muted mb-1">Users</p>
       <p class="text-2xl font-bold text-primary tabular-nums">{{ stats.total_athletes or 0 }}</p>
+      <div id="dau-spark" class="mt-2" style="height:28px"></div>
     </div>
     <div class="bg-surface rounded-xl border border-edge p-4">
       <p class="text-xs text-muted mb-1">Workouts</p>
@@ -56,6 +57,18 @@
         {% if cost_30d < 0.01 %}< $0.01{% else %}${{ "%.3f"|format(cost_30d) }}{% endif %}
       </p>
       <p class="text-xs text-muted mt-0.5 tabular-nums">{{ "{:,}".format(tokens_30d|int).replace(",", "\u00a0") }} tokens</p>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">AI cost — 30 days</h2>
+      <div id="cost-chart" style="height:160px"></div>
+    </div>
+    <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+      <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">AI calls per day</h2>
+      <div id="calls-chart" style="height:160px"></div>
     </div>
   </div>
 
@@ -136,6 +149,7 @@
           <th class="text-left py-2 pr-4">Name</th>
           <th class="text-left py-2 pr-4 hidden sm:table-cell">Strava ID</th>
           <th class="text-right py-2 pr-4 hidden md:table-cell">Joined</th>
+          <th class="text-right py-2 pr-4 hidden md:table-cell">Last active</th>
           <th class="text-right py-2 pr-4">Tokens (30d)</th>
           <th class="text-right py-2 pr-4 hidden md:table-cell">Limit</th>
           <th class="text-right py-2 pr-4 hidden lg:table-cell">Role</th>
@@ -165,6 +179,14 @@
           </td>
           <td class="py-2.5 pr-4 text-muted text-xs text-right hidden md:table-cell">
             {{ created_at.strftime('%d %b %Y') if created_at else '—' }}
+          </td>
+          {% set uh = user_health.get(athlete.id, {}) %}
+          <td class="py-2.5 pr-4 text-xs text-right hidden md:table-cell" data-last-active="{{ uh.get('last_activity', '') }}">
+            {% if uh.get('last_activity') %}
+              <span class="text-muted last-active-label">{{ uh.get('last_activity', '')[:10] }}</span>
+            {% else %}
+              <span class="text-coral">Never</span>
+            {% endif %}
           </td>
           <td class="py-2.5 pr-4 text-right tabular-nums text-xs text-secondary">
             {% if u_total > 0 %}
@@ -282,6 +304,142 @@
 </div>
 
 <script>
+// ── Admin charts ────────────────────────────────────────────
+(function() {
+  const dailyCost = {{ daily_cost_json | tojson }};
+  const dailyActive = {{ daily_active_json | tojson }};
+
+  function miniAreaChart(container, data, valueKey, color) {
+    const el = document.getElementById(container);
+    if (!el || !data.length) return;
+    const W = el.clientWidth || 300;
+    const H = el.clientHeight || 160;
+    const margin = {top: 8, right: 8, bottom: 24, left: 44};
+    const w = W - margin.left - margin.right;
+    const h = H - margin.top - margin.bottom;
+
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const pts = data.map(d => ({date: parseDate(d.date), value: d[valueKey]}));
+
+    const x = d3.scaleTime().domain(d3.extent(pts, d => d.date)).range([0, w]);
+    const y = d3.scaleLinear().domain([0, d3.max(pts, d => d.value) * 1.1 || 1]).range([h, 0]);
+
+    const svg = d3.select(el).append('svg')
+      .attr('viewBox', `0 0 ${W} ${H}`)
+      .style('width', '100%').style('height', '100%');
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Area
+    g.append('path')
+      .datum(pts)
+      .attr('d', d3.area().x(d => x(d.date)).y0(h).y1(d => y(d.value)).curve(d3.curveMonotoneX))
+      .style('fill', color).style('opacity', 0.15);
+
+    // Line
+    g.append('path')
+      .datum(pts)
+      .attr('d', d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveMonotoneX))
+      .style('fill', 'none').style('stroke', color).style('stroke-width', 1.5);
+
+    // Axes
+    g.append('g').attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%-d %b')))
+      .selectAll('text').style('fill', 'var(--color-text-muted)').style('font-size', '10px');
+    g.append('g')
+      .call(d3.axisLeft(y).ticks(4).tickFormat(d => valueKey === 'cost' ? '$' + d.toFixed(3) : d))
+      .selectAll('text').style('fill', 'var(--color-text-muted)').style('font-size', '10px');
+    g.selectAll('.domain, .tick line').style('stroke', 'var(--color-edge)');
+  }
+
+  function miniBarChart(container, data, valueKey, color) {
+    const el = document.getElementById(container);
+    if (!el || !data.length) return;
+    const W = el.clientWidth || 300;
+    const H = el.clientHeight || 160;
+    const margin = {top: 8, right: 8, bottom: 24, left: 36};
+    const w = W - margin.left - margin.right;
+    const h = H - margin.top - margin.bottom;
+
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const pts = data.map(d => ({date: parseDate(d.date), value: d[valueKey]}));
+
+    const x = d3.scaleBand().domain(pts.map(d => d.date)).range([0, w]).padding(0.25);
+    const y = d3.scaleLinear().domain([0, d3.max(pts, d => d.value) * 1.1 || 1]).range([h, 0]);
+
+    const svg = d3.select(el).append('svg')
+      .attr('viewBox', `0 0 ${W} ${H}`)
+      .style('width', '100%').style('height', '100%');
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    g.selectAll('rect').data(pts).join('rect')
+      .attr('x', d => x(d.date)).attr('y', d => y(d.value))
+      .attr('width', x.bandwidth()).attr('height', d => h - y(d.value))
+      .attr('rx', 2)
+      .style('fill', color);
+
+    // X axis — show every 5th label
+    const tickValues = pts.filter((_, i) => i % 5 === 0 || i === pts.length - 1).map(d => d.date);
+    g.append('g').attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).tickValues(tickValues).tickFormat(d3.timeFormat('%-d %b')))
+      .selectAll('text').style('fill', 'var(--color-text-muted)').style('font-size', '10px');
+    g.append('g')
+      .call(d3.axisLeft(y).ticks(4))
+      .selectAll('text').style('fill', 'var(--color-text-muted)').style('font-size', '10px');
+    g.selectAll('.domain, .tick line').style('stroke', 'var(--color-edge)');
+  }
+
+  // DAU sparkline in KPI card
+  function dauSparkline() {
+    const el = document.getElementById('dau-spark');
+    if (!el || !dailyActive.length) return;
+    const W = el.clientWidth || 120;
+    const H = 28;
+    const vals = dailyActive.map(d => d.users);
+    const x = d3.scaleLinear().domain([0, vals.length - 1]).range([1, W - 1]);
+    const y = d3.scaleLinear().domain([0, Math.max(...vals, 1)]).range([H - 1, 1]);
+    const svg = d3.select(el).append('svg')
+      .attr('viewBox', `0 0 ${W} ${H}`).style('width', '100%').style('height', '100%');
+    svg.append('path')
+      .datum(vals)
+      .attr('d', d3.area().x((d, i) => x(i)).y0(H).y1(d => y(d)).curve(d3.curveMonotoneX))
+      .style('fill', 'var(--color-mint)').style('opacity', 0.2);
+    svg.append('path')
+      .datum(vals)
+      .attr('d', d3.line().x((d, i) => x(i)).y(d => y(d)).curve(d3.curveMonotoneX))
+      .style('fill', 'none').style('stroke', 'var(--color-mint)').style('stroke-width', 1.5);
+  }
+
+  miniAreaChart('cost-chart', dailyCost, 'cost', 'var(--color-amber)');
+  miniBarChart('calls-chart', dailyCost, 'calls', 'var(--color-sky)');
+  dauSparkline();
+
+  // Format + color "last active" cells
+  document.querySelectorAll('[data-last-active]').forEach(td => {
+    const val = td.dataset.lastActive;
+    if (!val) return;
+    const d = new Date(val);
+    const label = td.querySelector('.last-active-label');
+    if (!label) return;
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    const formatted = d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+    if (days > 14) {
+      label.classList.remove('text-muted');
+      label.classList.add('text-coral');
+      label.textContent = `${formatted} (${days}d ago)`;
+    } else if (days > 7) {
+      label.classList.remove('text-muted');
+      label.classList.add('text-amber');
+      label.textContent = `${formatted} (${days}d ago)`;
+    } else if (days === 0) {
+      label.textContent = 'Today';
+    } else if (days === 1) {
+      label.textContent = 'Yesterday';
+    } else {
+      label.textContent = `${days}d ago`;
+    }
+  });
+})();
+
 function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
   document.getElementById('tab-' + name).classList.remove('hidden');
