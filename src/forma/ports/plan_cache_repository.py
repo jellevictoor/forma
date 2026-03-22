@@ -61,6 +61,11 @@ class PlanCacheRepository(ABC):
         ...
 
     @abstractmethod
+    async def save_days(self, athlete_id: str, days: list[PlannedDay]) -> None:
+        """Update the days in the cached plan without changing metadata."""
+        ...
+
+    @abstractmethod
     async def invalidate(self, athlete_id: str) -> None:
         """Remove the cached plan for an athlete."""
         ...

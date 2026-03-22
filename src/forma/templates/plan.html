@@ -350,6 +350,9 @@ function dayCard(day) {
                 <span class="text-xs tabular-nums text-muted">${day.duration_minutes}\u00a0min</span>
                 <button type="button" onclick="toggleExercises(this)"
                         class="text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:opacity-75 cursor-pointer">${hasExercises ? 'Hide' : 'Details'}</button>
+                <button type="button" onclick="skipDay('${day.date}')"
+                        class="skip-btn text-xs px-2.5 py-1 rounded-lg border border-edge text-muted transition-colors hover:text-coral hover:border-coral/30 cursor-pointer"
+                        aria-label="Not today — move this workout">Not today</button>
               ` : `<span class="text-xs italic text-muted">Rest day</span>`}
             </div>
           </div>
@@ -508,6 +511,45 @@ document.getElementById('plan-generate-btn').addEventListener('click', refreshPl
     document.getElementById('plan-content').classList.remove('hidden');
   }
 })();
+
+async function skipDay(dayDate) {
+  const card = document.querySelector(`[data-date="${dayDate}"]`);
+  const btn = card?.querySelector('.skip-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Moving…'; }
+
+  try {
+    const result = await fetch(`/api/plan/day/${dayDate}/skip`, { method: 'POST' }).then(r => r.json());
+
+    if (!result.swapped_with) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Not today'; }
+      showToast('No available day to swap with', 'amber');
+      return;
+    }
+
+    // Re-render the plan with swapped days
+    const content = document.getElementById('plan-content');
+    content.innerHTML = result.days.map(dayCard).join('');
+    loadAdherence();
+
+    const swapDate = new Date(result.swapped_with + 'T00:00:00');
+    const swapName = swapDate.toLocaleDateString('en-GB', { weekday: 'long' });
+    showToast(`Moved to ${swapName}`, 'mint');
+  } catch {
+    if (btn) { btn.disabled = false; btn.textContent = 'Not today'; }
+    showToast('Could not update plan', 'coral');
+  }
+}
+
+function showToast(message, color) {
+  const existing = document.getElementById('plan-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.id = 'plan-toast';
+  toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg z-50 transition-opacity bg-${color}/10 border border-${color}/30 text-${color}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
 
 async function loadAdherence() {
   try {

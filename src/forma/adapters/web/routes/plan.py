@@ -13,10 +13,12 @@ from forma.adapters.web.dependencies import (
     get_athlete_id,
     get_athlete_profile_service,
     get_plan_adherence_service,
+    get_plan_skip_service,
     get_workout_planning_service,
 )
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.plan_adherence import PlanAdherenceService
+from forma.application.plan_skip_service import PlanSkipService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.domain.athlete import ScheduleTemplateSlot
 from forma.domain.workout import WorkoutType
@@ -147,6 +149,16 @@ async def refresh_day_exercises(
         athlete_id, day_date, workout_type, body.description
     )
     return JSONResponse({"exercises": exercises})
+
+
+@router.post("/api/plan/day/{day_date}/skip")
+async def skip_plan_day(
+    day_date: date,
+    skip_service: Annotated[PlanSkipService, Depends(get_plan_skip_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    result = await skip_service.skip_day(athlete_id, day_date)
+    return JSONResponse(result)
 
 
 @router.get("/api/plan/adherence")

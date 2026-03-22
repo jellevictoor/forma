@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from forma.adapters.web.app import create_app
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.plan_adherence import PlanAdherenceService
+from forma.application.plan_skip_service import PlanSkipService
 from forma.application.workout_planning_service import WorkoutPlanningService
 from forma.domain.athlete import Athlete
 from forma.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay
@@ -58,6 +59,15 @@ def make_mock_profile_service() -> AthleteProfileService:
     return service
 
 
+def make_mock_skip_service() -> PlanSkipService:
+    service = AsyncMock(spec=PlanSkipService)
+    service.skip_day = AsyncMock(return_value={
+        "swapped_with": date.today().isoformat(),
+        "days": [],
+    })
+    return service
+
+
 def make_mock_adherence_service() -> PlanAdherenceService:
     service = AsyncMock(spec=PlanAdherenceService)
     service.get_adherence = AsyncMock(return_value=[
@@ -74,6 +84,7 @@ def client():
         get_athlete_id,
         get_athlete_profile_service,
         get_plan_adherence_service,
+        get_plan_skip_service,
         get_workout_planning_service,
     )
 
@@ -83,6 +94,7 @@ def client():
         cached=make_cached_plan()
     )
     app.dependency_overrides[get_plan_adherence_service] = lambda: make_mock_adherence_service()
+    app.dependency_overrides[get_plan_skip_service] = lambda: make_mock_skip_service()
 
     return TestClient(app)
 
@@ -232,3 +244,17 @@ def test_adherence_api_returns_days_list(client):
     response = client.get("/api/plan/adherence")
 
     assert isinstance(response.json()["days"], list)
+
+
+def test_skip_day_returns_200(client):
+    today = date.today().isoformat()
+    response = client.post(f"/api/plan/day/{today}/skip")
+
+    assert response.status_code == 200
+
+
+def test_skip_day_returns_swapped_with(client):
+    today = date.today().isoformat()
+    response = client.post(f"/api/plan/day/{today}/skip")
+
+    assert "swapped_with" in response.json()

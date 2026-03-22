@@ -66,6 +66,30 @@ class PostgresPlanCache(PlanCacheRepository):
             athlete_id,
         )
 
+    async def save_days(self, athlete_id: str, days: list[PlannedDay]) -> None:
+        row = await self._pool.fetchrow(
+            "SELECT data FROM plan_cache WHERE athlete_id = $1", athlete_id
+        )
+        if row is None:
+            return
+        payload = json.loads(row["data"])
+        payload["days"] = [
+            {
+                "day": d.day.isoformat(),
+                "workout_type": d.workout_type,
+                "intensity": d.intensity,
+                "duration_minutes": d.duration_minutes,
+                "description": d.description,
+                "exercises": d.exercises,
+            }
+            for d in days
+        ]
+        await self._pool.execute(
+            "UPDATE plan_cache SET data = $1 WHERE athlete_id = $2",
+            json.dumps(payload),
+            athlete_id,
+        )
+
     async def invalidate(self, athlete_id: str) -> None:
         await self._pool.execute(
             "DELETE FROM plan_cache WHERE athlete_id = $1", athlete_id

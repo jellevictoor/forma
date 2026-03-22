@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock
 import pytest
 
 from forma.application.training_alerts import TrainingAlertsService
+from forma.domain.athlete import Athlete, Goal, GoalMilestone, GoalType
 from forma.domain.workout import PerceivedEffort, Workout, WorkoutType
+from forma.ports.plan_cache_repository import CachedWeeklyPlan, PlannedDay
 from forma.ports.workout_analytics_repository import WeeklyVolume
 
 
@@ -127,3 +129,71 @@ async def test_no_consecutive_hard_alert_with_easy_day():
     alerts = await service.check("a1")
 
     assert not any(a.alert_type == "consecutive_hard_days" for a in alerts)
+
+
+def _make_service_with_goal(workouts=None, plan_days=None, goal=None) -> TrainingAlertsService:
+    repo = AsyncMock()
+    repo.list_workouts_for_athlete = AsyncMock(return_value=workouts or [])
+    analytics = AsyncMock()
+    analytics.weekly_volume_for_range = AsyncMock(return_value=[])
+    plan_cache = AsyncMock()
+    plan_cache.get = AsyncMock(return_value=CachedWeeklyPlan(
+        days=plan_days or [],
+        rationale="Test",
+        generated_at=datetime.now(tz=timezone.utc),
+    ) if plan_days else None)
+    athlete_repo = AsyncMock()
+    athlete = Athlete(id="a1", name="Test", goals=[goal] if goal else [])
+    athlete_repo.get = AsyncMock(return_value=athlete)
+    return TrainingAlertsService(repo, analytics, plan_cache, athlete_repo)
+
+
+@pytest.mark.asyncio
+async def test_goal_drift_alert_when_sessions_missed():
+    today = date.today()
+    plan_days = [
+        PlannedDay(day=today - timedelta(days=2), workout_type="run", intensity="easy", duration_minutes=45, description=""),
+        PlannedDay(day=today - timedelta(days=1), workout_type="run", intensity="moderate", duration_minutes=50, description=""),
+        PlannedDay(day=today + timedelta(days=1), workout_type="rest", intensity="rest", duration_minutes=0, description=""),
+    ]
+    goal = Goal(goal_type=GoalType.TIME_GOAL, description="Sub-25 5k")
+    service = _make_service_with_goal(workouts=[], plan_days=plan_days, goal=goal)
+
+    alerts = await service.check("a1")
+
+    assert any(a.alert_type == "goal_drift" for a in alerts)
+
+
+@pytest.mark.asyncio
+async def test_goal_drift_includes_milestone_warning():
+    today = date.today()
+    plan_days = [
+        PlannedDay(day=today - timedelta(days=2), workout_type="run", intensity="easy", duration_minutes=45, description=""),
+        PlannedDay(day=today - timedelta(days=1), workout_type="run", intensity="moderate", duration_minutes=50, description=""),
+    ]
+    milestone = GoalMilestone(date=today + timedelta(days=10), description="5k test", target="sub-28")
+    goal = Goal(goal_type=GoalType.TIME_GOAL, description="Sub-25 5k", milestones=[milestone])
+    service = _make_service_with_goal(workouts=[], plan_days=plan_days, goal=goal)
+
+    alerts = await service.check("a1")
+
+    drift = next(a for a in alerts if a.alert_type == "goal_drift")
+    assert "milestone" in drift.message
+
+
+@pytest.mark.asyncio
+async def test_no_goal_drift_when_sessions_completed():
+    today = date.today()
+    plan_days = [
+        PlannedDay(day=today - timedelta(days=1), workout_type="run", intensity="easy", duration_minutes=45, description=""),
+    ]
+    goal = Goal(goal_type=GoalType.TIME_GOAL, description="Sub-25 5k")
+    service = _make_service_with_goal(
+        workouts=[_workout(1)],
+        plan_days=plan_days,
+        goal=goal,
+    )
+
+    alerts = await service.check("a1")
+
+    assert not any(a.alert_type == "goal_drift" for a in alerts)
