@@ -32,6 +32,7 @@ This project follows **Hexagonal Architecture** (Ports & Adapters) with a clear 
 ## Clean code guidelines
 
 - always run `uv run ruff check` and fix the issues before being done with a task
+- always run `uv run pytest tests/test_smoke.py` before committing — these catch DI wiring, missing attributes, and template errors that unit tests miss
 - always use uv as dependency management and build tool
 
 ### General rules
