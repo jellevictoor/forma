@@ -132,6 +132,12 @@
   {% endif %}
 </div>
 
+<!-- Recovery estimate -->
+<div id="recovery-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
+  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-2">Recovery</h2>
+  <p id="recovery-text" class="text-sm text-secondary"></p>
+</div>
+
 <!-- Perceived effort -->
 {% set _effort_levels = [
   ("very_easy", "Very easy", "var(--color-sky)"),
@@ -1355,6 +1361,40 @@ async function setEffort(value) {
     setTimeout(() => saved.classList.add('hidden'), 1500);
   } catch {}
 }
+
+// Recovery estimate
+(async function() {
+  try {
+    const ffData = await fetch('/api/progress/fitness-freshness').then(r => r.json());
+    if (!ffData.length) return;
+    const form = ffData[ffData.length - 1].form;
+    const duration = {{ workout.duration_minutes }};
+    const avgHr = {{ workout.average_heartrate or 'null' }};
+    const maxHr = {{ athlete.max_heartrate if athlete and athlete.max_heartrate else 'null' }};
+
+    // Same formula as domain/recovery.py
+    let base = duration < 30 ? 12 : duration < 60 ? 24 : duration < 90 ? 36 : 48;
+    if (avgHr && maxHr && maxHr > 0) {
+      const pct = avgHr / maxHr;
+      if (pct > 0.85) base = Math.round(base * 1.5);
+      else if (pct < 0.65) base = Math.round(base * 0.7);
+    }
+    if (form < -15) base = Math.round(base * 1.4);
+    else if (form < -5) base = Math.round(base * 1.2);
+    else if (form > 10) base = Math.round(base * 0.8);
+    const hours = Math.max(6, Math.min(72, base));
+
+    let label;
+    if (hours <= 12) label = 'Ready for another session';
+    else if (hours <= 24) label = 'Light activity tomorrow, hard session in 2 days';
+    else if (hours <= 36) label = 'Easy day tomorrow recommended';
+    else if (hours <= 48) label = 'Take a rest day before your next hard session';
+    else label = 'Extended recovery needed — prioritise sleep and nutrition';
+
+    document.getElementById('recovery-text').textContent = `~${hours}h — ${label}`;
+    document.getElementById('recovery-card').classList.remove('hidden');
+  } catch {}
+})();
 
 // Mark the initially selected button as active
 document.querySelectorAll('.effort-btn').forEach(b => {
