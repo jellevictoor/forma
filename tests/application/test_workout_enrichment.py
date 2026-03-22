@@ -19,8 +19,6 @@ def make_workout(detail_fetched: bool = False, strava_id: int = 123) -> Workout:
         start_time=datetime(2026, 2, 16, 9, 0, tzinfo=timezone.utc),
         duration_seconds=3600,
         detail_fetched=detail_fetched,
-        mood="good",
-        sleep_quality="great",
     )
 
 
@@ -57,16 +55,15 @@ async def test_fetches_detail_and_saves(strava_client, workout_repo):
     strava_client.get_activity.assert_called_once_with(123)
 
 
-async def test_preserves_user_edits_during_enrichment(strava_client, workout_repo):
+async def test_preserves_id_during_enrichment(strava_client, workout_repo):
     enriched = make_workout(detail_fetched=True)
-    enriched = enriched.model_copy(update={"mood": "", "sleep_quality": ""})
+    enriched = enriched.model_copy(update={"id": "enriched-id"})
     strava_client.activity_to_workout = MagicMock(return_value=enriched)
 
     service = WorkoutEnrichmentService(strava_client, workout_repo)
     result = await service.ensure_detail("w1")
 
-    assert result.mood == "good"
-    assert result.sleep_quality == "great"
+    assert result.id == "w1"
 
 
 async def test_returns_none_when_workout_not_found(strava_client, workout_repo):

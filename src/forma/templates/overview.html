@@ -72,7 +72,7 @@
 
 {# ── Form widget ──────────────────────────────────────────── #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
-  <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Your form today</p>
+  <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Readiness</p>
   <div class="flex items-stretch gap-6 md:gap-10">
 
     {# Status + bars #}
@@ -472,8 +472,13 @@ function countUp(el, target, decimals = 0, duration = 700) {
     statusEl.textContent = label;
     statusEl.style.color = color;
 
+    // Readiness score (0-100)
+    const formScore = Math.max(0, Math.min(100, 50 + form * (50 / 30)));
+    const fitnessScore = Math.max(0, Math.min(100, fitness * (100 / 80)));
+    const readiness = Math.round(Math.max(0, Math.min(100, formScore * 0.6 + fitnessScore * 0.4)));
+
     const tsbEl = document.getElementById('form-tsb');
-    tsbEl.textContent = (form >= 0 ? '+' : '') + form.toFixed(1);
+    tsbEl.textContent = readiness + '/100';
     tsbEl.style.color = color;
 
     // Count consecutive days in current form zone (from most recent backwards)

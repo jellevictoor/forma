@@ -33,6 +33,8 @@
 - [x] **Goal: fixed weekly volume chart order** — oldest on left, newest on right
 - [x] **Goal: removed confusing "490 days ago"** — shows "Target date passed" instead
 - [x] **Daily briefing on web** — training alerts + form widget serve this purpose
+- [x] **Removed unused mood/sleep_quality fields** — dead code cleanup
+- [x] **Analytics sport switch** — client-side, no full page reload
 
 ---
 
@@ -40,20 +42,15 @@
 
 ### Analytics
 - [ ] **Pace / HR zones trend chart** — weekly zone distribution over time (Z1–Z5)
-- [ ] **Elevation trend chart** — weekly/monthly elevation gain aggregation
 - [ ] **Long run detection** — auto-tag runs above threshold, track separately
 - [ ] **Predicted race times** — derived from pace trend + recent efforts
-- [ ] **Analytics sport switch** — switching sports refreshes the whole page, should be client-side
 
 ### Recovery & readiness
 - [ ] **Daily readiness number** — single 1-100 score wrapping CTL/ATL/Form
 - [ ] **Recovery time recommendation** — post-workout suggestion based on effort + form
-- [ ] **Sleep quality integration** — `sleep_quality` field exists on Workout, never used
 
 ### Coaching
-- [ ] **Schedule adjustment suggestions** — `suggest_schedule_adjustment()` port exists, never wired
+- [ ] **Schedule adjustment suggestions** — when a user skips the same day 3+ weeks in a row, suggest moving that workout to a different day. Needs: skip history tracking + a simple rule-based check.
 
 ### Infrastructure
-- [ ] **Strava webhook** — real-time activity sync instead of manual
-- [ ] **Gear / shoe mileage tracking** — not modelled; Strava and Garmin both track this
-- [ ] **AI tier system** — `ai_tier` field on Athlete, per-tier model routing from admin
+- [ ] **Strava webhook** — register a webhook subscription at `https://www.strava.com/api/v3/push_subscriptions`. Strava sends POST to a callback URL on every new activity. Needs: a public endpoint (Cloudflare tunnel handles this), a `POST /api/strava/webhook` route that verifies the subscription and triggers a single-activity sync. Replaces manual sync for new activities; backfill still needed for history.
