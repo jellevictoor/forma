@@ -17,7 +17,10 @@ services:
       retries: 5
 
   forma:
-    build: .
+    build:
+      context: .
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: forma
     ports:
       - "9080:8080"

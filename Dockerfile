@@ -22,7 +22,9 @@ RUN uv pip install -e . --no-deps
 RUN mkdir -p data
 
 # Set environment variables
+ARG GIT_COMMIT=unknown
 ENV PYTHONPATH=/app/src
+ENV GIT_COMMIT=${GIT_COMMIT}
 
 # Run the web server
 ENTRYPOINT ["uv", "run", "uvicorn", "forma.__main__:app", "--host", "0.0.0.0", "--port", "8080"]

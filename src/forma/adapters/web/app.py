@@ -63,7 +63,10 @@ async def _lifespan(app: FastAPI):
 
 
 def _get_git_hash() -> str:
-    """Return short git commit hash, or 'dev' if not available."""
+    """Return short git commit hash from env (Docker) or git (local dev)."""
+    env_hash = os.environ.get("GIT_COMMIT")
+    if env_hash and env_hash != "unknown":
+        return env_hash[:7]
     try:
         import subprocess
         return subprocess.check_output(
@@ -71,7 +74,7 @@ def _get_git_hash() -> str:
             stderr=subprocess.DEVNULL,
         ).decode().strip()
     except Exception:
-        return "dev"
+        return "unknown"
 
 
 _COMMIT_HASH = _get_git_hash()
