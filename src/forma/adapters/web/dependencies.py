@@ -44,12 +44,10 @@ def _create_analytics_service() -> AnalyticsService:
 
 @lru_cache
 def _create_insights_service() -> TrainingInsightsService:
-    settings = get_settings()
     pool = get_pool()
     return TrainingInsightsService(
         PostgresAnalyticsRepository(pool),
         PostgresStorage(pool),
-        settings.gemini_api_key,
         PostgresInsightsCache(pool),
     )
 
@@ -89,10 +87,9 @@ async def get_workout_repo() -> WorkoutRepository:
 
 @lru_cache
 def _create_goal_coaching_service() -> GoalCoachingService:
-    settings = get_settings()
     pool = get_pool()
     storage = PostgresStorage(pool)
-    return GoalCoachingService(storage, storage, settings.gemini_api_key, PostgresChat(pool))
+    return GoalCoachingService(storage, storage, PostgresChat(pool))
 
 
 async def get_goal_coaching_service() -> GoalCoachingService:
@@ -101,10 +98,9 @@ async def get_goal_coaching_service() -> GoalCoachingService:
 
 @lru_cache
 def _create_athlete_profile_service() -> AthleteProfileService:
-    settings = get_settings()
     pool = get_pool()
     storage = PostgresStorage(pool)
-    return AthleteProfileService(storage, storage, settings.gemini_api_key)
+    return AthleteProfileService(storage, storage)
 
 
 @lru_cache
@@ -122,13 +118,11 @@ async def get_weight_tracking_service() -> WeightTrackingService:
 
 @lru_cache
 def _create_workout_planning_service() -> WorkoutPlanningService:
-    settings = get_settings()
     pool = get_pool()
     return WorkoutPlanningService(
         PostgresStorage(pool),
         PostgresStorage(pool),
         PostgresAnalyticsRepository(pool),
-        settings.gemini_api_key,
         PostgresPlanCache(pool),
     )
 
@@ -196,13 +190,11 @@ async def get_strava_sync(request: Request) -> AsyncIterator[FullStravaSync]:
 
 @lru_cache
 def _create_activity_analysis_service() -> ActivityAnalysisService:
-    settings = get_settings()
     pool = get_pool()
     return ActivityAnalysisService(
         PostgresStorage(pool),
         PostgresAnalyticsRepository(pool),
         PostgresStorage(pool),
-        settings.gemini_api_key,
         PostgresActivityAnalysis(pool),
         PostgresChat(pool),
     )

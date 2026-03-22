@@ -1,14 +1,10 @@
-"""Workout planning service — generates a 7-day rolling plan using Gemini."""
+"""Workout planning service — generates a 7-day rolling plan."""
 
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from google import genai
-from google.genai import types
-
-
-from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+from forma.application.llm import check_ai_access, generate as llm_generate
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.plan_cache_repository import (
@@ -21,7 +17,6 @@ from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
 logger = logging.getLogger(__name__)
 
-PLAN_MODEL = "models/gemini-2.5-flash"
 
 _SYSTEM_INSTRUCTION = """\
 You are a personal fitness coach. Generate training plans and exercise prescriptions that are
@@ -42,13 +37,11 @@ class WorkoutPlanningService:
         athlete_repo: AthleteRepository,
         workout_repo: WorkoutRepository,
         analytics_repo: WorkoutAnalyticsRepository,
-        gemini_api_key: str,
         plan_cache_repo: PlanCacheRepository,
     ) -> None:
         self._athletes = athlete_repo
         self._workouts = workout_repo
         self._analytics = analytics_repo
-        self._client = genai.Client(api_key=gemini_api_key)
         self._cache = plan_cache_repo
 
     async def get_fitness_state(self, athlete_id: str) -> dict:
@@ -118,7 +111,7 @@ class WorkoutPlanningService:
         )
         workouts_with_notes = [w for w in recent_workouts if w.private_note]
         prompt = self._build_exercises_prompt(athlete, day, workout_type, description, workouts_with_notes)
-        exercises = self._call_gemini_for_exercises(prompt, athlete_id)
+        exercises = self._call_llm_for_exercises(prompt, athlete_id)
         await self._cache.update_day_exercises(athlete_id, day, exercises)
         return exercises
 
@@ -131,7 +124,7 @@ class WorkoutPlanningService:
         ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
-        return self._call_gemini_for_plan(prompt, athlete_id)
+        return self._call_llm_for_plan(prompt, athlete_id)
 
     async def _completed_dates_in_window(self, athlete_id: str) -> set[date]:
         today = date.today()
@@ -322,15 +315,13 @@ Respond with a JSON object with three sections:
 Each item is a concise exercise string (e.g. "3×10 goblet squat @ 24\u202fkg", "5\u202fmin easy jog").
 Respond with only the JSON object, no other text."""
 
-    def _call_gemini_for_plan(self, prompt: str, athlete_id: str) -> WeeklyPlan:
-        config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = gemini_generate(self._client, PLAN_MODEL, prompt, config, service="plan", athlete_id=athlete_id)
-        return self._parse_plan_response(response.text)
+    def _call_llm_for_plan(self, prompt: str, athlete_id: str) -> WeeklyPlan:
+        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="plan", athlete_id=athlete_id)
+        return self._parse_plan_response(text)
 
-    def _call_gemini_for_exercises(self, prompt: str, athlete_id: str) -> dict[str, list[str]]:
-        config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = gemini_generate(self._client, PLAN_MODEL, prompt, config, service="exercises", athlete_id=athlete_id)
-        return self._parse_exercises_response(response.text)
+    def _call_llm_for_exercises(self, prompt: str, athlete_id: str) -> dict[str, list[str]]:
+        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="exercises", athlete_id=athlete_id)
+        return self._parse_exercises_response(text)
 
     def _parse_plan_response(self, text: str) -> WeeklyPlan:
         try:

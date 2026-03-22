@@ -1,21 +1,16 @@
-"""Training insights service — analyses private workout notes with Gemini."""
+"""Training insights service — analyses private workout notes."""
 
 import json
 import logging
 from dataclasses import dataclass
 
-from google import genai
-from google.genai import types
-
-from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
-
+from forma.application.llm import check_ai_access, generate as llm_generate
 
 from forma.ports.insights_cache_repository import CachedInsights, InsightsCacheRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
-logger = logging.getLogger(__name__)
 
-INSIGHT_MODEL = "models/gemini-2.5-flash"
+logger = logging.getLogger(__name__)
 
 _SYSTEM_INSTRUCTION = """\
 You are analysing an athlete's private workout notes to find training patterns and their impact.
@@ -42,12 +37,10 @@ class TrainingInsightsService:
         self,
         analytics_repo: WorkoutAnalyticsRepository,
         workout_repo: WorkoutRepository,
-        gemini_api_key: str,
         cache_repo: InsightsCacheRepository,
     ) -> None:
         self._analytics = analytics_repo
         self._workouts = workout_repo
-        self._client = genai.Client(api_key=gemini_api_key)
         self._cache = cache_repo
 
     async def get_cached(self, athlete_id: str, year: int) -> CachedInsights | None:
@@ -75,11 +68,10 @@ class TrainingInsightsService:
                 note_count=0,
             )
 
-        logger.info("calling Gemini for insights (%d noted workouts)", len(noted_workouts))
+        logger.info("calling LLM for insights (%d noted workouts)", len(noted_workouts))
         prompt = self._build_prompt(noted_workouts, all_recent)
-        config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = gemini_generate(self._client, INSIGHT_MODEL, prompt, config, service="insights", athlete_id=athlete_id)
-        return self._parse_response(response.text, len(noted_workouts))
+        text = llm_generate(system=_SYSTEM_INSTRUCTION, prompt=prompt, service="insights", athlete_id=athlete_id)
+        return self._parse_response(text, len(noted_workouts))
 
     def _build_prompt(self, noted_workouts: list[dict], recent_workouts: list) -> str:
         notes_block = "\n\n".join(

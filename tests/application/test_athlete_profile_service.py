@@ -19,7 +19,7 @@ def make_service(athlete: Athlete | None = None) -> AthleteProfileService:
     athlete_repo.save = AsyncMock()
     workout_repo = AsyncMock()
     workout_repo.get_recent = AsyncMock(return_value=[])
-    return AthleteProfileService(athlete_repo, workout_repo, gemini_api_key="fake-key")
+    return AthleteProfileService(athlete_repo, workout_repo)
 
 
 async def test_update_profile_name():
@@ -88,7 +88,7 @@ async def test_add_schedule_slot_saves_athlete():
     athlete_repo.get = AsyncMock(return_value=make_athlete())
     athlete_repo.save = AsyncMock()
     workout_repo = AsyncMock()
-    service = AthleteProfileService(athlete_repo, workout_repo, gemini_api_key="fake-key")
+    service = AthleteProfileService(athlete_repo, workout_repo)
     slot = ScheduleTemplateSlot(workout_type=WorkoutType.STRENGTH, day_of_week=1)
 
     await service.add_schedule_slot("athlete1", slot)
@@ -119,7 +119,7 @@ async def test_remove_schedule_slot_saves_athlete():
     athlete_repo.get = AsyncMock(return_value=athlete)
     athlete_repo.save = AsyncMock()
     workout_repo = AsyncMock()
-    service = AthleteProfileService(athlete_repo, workout_repo, gemini_api_key="fake-key")
+    service = AthleteProfileService(athlete_repo, workout_repo)
 
     await service.remove_schedule_slot("athlete1", 0)
 

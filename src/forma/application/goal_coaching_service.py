@@ -1,4 +1,4 @@
-"""Goal coaching service — conversational, data-grounded goal setting with Gemini."""
+"""Goal coaching service — conversational, data-grounded goal setting."""
 
 import json
 import logging
@@ -6,17 +6,12 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
-from google import genai
-from google.genai import types
-
-from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+from forma.application.llm import check_ai_access, generate as llm_generate
 
 from forma.domain.athlete import Athlete, Goal, GoalMilestone, GoalType
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.chat_repository import ChatRepository
 from forma.ports.workout_repository import WorkoutRepository
-
-COACHING_MODEL = "models/gemini-2.5-flash"
 
 logger = logging.getLogger(__name__)
 
@@ -172,12 +167,10 @@ class GoalCoachingService:
         self,
         athlete_repo: AthleteRepository,
         workout_repo: WorkoutRepository,
-        gemini_api_key: str,
         chat_repo: ChatRepository,
     ) -> None:
         self._athletes = athlete_repo
         self._workouts = workout_repo
-        self._client = genai.Client(api_key=gemini_api_key)
         self._chat = chat_repo
         self._snapshot_cache: dict[str, tuple[TrainingSnapshot, datetime]] = {}
 
@@ -236,13 +229,13 @@ class GoalCoachingService:
         conv_key = f"goal:{athlete_id}"
         await self._chat.clear_messages(conv_key)
 
-        contents = [
-            {"role": "user", "parts": [{"text": athlete_data + "\n\n" + _START_PROMPT}]},
-        ]
         logger.info("goal coaching: generating opening message for %s", athlete_id)
-        config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = gemini_generate(self._client, COACHING_MODEL, contents, config, service="goal-coach-open", athlete_id=athlete_id)
-        opening = response.text.strip()
+        opening = llm_generate(
+            system=_SYSTEM_INSTRUCTION,
+            prompt=athlete_data + "\n\n" + _START_PROMPT,
+            service="goal-coach-open",
+            athlete_id=athlete_id,
+        )
         await self._chat.append_message(conv_key, "model", opening)
         return opening
 
@@ -257,18 +250,22 @@ class GoalCoachingService:
         conv_key = f"goal:{athlete_id}"
         history = await self._chat.list_messages(conv_key)
 
-        contents = [
-            {"role": "user", "parts": [{"text": athlete_data}]},
-            {"role": "model", "parts": [{"text": "Understood. I have the athlete's full context."}]},
+        messages = [
+            {"role": "user", "content": athlete_data},
+            {"role": "assistant", "content": "Understood. I have the athlete's full context."},
         ]
         for msg in history:
-            contents.append({"role": msg.role, "parts": [{"text": msg.content}]})
-        contents.append({"role": "user", "parts": [{"text": message}]})
+            role = "assistant" if msg.role == "model" else "user"
+            messages.append({"role": role, "content": msg.content})
+        messages.append({"role": "user", "content": message})
 
         logger.info("goal coaching: chat turn for %s (history len %d)", athlete_id, len(history))
-        config = types.GenerateContentConfig(system_instruction=_SYSTEM_INSTRUCTION)
-        response = gemini_generate(self._client, COACHING_MODEL, contents, config, service="goal-coach-chat", athlete_id=athlete_id)
-        reply = response.text.strip()
+        reply = llm_generate(
+            system=_SYSTEM_INSTRUCTION,
+            messages=messages,
+            service="goal-coach-chat",
+            athlete_id=athlete_id,
+        )
         await self._chat.append_message(conv_key, "user", message)
         await self._chat.append_message(conv_key, "model", reply)
         return reply

@@ -6,10 +6,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from forma.application.gemini_utils import AIQuotaExceeded
+from forma.application.llm import AIQuotaExceeded
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
-from google.genai.errors import ClientError
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
@@ -114,19 +113,17 @@ def create_app() -> FastAPI:
             content={"error": "ai_quota_exceeded", "message": str(exc)},
         )
 
-    @app.exception_handler(ClientError)
-    async def gemini_client_error_handler(request: Request, exc: ClientError):
-        if exc.code == 429:
-            logger.warning("Gemini quota exceeded: %s", exc)
+    @app.exception_handler(Exception)
+    async def llm_error_handler(request: Request, exc: Exception):
+        # Catch litellm rate limit errors (they raise litellm.RateLimitError)
+        exc_name = type(exc).__name__
+        if "RateLimitError" in exc_name or "429" in str(exc):
+            logger.warning("LLM rate limit: %s", exc)
             return JSONResponse(
                 status_code=429,
-                content={"error": "quota_exceeded", "message": "Gemini API quota exceeded. Please try again later."},
+                content={"error": "quota_exceeded", "message": "AI API rate limit exceeded. Please try again later."},
             )
-        logger.error("Gemini client error: %s", exc)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "gemini_error", "message": str(exc.message or exc)},
-        )
+        raise exc
 
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

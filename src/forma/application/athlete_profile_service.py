@@ -4,20 +4,16 @@ import json
 from dataclasses import dataclass
 from datetime import date
 
-from google import genai
-
-from forma.application.gemini_utils import check_ai_access, generate as gemini_generate
+from forma.application.llm import check_ai_access, generate as llm_generate
 
 from forma.domain.athlete import Athlete, Goal, ScheduleTemplateSlot
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.workout_repository import WorkoutRepository
 
-ADVICE_MODEL = "models/gemini-2.5-flash"
-
 
 @dataclass
 class GoalAdvice:
-    """Gemini-generated advice for the athlete's primary goal."""
+    """AI-generated advice for the athlete's primary goal."""
 
     summary: str
     training_tips: list[str]
@@ -25,17 +21,15 @@ class GoalAdvice:
 
 
 class AthleteProfileService:
-    """Manages athlete profile, goals, and Gemini-powered goal advice."""
+    """Manages athlete profile, goals, and AI-powered goal advice."""
 
     def __init__(
         self,
         athlete_repo: AthleteRepository,
         workout_repo: WorkoutRepository,
-        gemini_api_key: str,
     ) -> None:
         self._athletes = athlete_repo
         self._workouts = workout_repo
-        self._client = genai.Client(api_key=gemini_api_key)
 
     async def get_profile(self, athlete_id: str) -> Athlete | None:
         return await self._athletes.get(athlete_id)
@@ -90,8 +84,8 @@ class AthleteProfileService:
 
         recent_workouts = await self._workouts.get_recent(athlete_id, count=28)
         prompt = self._build_advice_prompt(athlete, recent_workouts)
-        response = gemini_generate(self._client, ADVICE_MODEL, prompt, service="profile-advice", athlete_id=athlete_id)
-        return self._parse_advice_response(response.text)
+        text = llm_generate(prompt=prompt, service="profile-advice", athlete_id=athlete_id)
+        return self._parse_advice_response(text)
 
     def _build_advice_prompt(self, athlete: Athlete, recent_workouts: list) -> str:
         goal = athlete.primary_goal

@@ -83,7 +83,6 @@ def _make_service(workout_repo=None, analytics_repo=None, athlete_repo=None, cac
         workout_repo=workout_repo or wr,
         analytics_repo=analytics_repo or ar,
         athlete_repo=athlete_repo or atr,
-        gemini_api_key="fake-key",
         cache_repo=cache_repo or cr,
         chat_repo=chat_repo or chr_,
     )
@@ -112,10 +111,10 @@ async def test_get_cached_returns_cached_analysis():
     assert result is cached
 
 
-async def test_get_cached_does_not_call_gemini():
+async def test_get_cached_does_not_call_llm():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini") as mock_gemini:
+    with patch.object(service, "_call_llm") as mock_gemini:
         await service.get_cached("w1")
 
     mock_gemini.assert_not_called()
@@ -124,7 +123,7 @@ async def test_get_cached_does_not_call_gemini():
 async def test_generate_and_cache_returns_cached_analysis():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()):
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()):
         result = await service.generate_and_cache("athlete1", "w1")
 
     assert isinstance(result, CachedActivityAnalysis)
@@ -134,7 +133,7 @@ async def test_generate_and_cache_saves_to_cache():
     _, _, _, cache_repo, _ = _make_deps()
     service = _make_service(cache_repo=cache_repo)
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()):
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()):
         await service.generate_and_cache("athlete1", "w1")
 
     cache_repo.save.assert_called_once()
@@ -143,7 +142,7 @@ async def test_generate_and_cache_saves_to_cache():
 async def test_generate_and_cache_calls_gemini():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()) as mock_gemini:
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()) as mock_gemini:
         await service.generate_and_cache("athlete1", "w1")
 
     mock_gemini.assert_called_once()
@@ -155,7 +154,7 @@ async def test_generate_raises_when_workout_not_found():
     service = _make_service(workout_repo=workout_repo)
 
     with pytest.raises(ValueError, match="not found"):
-        with patch.object(service, "_call_gemini", return_value=_sample_analysis()):
+        with patch.object(service, "_call_llm", return_value=_sample_analysis()):
             await service.generate_and_cache("athlete1", "w1")
 
 
@@ -163,7 +162,7 @@ async def test_generate_fetches_athlete_profile():
     _, _, athlete_repo, _, _ = _make_deps()
     service = _make_service(athlete_repo=athlete_repo)
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()):
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()):
         await service.generate_and_cache("athlete1", "w1")
 
     athlete_repo.get.assert_called_once_with("athlete1")
@@ -172,7 +171,7 @@ async def test_generate_fetches_athlete_profile():
 async def test_prompt_contains_workout_type():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()) as mock:
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()) as mock:
         await service.generate_and_cache("athlete1", "w1")
 
     prompt = mock.call_args[0][0]
@@ -182,7 +181,7 @@ async def test_prompt_contains_workout_type():
 async def test_prompt_contains_athlete_goals():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()) as mock:
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()) as mock:
         await service.generate_and_cache("athlete1", "w1")
 
     prompt = mock.call_args[0][0]
@@ -192,7 +191,7 @@ async def test_prompt_contains_athlete_goals():
 async def test_prompt_contains_fitness_state():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()) as mock:
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()) as mock:
         await service.generate_and_cache("athlete1", "w1")
 
     prompt = mock.call_args[0][0]
@@ -205,7 +204,7 @@ async def test_prompt_includes_recent_similar_workouts():
     workout_repo.list_workouts_for_athlete = AsyncMock(return_value=[recent_run])
     service = _make_service(workout_repo=workout_repo)
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()) as mock:
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()) as mock:
         await service.generate_and_cache("athlete1", "w1")
 
     prompt = mock.call_args[0][0]
@@ -215,7 +214,7 @@ async def test_prompt_includes_recent_similar_workouts():
 async def test_prompt_handles_no_recent_similar_workouts():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini", return_value=_sample_analysis()) as mock:
+    with patch.object(service, "_call_llm", return_value=_sample_analysis()) as mock:
         await service.generate_and_cache("athlete1", "w1")
 
     prompt = mock.call_args[0][0]
@@ -260,7 +259,7 @@ async def test_chat_saves_user_message():
     _, _, _, _, chat_repo = _make_deps()
     service = _make_service(chat_repo=chat_repo)
 
-    with patch.object(service, "_call_gemini_chat", return_value="Great run!"):
+    with patch.object(service, "_call_llm_chat", return_value="Great run!"):
         await service.chat("athlete1", "w1", "How did I do?")
 
     chat_repo.append_message.assert_any_call("w1", "user", "How did I do?")
@@ -270,7 +269,7 @@ async def test_chat_saves_model_response():
     _, _, _, _, chat_repo = _make_deps()
     service = _make_service(chat_repo=chat_repo)
 
-    with patch.object(service, "_call_gemini_chat", return_value="Great run!"):
+    with patch.object(service, "_call_llm_chat", return_value="Great run!"):
         await service.chat("athlete1", "w1", "How did I do?")
 
     chat_repo.append_message.assert_any_call("w1", "model", "Great run!")
@@ -279,7 +278,7 @@ async def test_chat_saves_model_response():
 async def test_chat_returns_model_response():
     service = _make_service()
 
-    with patch.object(service, "_call_gemini_chat", return_value="Solid tempo effort."):
+    with patch.object(service, "_call_llm_chat", return_value="Solid tempo effort."):
         result = await service.chat("athlete1", "w1", "How was my pace?")
 
     assert result == "Solid tempo effort."
@@ -302,7 +301,7 @@ async def test_chat_passes_history_to_gemini():
     chat_repo.list_messages = AsyncMock(return_value=history)
     service = _make_service(chat_repo=chat_repo)
 
-    with patch.object(service, "_call_gemini_chat", return_value="Answer") as mock:
+    with patch.object(service, "_call_llm_chat", return_value="Answer") as mock:
         await service.chat("athlete1", "w1", "New question")
 
     _, passed_history, *_ = mock.call_args[0]

@@ -63,7 +63,6 @@ def make_service(athlete_repo=None, workout_repo=None, analytics_repo=None, plan
         athlete_repo=athlete_repo or deps[0],
         workout_repo=workout_repo or deps[1],
         analytics_repo=analytics_repo or deps[2],
-        gemini_api_key="fake-key",
         plan_cache_repo=plan_cache or deps[3],
     )
 
@@ -118,7 +117,7 @@ async def test_get_cached_sets_stale_true_when_new_activity_exists():
 async def test_generate_and_cache_returns_cached_weekly_plan():
     service = make_service()
 
-    with patch.object(service, "_call_gemini_for_plan", return_value=make_plan()):
+    with patch.object(service, "_call_llm_for_plan", return_value=make_plan()):
         result = await service.generate_and_cache("athlete1")
 
     assert isinstance(result, CachedWeeklyPlan)
@@ -128,7 +127,7 @@ async def test_generate_and_cache_saves_to_cache():
     _, workout_repo, analytics_repo, plan_cache = make_deps()
     service = make_service(workout_repo=workout_repo, analytics_repo=analytics_repo, plan_cache=plan_cache)
 
-    with patch.object(service, "_call_gemini_for_plan", return_value=make_plan()):
+    with patch.object(service, "_call_llm_for_plan", return_value=make_plan()):
         await service.generate_and_cache("athlete1")
 
     plan_cache.save.assert_called_once()
@@ -137,7 +136,7 @@ async def test_generate_and_cache_saves_to_cache():
 async def test_generate_and_cache_calls_gemini():
     service = make_service()
 
-    with patch.object(service, "_call_gemini_for_plan", return_value=make_plan()) as mock_gemini:
+    with patch.object(service, "_call_llm_for_plan", return_value=make_plan()) as mock_gemini:
         await service.generate_and_cache("athlete1")
 
     mock_gemini.assert_called_once()
@@ -146,7 +145,7 @@ async def test_generate_and_cache_calls_gemini():
 async def test_generate_and_cache_returns_plan_with_days():
     service = make_service()
 
-    with patch.object(service, "_call_gemini_for_plan", return_value=make_plan()):
+    with patch.object(service, "_call_llm_for_plan", return_value=make_plan()):
         result = await service.generate_and_cache("athlete1")
 
     assert len(result.days) == 1
@@ -156,7 +155,7 @@ async def test_get_exercises_returns_dict():
     service = make_service()
     sections = {"warmup": ["5 min jog"], "main": ["3x10 squats"], "cooldown": ["stretch"]}
 
-    with patch.object(service, "_call_gemini_for_exercises", return_value=sections):
+    with patch.object(service, "_call_llm_for_exercises", return_value=sections):
         result = await service.get_exercises_for_day("athlete1", date.today(), "strength")
 
     assert isinstance(result, dict)
@@ -165,7 +164,7 @@ async def test_get_exercises_returns_dict():
 async def test_get_exercises_calls_gemini_when_not_cached():
     service = make_service()
 
-    with patch.object(service, "_call_gemini_for_exercises", return_value=[]) as mock_gemini:
+    with patch.object(service, "_call_llm_for_exercises", return_value=[]) as mock_gemini:
         await service.get_exercises_for_day("athlete1", date.today(), "strength")
 
     mock_gemini.assert_called_once()
@@ -183,7 +182,7 @@ async def test_get_exercises_returns_cached_exercises_without_calling_gemini():
     ))
     service = make_service(plan_cache=plan_cache)
 
-    with patch.object(service, "_call_gemini_for_exercises") as mock_gemini:
+    with patch.object(service, "_call_llm_for_exercises") as mock_gemini:
         result = await service.get_exercises_for_day("athlete1", date.today(), "run")
 
     assert result == cached_exercises
@@ -204,7 +203,7 @@ async def test_refresh_exercises_always_calls_gemini_even_when_cached():
     service = make_service(plan_cache=plan_cache)
 
     new_exercises = {"warmup": [], "main": ["New exercise"], "cooldown": []}
-    with patch.object(service, "_call_gemini_for_exercises", return_value=new_exercises) as mock_gemini:
+    with patch.object(service, "_call_llm_for_exercises", return_value=new_exercises) as mock_gemini:
         result = await service.refresh_exercises_for_day("athlete1", date.today(), "run")
 
     assert result == new_exercises
@@ -216,7 +215,7 @@ async def test_get_exercises_caches_result_after_generating():
     plan_cache.update_day_exercises = AsyncMock()
     service = make_service(plan_cache=plan_cache)
 
-    with patch.object(service, "_call_gemini_for_exercises", return_value=["Warm-up: 5 min"]):
+    with patch.object(service, "_call_llm_for_exercises", return_value=["Warm-up: 5 min"]):
         await service.get_exercises_for_day("athlete1", date.today(), "strength")
 
     plan_cache.update_day_exercises.assert_called_once()
@@ -234,7 +233,7 @@ async def test_plan_excludes_days_with_completed_workouts():
         captured_prompt.append(prompt)
         return WeeklyPlan(days=[PlannedDay(day=date.today() + timedelta(days=1), workout_type="rest", intensity="recovery", duration_minutes=0, description="Rest.")], rationale="", generated_at=datetime.now(tz=timezone.utc))
 
-    with patch.object(service, "_call_gemini_for_plan", side_effect=capture_plan):
+    with patch.object(service, "_call_llm_for_plan", side_effect=capture_plan):
         await service.generate_and_cache("athlete1")
 
     assert date.today().isoformat() not in captured_prompt[0]
@@ -252,7 +251,7 @@ async def test_plan_includes_days_without_completed_workouts():
         captured_prompt.append(prompt)
         return WeeklyPlan(days=[PlannedDay(day=date.today() + timedelta(days=1), workout_type="rest", intensity="recovery", duration_minutes=0, description="Rest.")], rationale="", generated_at=datetime.now(tz=timezone.utc))
 
-    with patch.object(service, "_call_gemini_for_plan", side_effect=capture_plan):
+    with patch.object(service, "_call_llm_for_plan", side_effect=capture_plan):
         await service.generate_and_cache("athlete1")
 
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
