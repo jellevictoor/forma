@@ -25,7 +25,7 @@
   <button onclick="switchTab('users')" data-tab="users" role="tab" aria-selected="false"
           class="admin-tab px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors border-b-2 border-transparent text-muted hover:text-primary">Users</button>
   <button onclick="switchTab('prompts')" data-tab="prompts" role="tab" aria-selected="false"
-          class="admin-tab px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors border-b-2 border-transparent text-muted hover:text-primary">Prompts</button>
+          class="admin-tab px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors border-b-2 border-transparent text-muted hover:text-primary">AI config</button>
 </div>
 
 {% set cost_30d = stats.cost_30d or 0 %}
@@ -260,16 +260,39 @@
 </div>
 
 {# ═══════════════════════════════════════════════════════════ #}
-{# TAB: Prompts                                               #}
+{# TAB: AI config                                             #}
 {# ═══════════════════════════════════════════════════════════ #}
 <div id="tab-prompts" class="tab-panel hidden">
 
-  <p class="text-sm text-secondary mb-6">System prompts define the AI persona for each service. Edits take effect on the next AI call — no restart needed.</p>
+  <p class="text-sm text-secondary mb-2">Configure which AI model each service uses and edit system prompts. Changes take effect on the next AI call.</p>
+  <p class="text-xs text-muted mb-6">Powered by <span class="font-medium text-secondary">litellm</span> — supports Gemini, Claude, GPT and any OpenAI-compatible provider.</p>
 
+  {# Model overview — quick view of all service models #}
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Model assignments</h2>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-muted font-medium border-b border-edge">
+          <th class="text-left py-2 pr-4">Service</th>
+          <th class="text-left py-2">Model</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for prompt in system_prompts %}
+        <tr class="border-b border-edge">
+          <td class="py-2.5 pr-4 text-primary font-medium">{{ prompt.label }}</td>
+          <td class="py-2.5 text-secondary font-mono text-xs">{{ prompt.model or 'gemini/gemini-2.5-flash (default)' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Per-service config cards #}
   <div class="space-y-4">
     {% for prompt in system_prompts %}
     <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6" id="prompt-card-{{ prompt.service }}">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="text-sm font-semibold text-primary">{{ prompt.label }}</h3>
           <p class="text-xs text-muted font-mono">{{ prompt.service }}</p>
@@ -277,12 +300,12 @@
         <div class="flex items-center gap-2">
           <span id="prompt-status-{{ prompt.service }}" class="hidden text-xs font-medium text-mint">Saved</span>
           {% if prompt.updated_at %}
-          <span class="text-xs text-muted">Edited {{ prompt.updated_at.strftime('%-d %b %Y %H:%M') }}</span>
+          <span class="text-xs text-muted">{{ prompt.updated_at.strftime('%-d %b %Y %H:%M') }}</span>
           {% endif %}
         </div>
       </div>
-      <div class="flex items-center gap-3 mb-3">
-        <label class="text-xs text-muted shrink-0">Model</label>
+      <div class="flex items-center gap-3 mb-4">
+        <label class="text-xs font-medium text-secondary shrink-0">Model</label>
         <select id="prompt-model-{{ prompt.service }}"
                 class="text-sm px-3 py-2 border border-edge rounded-lg bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-mint/40">
           {% for m in [
@@ -298,6 +321,7 @@
           {% endfor %}
         </select>
       </div>
+      <label class="text-xs font-medium text-secondary mb-2 block">System prompt</label>
       <textarea
         id="prompt-text-{{ prompt.service }}"
         rows="6"
