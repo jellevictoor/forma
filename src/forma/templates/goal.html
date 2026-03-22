@@ -27,7 +27,7 @@
         <span class="text-xs px-2.5 py-1 rounded-full border text-secondary
           {% if days_left < 14 %}border-amber/40{% else %}border-edge{% endif %}"
               style="{% if days_left < 14 %}background:rgba(251,146,60,0.08){% endif %}">
-          {% if days_left > 0 %}{{ days_left }} days to go{% elif days_left == 0 %}Today!{% else %}{{ (-days_left) }} days ago{% endif %}
+          {% if days_left > 0 %}{{ days_left }} days to go{% elif days_left == 0 %}Today!{% else %}Target date passed{% endif %}
         </span>
         {% endif %}
       </div>

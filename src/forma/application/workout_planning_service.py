@@ -272,7 +272,7 @@ RULES:
 
 Respond with a JSON object:
 {{
-  "rationale": "2-3 sentences explaining the weekly plan logic",
+  "rationale": "1 concise sentence explaining why this week is structured this way",
   "days": [
     {{
       "date": "YYYY-MM-DD",

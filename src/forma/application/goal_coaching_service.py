@@ -202,15 +202,15 @@ class GoalCoachingService:
             week_start = run.start_time.date() - timedelta(days=run.start_time.weekday())
             weekly.setdefault(week_start, []).append(run)
 
-        weekly_volumes = [
+        weekly_volumes = sorted([
             WeeklyVolume(
                 week_start=ws,
                 distance_km=sum(r.distance_km or 0 for r in rs),
                 run_count=len(rs),
                 avg_pace_sec_per_km=_avg_pace(rs),
             )
-            for ws, rs in sorted(weekly.items(), reverse=True)
-        ]
+            for ws, rs in weekly.items()
+        ], key=lambda v: v.week_start)
 
         pace_vals = [r.pace_min_per_km for r in runs if r.pace_min_per_km]
         hr_vals = [r.average_heartrate for r in runs if r.average_heartrate]

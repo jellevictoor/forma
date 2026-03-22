@@ -1,54 +1,59 @@
 # forma — feature backlog
 
-Gaps identified by comparing Strava (Summit), Runna (Premium), and Garmin Connect+.
+---
+
+## Done
+
+- [x] **Today's workout card** on overview — "Up next" card with Not today action
+- [x] **Readiness score** — Form widget (FRESH/TRAINING/BUILDING + TSB) on overview
+- [x] **Streak tracking** — week-based streak on overview KPIs
+- [x] **Effort score per workout** — perceived effort picker + display on dashboard
+- [x] **Goal & race event display** — goal card on overview with milestone countdown
+- [x] **HR zone distribution** — zone gauge + time distribution on activity detail
+- [x] **Training plan web UI** — full /plan page with 7-day plan, exercises, schedule template
+- [x] **Auto-generated training plan** — LLM-generated plans with exercises
+- [x] **Route map visualisation** — Leaflet map on activity detail with pace/HR overlay
+- [x] **Relative effort badge** — HR zone badge on activity detail
+- [x] **Training alerts** — volume spike, no rest day, consecutive hard days, goal drift
+- [x] **Plan adherence** — Done/Missed/Swapped badges per planned day
+- [x] **Not today plan swap** — constraint-aware day swap with instant feedback
+- [x] **Contextual insights** — form zone streak, 30-day fitness trend
+- [x] **Fitness trajectory** — summary cards on progress page
+- [x] **LiteLLM integration** — provider-agnostic LLM calls
+- [x] **System prompts in DB** — editable from admin console
+- [x] **Admin redesign** — 3 tabs with charts, user health, prompts editor
+- [x] **Mobile responsive** — all pages work on 375px
+- [x] **Smoke test suite** — 25 real-DB integration tests
+- [x] **Weekly recap removed** — replaced by training alerts + contextual insights
+- [x] **Rolling 12-month training log** — GitHub-style heatmap
+- [x] **Plan: layman fitness labels** — "Well rested" instead of "CTL/ATL/Form"
+- [x] **Plan: removed weekly cap** — not needed at this stage
+- [x] **Plan: sport dot alignment** — aligned with title text
+- [x] **Plan: rationale moved to top** — concise, explains "why" before the days
+- [x] **Goal: fixed weekly volume chart order** — oldest on left, newest on right
+- [x] **Goal: removed confusing "490 days ago"** — shows "Target date passed" instead
+- [x] **Daily briefing on web** — training alerts + form widget serve this purpose
 
 ---
 
-## Quick wins (low effort, high value)
+## Still relevant (not done yet)
 
-- [ ] **Today's workout card** on overview — schedule domain model already has the data, just needs a web UI
-- [ ] **Readiness score** on overview — CTL/ATL/Form is already computed, surface it as a single number
-- [ ] **Streak tracking** — compute from existing workout data, show on overview
-- [ ] **Effort score per workout** — TRIMP is already computed internally, surface it in the activity table/detail
-- [ ] **Goal & race event display** — athlete model already has goals, just needs a UI card
+### Analytics
+- [ ] **Pace / HR zones trend chart** — weekly zone distribution over time (Z1–Z5)
+- [ ] **Elevation trend chart** — weekly/monthly elevation gain aggregation
+- [ ] **Long run detection** — auto-tag runs above threshold, track separately
+- [ ] **Predicted race times** — derived from pace trend + recent efforts
+- [ ] **Analytics sport switch** — switching sports refreshes the whole page, should be client-side
 
----
+### Recovery & readiness
+- [ ] **Daily readiness number** — single 1-100 score wrapping CTL/ATL/Form
+- [ ] **Recovery time recommendation** — post-workout suggestion based on effort + form
+- [ ] **Sleep quality integration** — `sleep_quality` field exists on Workout, never used
 
-## Analytics gaps
+### Coaching
+- [ ] **Schedule adjustment suggestions** — `suggest_schedule_adjustment()` port exists, never wired
 
-- [ ] **Pace / HR zones** — zone breakdown per workout and as a trend chart (Z1–Z5)
-- [ ] **HR zone distribution** — you have avg HR per workout, but no zone split
-- [ ] **Elevation trend chart** — activity detail shows elevation, no weekly/monthly trend
-- [ ] **Long run detection & tracking** — tag and track long runs separately (key for marathon training)
-- [ ] **Predicted race times** — Runna and Garmin both offer this; can be derived from pace trend + recent efforts
-
----
-
-## Recovery & readiness
-
-- [ ] **Daily readiness score** — wrap CTL/ATL/Form into a single daily score (Garmin style)
-- [ ] **Recovery time recommendation** — post-workout suggestion based on effort and form
-- [ ] **Sleep quality integration** — `sleep_quality` field already exists on Workout, never used
-
----
-
-## Coaching & planning
-
-- [ ] **Training plan web UI** — domain model fully exists (Schedule, ScheduledWorkout), no web pages at all
-- [ ] **Auto-generated training plan** — given goal + current fitness, generate a plan (Runna/Garmin core feature)
-- [ ] **Schedule adjustment suggestions** — `suggest_schedule_adjustment()` exists on Coach port, never wired up
-- [ ] **Daily briefing on web** — currently CLI only (`fitness-coach briefing`), should be a web card
-
----
-
-## Activity detail enhancements
-
-- [ ] **Route map visualisation** — Strava API returns a polyline, render it on the activity detail page
-- [ ] **Relative effort badge** — show per-activity effort score (TRIMP) on the activity list and detail
-
----
-
-## Other
-
-- [ ] **Gear / shoe mileage tracking** — not modelled at all; Strava and Garmin both track equipment wear
-- [ ] **Strava webhook** — receive new activity events in real time instead of manual `sync`
+### Infrastructure
+- [ ] **Strava webhook** — real-time activity sync instead of manual
+- [ ] **Gear / shoe mileage tracking** — not modelled; Strava and Garmin both track this
+- [ ] **AI tier system** — `ai_tier` field on Athlete, per-tier model routing from admin
