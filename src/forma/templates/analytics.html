@@ -29,23 +29,19 @@
 
 {# Sport-specific volume chart #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">
-    {% if sport == 'run' %}Weekly distance{% else %}Weekly duration{% endif %}
-  </h2>
+  <h2 id="volume-heading" class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Weekly distance</h2>
   <div class="chart-container chart-loading" id="volume-chart" style="min-height:220px"></div>
 </div>
 
-{% if sport == 'run' %}
-{# Pace trend chart #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+{# Pace trend chart — shown only for running #}
+<div id="pace-section" class="bg-surface rounded-2xl border border-edge shadow-sm p-6 {{ '' if sport == 'run' else 'hidden' }}">
   <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Pace trend</h2>
   <p class="text-xs text-muted mb-5">Average pace per week (min/km) — lower is faster</p>
-  <div class="chart-container chart-loading" id="pace-chart" style="min-height:220px"></div>
+  <div class="chart-container" id="pace-chart" style="min-height:220px"></div>
 </div>
-{% endif %}
 
 <script>
-const SPORT = {{ sport | tojson }};
+let SPORT = {{ sport | tojson }};
 const SPORT_COLORS = {run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)'};
 const color = SPORT_COLORS[SPORT] || 'var(--color-surface-alt)';
 const fmtWeek = d => { const p = d.split('-'); return d3.timeFormat('%b %-d')(new Date(+p[0], +p[1]-1, +p[2])); };
@@ -195,10 +191,11 @@ function renderSportTabsAndLegend(unifiedData) {
   const legendEl = document.getElementById('unified-volume-legend');
   if (tabsEl) {
     tabsEl.innerHTML = sports.map(s =>
-      `<a href="/analytics/${s}"
-          class="px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer ${s === SPORT ? 'tab-active' : 'tab-inactive'}">
+      `<button onclick="switchSport('${s}')"
+          class="px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer ${s === SPORT ? 'tab-active' : 'tab-inactive'}"
+          data-sport="${s}">
         ${SPORT_LABEL_MAP[s] || s}
-      </a>`
+      </button>`
     ).join('');
   }
   if (legendEl) {
@@ -232,6 +229,41 @@ async function loadAllCharts(months) {
     const paceData = await fetch(`/api/analytics/run/pace-trend/${months}m`).then(r => r.json());
     document.getElementById('pace-chart').innerHTML = '';
     drawLineChart('pace-chart', paceData, 'pace_min_per_km');
+  }
+}
+
+async function switchSport(newSport) {
+  SPORT = newSport;
+  history.replaceState(null, '', `/analytics/${newSport}`);
+
+  // Update tab active states
+  document.querySelectorAll('#sport-tabs button').forEach(b => {
+    b.className = b.dataset.sport === newSport
+      ? 'px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer tab-active'
+      : 'px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-150 cursor-pointer tab-inactive';
+  });
+
+  // Update volume heading
+  document.getElementById('volume-heading').textContent = newSport === 'run' ? 'Weekly distance' : 'Weekly duration';
+
+  // Show/hide pace section
+  const paceSection = document.getElementById('pace-section');
+  if (newSport === 'run') {
+    paceSection.classList.remove('hidden');
+  } else {
+    paceSection.classList.add('hidden');
+  }
+
+  // Re-fetch sport-specific charts
+  const volumeData = await fetch(`/api/analytics/${newSport}/volume/${currentMonths}m`).then(r => r.json());
+  document.getElementById('volume-chart').innerHTML = '';
+  if (newSport === 'run') {
+    drawBarChart('volume-chart', volumeData, 'distance_km', d => d + ' km');
+    const paceData = await fetch(`/api/analytics/run/pace-trend/${currentMonths}m`).then(r => r.json());
+    document.getElementById('pace-chart').innerHTML = '';
+    drawLineChart('pace-chart', paceData, 'pace_min_per_km');
+  } else {
+    drawBarChart('volume-chart', volumeData, 'duration_hours', d => d + 'h');
   }
 }
 
