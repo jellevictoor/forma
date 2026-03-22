@@ -61,3 +61,6 @@
 - [x] Goal milestone timeline — solid circle backgrounds hide the line
 - [x] Admin model selection — dropdown per service on Prompts tab
 
+- [x] Dashboard mobile friendly — fixed in earlier commit
+- [x] Bauhaus strip restored — dark (#1C1A15) replaces teal to avoid clash
+- [x] Admin page — removed redundant "admin" badge above title
