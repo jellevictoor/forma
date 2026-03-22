@@ -43,14 +43,15 @@
 ### Analytics
 - [x] **HR zones trend chart** — weekly Z1-Z5 stacked bar chart on progress page
 - [x] **Long run detection** — domain logic + API endpoint, >=60min or >=10km
-- [ ] **Predicted race times** — derived from pace trend + recent efforts
+- [x] **Predicted race times** — Riegel formula from best PR, shown on progress page
+- [x] **Not today: only today/tomorrow** — hidden on future days (UX fix)
 
 ### Recovery & readiness
 - [x] **Daily readiness number** — 0-100 score on dashboard (60% form + 40% fitness)
 - [x] **Recovery time recommendation** — shown on activity detail page (~Xh + suggestion)
 
 ### Coaching
-- [ ] **Schedule adjustment suggestions** — when a user skips the same day 3+ weeks in a row, suggest moving that workout to a different day. Needs: skip history tracking + a simple rule-based check.
+- [x] **Schedule adjustment suggestions** — detects missed scheduled days, shows banner on plan page
 
 ### Infrastructure
 - [ ] **Strava webhook** — register a webhook subscription at `https://www.strava.com/api/v3/push_subscriptions`. Strava sends POST to a callback URL on every new activity. Needs: a public endpoint (Cloudflare tunnel handles this), a `POST /api/strava/webhook` route that verifies the subscription and triggers a single-activity sync. Replaces manual sync for new activities; backfill still needed for history.
@@ -59,3 +60,4 @@
 - [x] Weekly volume chart — most recent week highlighted (was oldest)
 - [x] Goal milestone timeline — solid circle backgrounds hide the line
 - [x] Admin model selection — dropdown per service on Prompts tab
+
