@@ -156,7 +156,6 @@
   <p id="recovery-text" class="text-sm text-secondary"></p>
 </div>
 
-<!-- Perceived effort -->
 {% set _effort_levels = [
   ("very_easy", "Very easy", "var(--color-sky)"),
   ("easy",      "Easy",      "var(--color-mint)"),
@@ -165,27 +164,6 @@
   ("very_hard", "Very hard", "var(--color-coral)"),
   ("maximum",   "Maximum",   "var(--color-coral)"),
 ] %}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
-  <div class="flex items-center justify-between mb-3">
-    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">How did it feel?</h2>
-    <span id="effort-saved" class="hidden text-xs text-mint font-medium">Saved — asking your coach</span>
-  </div>
-  <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="effort-picker">
-    {% for value, label, color in _effort_levels %}
-    <button data-effort="{{ value }}"
-            data-active="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
-            onclick="setEffort('{{ value }}')"
-            aria-label="Rate effort as {{ label }}"
-            aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
-            class="effort-btn py-2.5 px-2 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border hover:opacity-80 min-h-[44px] {% if workout.perceived_effort and workout.perceived_effort.value == value %}border-current{% else %}border-transparent bg-surface-alt text-muted{% endif %}"
-            {% if workout.perceived_effort and workout.perceived_effort.value == value %}
-            style="background:{{ color }}20;color:{{ color }}"
-            {% endif %}>
-      {{ label }}
-    </button>
-    {% endfor %}
-  </div>
-</div>
 
 <!-- Plan linkage card — populated by JS if workout date matches a planned day -->
 <div id="plan-match-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
@@ -310,9 +288,31 @@
   {% endif %}
 </div>
 
-<!-- Chat panel — hidden until analysis exists, then revealed -->
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6{% if not cached_analysis and not chat_messages %} hidden{% endif %}" id="chat-card">
-  <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-5">Ask your coach</h2>
+<!-- Coach panel — effort picker + chat -->
+<div class="bg-surface rounded-2xl border border-edge shadow-sm p-6" id="chat-card">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Your coach</h2>
+    <span id="effort-saved" class="hidden text-xs text-mint font-medium">Saved</span>
+  </div>
+
+  <div class="mb-5">
+    <p class="text-xs text-muted mb-2">How did this session feel?</p>
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="effort-picker">
+      {% for value, label, color in _effort_levels %}
+      <button data-effort="{{ value }}"
+              data-active="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
+              onclick="setEffort('{{ value }}')"
+              aria-label="Rate effort as {{ label }}"
+              aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
+              class="effort-btn py-2.5 px-2 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border hover:opacity-80 min-h-[44px] {% if workout.perceived_effort and workout.perceived_effort.value == value %}border-current{% else %}border-transparent bg-surface-alt text-muted{% endif %}"
+              {% if workout.perceived_effort and workout.perceived_effort.value == value %}
+              style="background:{{ color }}20;color:{{ color }}"
+              {% endif %}>
+        {{ label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
 
   <div id="chat-messages" class="space-y-4 mb-5 max-h-[480px] overflow-y-auto">
     {% for msg in chat_messages %}
@@ -1340,8 +1340,6 @@ async function runAnalysis(workoutId) {
       </dl>`;
     content.classList.remove('hidden');
 
-    // Reveal chat panel now that analysis exists
-    document.getElementById('chat-card').classList.remove('hidden');
     document.getElementById('chat-input').focus();
   } catch {
     errorEl.textContent = 'Something went wrong. Please try again.';
@@ -1406,22 +1404,16 @@ async function setEffort(value) {
     setTimeout(() => saved.classList.add('hidden'), 1500);
   } catch {}
 
-  // Trigger coach conversation when effort is set (not cleared)
-  if (newValue) {
-    askCoachAboutEffort(newValue);
-  }
-}
+  if (!newValue) return;
 
-async function askCoachAboutEffort(effort) {
-  const chatCard = document.getElementById('chat-card');
+  // Send brief message to coach chat
   const messages = document.getElementById('chat-messages');
-  const label = effortLabels[effort] || effort;
-  const message = `This session felt ${label}. What do you think — was that the right intensity for this workout?`;
+  const label = effortLabels[value] || value;
+  const message = `This felt ${label}`;
 
-  chatCard.classList.remove('hidden');
   appendMessage(messages, 'user', message);
   const thinkingRow = appendMessage(messages, 'model', '...');
-  chatCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  messages.scrollTop = messages.scrollHeight;
 
   try {
     const res = await fetch(`/activities/detail/{{ workout.id }}/chat`, {
@@ -1432,6 +1424,7 @@ async function askCoachAboutEffort(effort) {
     const data = await res.json();
     if (res.ok) {
       updateBubble(thinkingRow, data.response);
+      messages.scrollTop = messages.scrollHeight;
     } else {
       thinkingRow.remove();
     }
