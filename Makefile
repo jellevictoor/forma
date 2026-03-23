@@ -37,31 +37,13 @@ update:
 	echo "── Running tests..."; \
 	$(MAKE) test && \
 	echo "── Building new image..." && \
-	docker tag forma-forma:latest forma-forma:rollback 2>/dev/null; \
 	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose build && \
 	echo "── Starting new container..." && \
-	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d && \
-	echo "── Checking health (waiting up to 30s)..." && \
-	HEALTHY=false; \
-	for i in 1 2 3 4 5 6; do \
-		sleep 5; \
-		if docker exec forma curl -sf http://localhost:8080/ > /dev/null 2>&1; then \
-			HEALTHY=true; break; \
-		fi; \
-		echo "   retry $$i..."; \
-	done; \
-	if [ "$$HEALTHY" = "true" ]; then \
-		echo "✓ Deployed $$(git rev-parse --short HEAD) — healthy"; \
-	else \
-		echo "✗ New container unhealthy — rolling back..."; \
-		docker tag forma-forma:rollback forma-forma:latest 2>/dev/null; \
-		docker compose up -d; \
-		echo "✗ Rolled back to previous version"; \
-		exit 1; \
-	fi
+	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d --wait && \
+	echo "✓ Deployed $$(git rev-parse --short HEAD) — healthy"
 
 deploy: test build
-	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d
+	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d --wait
 	@echo "✓ Deployed $$(git rev-parse --short HEAD)"
 
 build:

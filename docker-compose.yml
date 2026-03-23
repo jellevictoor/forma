@@ -30,6 +30,12 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://forma:forma@postgres:5432/forma
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy

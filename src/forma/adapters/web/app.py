@@ -150,6 +150,10 @@ def create_app() -> FastAPI:
             )
         raise exc
 
+    @app.get("/healthz")
+    async def healthz():
+        return {"status": "ok", "commit": _COMMIT_HASH}
+
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
