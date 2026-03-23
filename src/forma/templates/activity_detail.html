@@ -168,7 +168,7 @@
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 mb-4">
   <div class="flex items-center justify-between mb-3">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">How did it feel?</h2>
-    <span id="effort-saved" class="hidden text-xs text-mint font-medium">Saved</span>
+    <span id="effort-saved" class="hidden text-xs text-mint font-medium">Saved — asking your coach</span>
   </div>
   <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="effort-picker">
     {% for value, label, color in _effort_levels %}
@@ -1360,6 +1360,15 @@ const effortColors = {
   maximum: 'var(--color-coral)',
 };
 
+const effortLabels = {
+  very_easy: 'very easy',
+  easy: 'easy',
+  moderate: 'moderate',
+  hard: 'hard',
+  very_hard: 'very hard',
+  maximum: 'maximum effort',
+};
+
 async function setEffort(value) {
   const btns = document.querySelectorAll('.effort-btn');
   const saved = document.getElementById('effort-saved');
@@ -1395,6 +1404,39 @@ async function setEffort(value) {
     saved.classList.remove('hidden');
     setTimeout(() => saved.classList.add('hidden'), 1500);
   } catch {}
+
+  // Trigger coach conversation when effort is set (not cleared)
+  if (newValue) {
+    askCoachAboutEffort(newValue);
+  }
+}
+
+async function askCoachAboutEffort(effort) {
+  const chatCard = document.getElementById('chat-card');
+  const messages = document.getElementById('chat-messages');
+  const label = effortLabels[effort] || effort;
+  const message = `This session felt ${label}. What do you think — was that the right intensity for this workout?`;
+
+  chatCard.classList.remove('hidden');
+  appendMessage(messages, 'user', message);
+  const thinkingRow = appendMessage(messages, 'model', '...');
+  chatCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const res = await fetch(`/activities/detail/{{ workout.id }}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      updateBubble(thinkingRow, data.response);
+    } else {
+      thinkingRow.remove();
+    }
+  } catch {
+    thinkingRow.remove();
+  }
 }
 
 // Recovery estimate
