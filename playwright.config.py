@@ -31,6 +31,10 @@ PAGES = [
     ("/progress", "progress"),
     ("/profile", "profile"),
     ("/insights", "insights"),
+]
+
+# Desktop-only pages (skipped in mobile screenshots)
+ADMIN_PAGES = [
     ("/admin", "admin"),
     ("/admin?tab=users", "admin-users"),
     ("/admin?tab=prompts", "admin-ai"),

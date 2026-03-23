@@ -24,20 +24,22 @@ spec.loader.exec_module(pw_config)
 BASE_URL = pw_config.BASE_URL
 DEVICES = pw_config.DEVICES
 PAGES = pw_config.PAGES
+ADMIN_PAGES = pw_config.ADMIN_PAGES
 
 
 OUTPUT_DIR = Path("screenshots")
 
 
-async def capture_device(browser, device_name: str, device_config: dict):
+async def capture_device(browser, device_name: str, device_config: dict, pages=None):
     """Capture all pages for a single device profile."""
+    pages = pages or PAGES
     out = OUTPUT_DIR / device_name
     out.mkdir(parents=True, exist_ok=True)
 
     context = await browser.new_context(**device_config)
     page = await context.new_page()
 
-    for path, name in PAGES:
+    for path, name in pages:
         url = f"{BASE_URL}{path}"
         try:
             await page.goto(url, wait_until="networkidle", timeout=15000)
@@ -58,7 +60,8 @@ async def main():
         browser = await p.chromium.launch()
 
         for device_name, device_config in DEVICES.items():
-            await capture_device(browser, device_name, device_config)
+            pages = PAGES + ADMIN_PAGES if device_name == "desktop" else PAGES
+            await capture_device(browser, device_name, device_config, pages)
 
         await browser.close()
 
