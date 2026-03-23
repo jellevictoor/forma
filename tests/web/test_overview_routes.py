@@ -28,6 +28,10 @@ def make_mock_analytics_service() -> AnalyticsService:
     )
     service.weekly_volume_chart_data = AsyncMock(return_value=[])
     service.training_log_data = AsyncMock(return_value=[])
+    service.rolling_kpi_data = AsyncMock(return_value={
+        "current": {"sessions": 3, "run_km": 15.0, "hours": 4.5},
+        "previous": {"sessions": 5, "run_km": 22.0, "hours": 6.3},
+    })
     return service
 
 
@@ -158,6 +162,24 @@ def test_resume_backfill_returns_started(client):
     response = client.post("/api/sync/resume-backfill")
 
     assert response.json()["status"] == "started"
+
+
+def test_rolling_kpis_api_returns_200(client):
+    response = client.get("/api/overview/rolling-kpis")
+
+    assert response.status_code == 200
+
+
+def test_rolling_kpis_api_returns_current_and_previous(client):
+    response = client.get("/api/overview/rolling-kpis")
+
+    assert "current" in response.json()
+
+
+def test_rolling_kpis_api_includes_target_sessions(client):
+    response = client.get("/api/overview/rolling-kpis")
+
+    assert "target_sessions" in response.json()
 
 
 def test_alerts_api_returns_200(client):

@@ -322,6 +322,29 @@ class AnalyticsService:
         daily_efforts = await self._analytics.daily_effort(athlete_id, since, max_hr)
         return compute_fitness_freshness(daily_efforts, days)
 
+    async def rolling_kpi_data(self, athlete_id: str) -> dict:
+        """Return rolling 7-day KPIs with previous 7-day comparison."""
+        today = date.today()
+        since = today - timedelta(days=13)
+        log = await self._analytics.training_log(athlete_id, since, today)
+        cutoff = (today - timedelta(days=6)).isoformat()
+        current = [w for w in log if w["date"] >= cutoff]
+        previous = [w for w in log if w["date"] < cutoff]
+        return {
+            "current": self._aggregate_kpis(current),
+            "previous": self._aggregate_kpis(previous),
+        }
+
+    @staticmethod
+    def _aggregate_kpis(workouts: list[dict]) -> dict:
+        return {
+            "sessions": len(workouts),
+            "run_km": round(
+                sum(w["distance_meters"] for w in workouts if w["workout_type"] == "run") / 1000, 1
+            ),
+            "hours": round(sum(w["duration_seconds"] for w in workouts) / 3600, 1),
+        }
+
     async def zone2_compliance(
         self,
         athlete_id: str,

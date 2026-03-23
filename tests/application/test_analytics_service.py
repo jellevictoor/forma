@@ -522,3 +522,101 @@ async def test_range_queries_include_today():
     until_date = call_args[2]
 
     assert until_date > date.today()
+
+
+async def test_rolling_kpi_data_returns_current_and_previous():
+    today = date.today()
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[
+        {"id": "w1", "date": today.isoformat(), "workout_type": "run", "duration_seconds": 3600, "distance_meters": 10000, "name": "Run"},
+    ])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert "current" in result
+
+
+async def test_rolling_kpi_data_has_previous_key():
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert "previous" in result
+
+
+async def test_rolling_kpi_current_counts_last_7_days():
+    today = date.today()
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[
+        {"id": "w1", "date": today.isoformat(), "workout_type": "run", "duration_seconds": 3600, "distance_meters": 10000, "name": "Run"},
+        {"id": "w2", "date": (today - timedelta(days=3)).isoformat(), "workout_type": "strength", "duration_seconds": 1800, "distance_meters": 0, "name": "Strength"},
+    ])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert result["current"]["sessions"] == 2
+
+
+async def test_rolling_kpi_previous_counts_days_8_to_14():
+    today = date.today()
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[
+        {"id": "w1", "date": today.isoformat(), "workout_type": "run", "duration_seconds": 3600, "distance_meters": 10000, "name": "Today"},
+        {"id": "w2", "date": (today - timedelta(days=10)).isoformat(), "workout_type": "run", "duration_seconds": 3600, "distance_meters": 8000, "name": "Old"},
+    ])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert result["previous"]["sessions"] == 1
+
+
+async def test_rolling_kpi_run_km_only_counts_runs():
+    today = date.today()
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[
+        {"id": "w1", "date": today.isoformat(), "workout_type": "run", "duration_seconds": 3600, "distance_meters": 10000, "name": "Run"},
+        {"id": "w2", "date": today.isoformat(), "workout_type": "strength", "duration_seconds": 1800, "distance_meters": 0, "name": "Strength"},
+    ])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert result["current"]["run_km"] == pytest.approx(10.0)
+
+
+async def test_rolling_kpi_hours_sums_all_sports():
+    today = date.today()
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[
+        {"id": "w1", "date": today.isoformat(), "workout_type": "run", "duration_seconds": 3600, "distance_meters": 10000, "name": "Run"},
+        {"id": "w2", "date": today.isoformat(), "workout_type": "strength", "duration_seconds": 3600, "distance_meters": 0, "name": "Strength"},
+    ])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert result["current"]["hours"] == pytest.approx(2.0)
+
+
+async def test_rolling_kpi_empty_log_returns_zeros():
+    analytics_repo = make_analytics_repo()
+    analytics_repo.training_log = AsyncMock(return_value=[])
+    workout_repo = make_workout_repo()
+    service = AnalyticsService(analytics_repo, workout_repo)
+
+    result = await service.rolling_kpi_data("athlete1")
+
+    assert result["current"]["sessions"] == 0
+    assert result["current"]["run_km"] == 0.0
+    assert result["current"]["hours"] == 0.0

@@ -53,6 +53,20 @@ async def weekly_volume_api(
     return await service.weekly_volume_chart_data(athlete_id)
 
 
+@router.get("/api/overview/rolling-kpis")
+async def rolling_kpis_api(
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    profile_service: Annotated[AthleteProfileService, Depends(get_athlete_profile_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    athlete, kpis = await asyncio.gather(
+        profile_service.get_profile(athlete_id),
+        service.rolling_kpi_data(athlete_id),
+    )
+    kpis["target_sessions"] = len(athlete.schedule_template) if athlete.schedule_template else None
+    return kpis
+
+
 @router.get("/api/overview/training-log")
 async def training_log_api(
     service: Annotated[AnalyticsService, Depends(get_analytics_service)],

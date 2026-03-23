@@ -166,13 +166,13 @@
 
 </div>
 
-{# ── This week KPIs ───────────────────────────────────────── #}
+{# ── Rolling 7-day KPIs ───────────────────────────────────── #}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
 
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Sessions</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-sessions">—</p>
-    <p class="text-xs text-muted mt-1">this week</p>
+    <p class="text-xs text-muted mt-1">last 7 days</p>
     <p class="text-xs mt-1.5 font-medium" id="kpi-sessions-delta"></p>
     <div id="spark-sessions" class="mt-3 -mx-1"></div>
   </div>
@@ -180,7 +180,7 @@
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Run distance</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-km">—</p>
-    <p class="text-xs text-muted mt-1">km this week</p>
+    <p class="text-xs text-muted mt-1">km last 7 days</p>
     <p class="text-xs mt-1.5 font-medium" id="kpi-km-delta"></p>
     <div id="spark-km" class="mt-3 -mx-1"></div>
   </div>
@@ -188,7 +188,7 @@
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Training time</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-hours">—</p>
-    <p class="text-xs text-muted mt-1">hours this week</p>
+    <p class="text-xs text-muted mt-1">hours last 7 days</p>
     <p class="text-xs mt-1.5 font-medium" id="kpi-hours-delta"></p>
     <div id="spark-hours" class="mt-3 -mx-1"></div>
   </div>
@@ -573,8 +573,15 @@ function renderDelta(id, curr, prev, suffix) {
   const diff = curr - prev;
   const sign = diff >= 0 ? '+' : '';
   const val = Number.isInteger(diff) ? diff : diff.toFixed(1);
-  el.textContent = `${sign}${val}${suffix} vs last week`;
+  el.textContent = `${sign}${val}${suffix} vs prev 7 days`;
   el.style.color = diff >= 0 ? 'var(--color-mint)' : 'var(--color-negative)';
+}
+
+function renderTarget(id, curr, target) {
+  const el = document.getElementById(id);
+  if (!el || target === null) return;
+  el.textContent = `${curr} of ${target} planned`;
+  el.style.color = curr >= target ? 'var(--color-mint)' : 'var(--color-muted)';
 }
 
 // ── KPI sparkline helper ─────────────────────────────────────────
@@ -601,36 +608,33 @@ function renderSparkline(containerId, values, color) {
     .style('fill', 'none').style('stroke', color).style('stroke-width', 2);
 }
 
-// ── KPIs + sparklines ────────────────────────────────────────────
+// ── KPIs (rolling 7-day) ─────────────────────────────────────────
+(async function() {
+  const kpis = await fetchCached('/api/overview/rolling-kpis');
+  const curr = kpis.current;
+  const prev = kpis.previous;
+
+  countUp(document.getElementById('kpi-sessions'), curr.sessions);
+  countUp(document.getElementById('kpi-km'), curr.run_km, 1);
+  countUp(document.getElementById('kpi-hours'), curr.hours, 1);
+
+  if (kpis.target_sessions !== null) {
+    renderTarget('kpi-sessions-delta', curr.sessions, kpis.target_sessions);
+  } else {
+    renderDelta('kpi-sessions-delta', curr.sessions, prev.sessions, '');
+  }
+  renderDelta('kpi-km-delta', curr.run_km, prev.run_km, ' km');
+  renderDelta('kpi-hours-delta', curr.hours, prev.hours, ' h');
+})();
+
+// ── KPI sparklines (8-week) ─────────────────────────────────────
 (async function() {
   const data = await fetchCached('/api/overview/weekly-volume');
   const now = new Date();
   const dow = (now.getDay() + 6) % 7;
   const thisMon = new Date(now); thisMon.setDate(now.getDate() - dow);
-  const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
-  const thisW = localDateStr(thisMon);
-  const lastW = localDateStr(lastMon);
-
-  const tw = data.filter(d => d.week_start === thisW);
-  const lw = data.filter(d => d.week_start === lastW);
   const sum = (arr, f) => arr.reduce((a, b) => a + (b[f] || 0), 0);
 
-  const thisSess = sum(tw, 'workout_count');
-  const lastSess = sum(lw, 'workout_count');
-  const thisKm   = sum(tw.filter(d => d.workout_type === 'run'), 'distance_km');
-  const lastKm   = sum(lw.filter(d => d.workout_type === 'run'), 'distance_km');
-  const thisH    = sum(tw, 'duration_hours');
-  const lastH    = sum(lw, 'duration_hours');
-
-  countUp(document.getElementById('kpi-sessions'), thisSess);
-  countUp(document.getElementById('kpi-km'), thisKm, 1);
-  countUp(document.getElementById('kpi-hours'), thisH, 1);
-
-  renderDelta('kpi-sessions-delta', thisSess, lastSess, '');
-  renderDelta('kpi-km-delta', thisKm, lastKm, ' km');
-  renderDelta('kpi-hours-delta', thisH, lastH, ' h');
-
-  // 8-week sparklines from weekly-volume data
   const weeks8 = Array.from({length: 8}, (_, i) => {
     const d = new Date(thisMon); d.setDate(thisMon.getDate() - (7 - i) * 7);
     return localDateStr(d);
