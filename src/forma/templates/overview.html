@@ -5,12 +5,12 @@
 {% set _sport_colors = {
   'run': 'var(--color-mint)', 'strength': 'var(--color-sky)', 'climbing': 'var(--color-coral)',
   'yoga': 'var(--color-violet)', 'hike': 'var(--color-sage)', 'walk': 'var(--color-sage)',
-  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'cross_training': 'var(--color-sky)',
+  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'ebike': 'var(--color-electric)', 'cross_training': 'var(--color-sky)',
 } %}
 {% set _sport_labels = {
   'run': 'Running', 'strength': 'Strength', 'climbing': 'Climbing',
   'yoga': 'Yoga', 'hike': 'Hike', 'walk': 'Walk',
-  'swim': 'Swim', 'bike': 'Bike', 'cross_training': 'Cross training',
+  'swim': 'Swim', 'bike': 'Bike', 'ebike': 'E-bike', 'cross_training': 'Cross training',
 } %}
 
 {% macro sport_color(t) -%}{{ _sport_colors.get(t, 'var(--color-edge)') }}{%- endmacro %}
@@ -660,12 +660,12 @@ function renderSparkline(containerId, values, color) {
   const SPORT_COLORS = {
     run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
     yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
-    swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', ebike: 'var(--color-electric)', cross_training: 'var(--color-sky)',
   };
   const SPORT_LABELS = {
     run: 'Running', strength: 'Strength', climbing: 'Climbing',
     yoga: 'Yoga', hike: 'Hike', walk: 'Walk',
-    swim: 'Swim', bike: 'Bike', cross_training: 'Cross training',
+    swim: 'Swim', bike: 'Bike', ebike: 'E-bike', cross_training: 'Cross training',
   };
   const INTENSITY_CLS = {
     recovery: 'bg-surface-alt text-muted',

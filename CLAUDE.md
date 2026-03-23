@@ -192,10 +192,15 @@ All URLs must be externally linkable. Parameters go in the path: `/{param}`, nev
     surface-alt:  var(--color-surface-alt) light: #F2F0EB  dark: #231F1B
     edge:         var(--color-edge)        light: #DCD9D1  dark: #312D28
 - Sport color mapping:
-    running   → mint   var(--color-mint)   #2DD4AA
-    strength  → sky    var(--color-sky)    #60A5FA
-    climbing  → amber  var(--color-amber)  #FB923C
-- Use `.sport-run`, `.sport-strength`, `.sport-climbing` CSS classes for sport indicator dots
+    running   → mint     var(--color-mint)     #599DA4
+    strength  → sky      var(--color-sky)      #60A5FA
+    climbing  → coral    var(--color-coral)    #E46B47
+    bike      → azure    var(--color-azure)    #4FA8D5
+    e-bike    → electric var(--color-electric) #8B5CF6
+    yoga      → violet   var(--color-violet)   #9B8EC4
+    hike/walk → sage     var(--color-sage)     #7BAF8E
+    swim      → azure    var(--color-azure)    #4FA8D5
+- Use `.sport-{type}` CSS classes for sport indicator dots (e.g. `.sport-run`, `.sport-ebike`)
 - When showing multiple timeseries, always align the x-axis vertically across charts on the page
 
 ### Tooltip Labels

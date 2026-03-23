@@ -188,11 +188,7 @@
         {% for slot in athlete.schedule_template %}
         <div class="flex items-center gap-2 text-sm">
           <span class="text-muted w-8">{{ day_names[slot.day_of_week] }}</span>
-          <span class="w-1.5 h-1.5 rounded-full
-            {% if slot.workout_type.value == 'run' %}sport-run
-            {% elif slot.workout_type.value == 'strength' %}sport-strength
-            {% elif slot.workout_type.value == 'climbing' %}sport-climbing
-            {% else %}bg-edge{% endif %}"></span>
+          <span class="w-1.5 h-1.5 rounded-full sport-{{ slot.workout_type.value }}"></span>
           <span class="text-secondary capitalize">{{ slot.workout_type.value }}</span>
         </div>
         {% endfor %}

@@ -13,6 +13,7 @@
   --color-violet: #9B8EC4;  /* yoga */
   --color-sage:   #7BAF8E;  /* hike / walk */
   --color-azure:  #4FA8D5;  /* swim / bike */
+  --color-electric: #8B5CF6; /* e-bike */
 
   /* Nav */
   --color-nav:               #599DA4;
@@ -133,6 +134,7 @@ body {
 .sport-walk          { background-color: var(--color-sage); }
 .sport-swim          { background-color: var(--color-azure); }
 .sport-bike          { background-color: var(--color-azure); }
+.sport-ebike         { background-color: var(--color-electric); }
 .sport-cross_training{ background-color: var(--color-sky); }
 
 /* ── Active tab ─────────────────────────────────────────────── */

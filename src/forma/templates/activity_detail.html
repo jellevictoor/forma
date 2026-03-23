@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ workout.name if workout else 'Activity' }} — forma{% endblock %}
 
+{% set _gps_sports = ['run', 'bike', 'ebike'] %}
+{% set _is_gps = workout and workout.workout_type.value in _gps_sports %}
+{% set _is_bike = workout and workout.workout_type.value in ['bike', 'ebike'] %}
 {% block extra_head %}
-{% if workout and workout.workout_type.value == 'run' %}
+{% if _is_gps %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 {% endif %}
 {% endblock %}
@@ -39,7 +42,7 @@
 {% set _sport_colors = {
   'run': 'var(--color-mint)', 'strength': 'var(--color-sky)', 'climbing': 'var(--color-coral)',
   'yoga': 'var(--color-violet)', 'hike': 'var(--color-sage)', 'walk': 'var(--color-sage)',
-  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'cross_training': 'var(--color-sky)',
+  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'ebike': 'var(--color-electric)', 'cross_training': 'var(--color-sky)',
 } %}
 {% set sport_color = _sport_colors.get(workout.workout_type.value, 'var(--color-edge)') %}
 <div class="mb-6">
@@ -62,10 +65,12 @@
       <p class="text-xs font-medium uppercase tracking-widest text-muted mb-0.5">
         {{ workout.start_time.strftime('%A, %d %B %Y · %H:%M') }}
         ·
-        {% if workout.workout_type.value == 'run' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-run inline-block"></span>Running</span>
-        {% elif workout.workout_type.value == 'strength' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-strength inline-block"></span>Strength</span>
-        {% elif workout.workout_type.value == 'climbing' %}<span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-climbing inline-block"></span>Climbing</span>
-        {% else %}{{ workout.workout_type.value | replace('_', ' ') | title }}{% endif %}
+        {% set _sport_label_map = {
+          'run': 'Running', 'strength': 'Strength', 'climbing': 'Climbing',
+          'yoga': 'Yoga', 'hike': 'Hike', 'walk': 'Walk',
+          'swim': 'Swim', 'bike': 'Bike', 'ebike': 'E-bike', 'cross_training': 'Cross training',
+        } %}
+        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full sport-{{ workout.workout_type.value }} inline-block"></span>{{ _sport_label_map.get(workout.workout_type.value, workout.workout_type.value | replace('_', ' ') | title) }}</span>
       </p>
       <h1 class="text-3xl font-bold text-primary">{{ workout.name }}</h1>
       {% if workout.strava_id %}
@@ -94,10 +99,23 @@
   </div>
   {% endif %}
 
-  {% if workout.pace_formatted() %}
+  {% if _is_bike and workout.speed_formatted() %}
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Average speed</p>
+    <p class="text-3xl font-bold text-primary">{{ workout.speed_formatted() }}</p>
+  </div>
+  {% elif workout.pace_formatted() %}
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
     <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Pace</p>
     <p class="text-3xl font-bold text-primary">{{ workout.pace_formatted() }}</p>
+  </div>
+  {% endif %}
+
+  {% if workout.average_watts %}
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 text-center">
+    <p class="text-xs font-medium text-muted uppercase tracking-widest mb-2">Average power</p>
+    <p class="text-3xl font-bold text-primary">{{ "%.0f"|format(workout.average_watts) }}</p>
+    <p class="text-xs text-muted mt-1">watts</p>
   </div>
   {% endif %}
 
@@ -200,13 +218,13 @@
   <div id="comparison-body"></div>
 </div>
 
-{% if workout.workout_type.value == 'run' %}
+{% if _is_gps %}
 <!-- Route map -->
 <div class="bg-surface rounded-2xl border border-edge shadow-sm overflow-hidden mb-4" id="map-card">
   <div class="flex items-center justify-between px-6 pt-5 pb-4">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Route</h2>
     <div id="map-toggle" class="hidden flex gap-1">
-      <button id="btn-pace"  onclick="setMapMode('pace')"  class="px-3 py-1 rounded-lg tab-active  text-xs cursor-pointer">Pace</button>
+      <button id="btn-pace"  onclick="setMapMode('pace')"  class="px-3 py-1 rounded-lg tab-active  text-xs cursor-pointer">{{ 'Speed' if _is_bike else 'Pace' }}</button>
       <button id="btn-zones" onclick="setMapMode('zones')" class="px-3 py-1 rounded-lg tab-inactive text-xs cursor-pointer">HR zones</button>
     </div>
   </div>
@@ -228,7 +246,7 @@
 <!-- Pace + HR chart (shown when streams loaded) -->
 <div id="charts-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm px-6 pt-5 pb-6 mb-6">
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Pace &amp; heart rate</h2>
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">{{ 'Speed' if _is_bike else 'Pace' }} &amp; heart rate</h2>
     <div class="flex items-center gap-3">
       <span id="zone-calibration-badge" class="hidden text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 font-medium"></span>
       <span id="drift-badge" class="hidden text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 font-medium"></span>
@@ -327,7 +345,7 @@
   </form>
 </div>
 
-{% if workout.workout_type.value == 'run' %}
+{% if _is_gps %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 {% endif %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -343,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   const chatMessages = document.getElementById('chat-messages');
   if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-  {% if workout and workout.workout_type.value == 'run' %}
+  {% if _is_gps %}
   loadActivityMap('{{ workout.id }}');
   {% endif %}
   {% if workout %}
@@ -580,8 +598,9 @@ function _drawZoneDistribution(hrs, times) {
   dist.classList.remove('hidden');
 }
 
-{% if workout.workout_type.value == 'run' %}
+{% if _is_gps %}
 // ── Route map + charts ─────────────────────────────────────
+const IS_BIKE = {{ 'true' if _is_bike else 'false' }};
 const MAP_LOW  = '#B2F0E4';
 const MAP_MID  = '#2DD4AA';
 const MAP_HIGH = '#0A6A50';
@@ -609,6 +628,12 @@ function _zoneColor(hr) { return hr ? _hrZoneColor(hr) : '#CBD5E1'; }
 function _formatPace(secPerKm) {
   const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
   return `${m}:${String(s).padStart(2,'0')}/km`;
+}
+function _formatSpeed(mps) {
+  return `${(mps * 3.6).toFixed(1)} km/h`;
+}
+function _formatVelocity(v) {
+  return IS_BIKE ? _formatSpeed(v) : _formatPace(1000/v);
 }
 function _formatTime(secs) {
   const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=Math.floor(secs%60);
@@ -648,8 +673,8 @@ function _drawRoute(latlng, values, useZones) {
   if (showPaceLegend) {
     document.getElementById('legend-gradient').style.background =
       `linear-gradient(to right, ${MAP_LOW}, ${MAP_MID}, ${MAP_HIGH})`;
-    document.getElementById('legend-low').textContent  = minVal>0 ? _formatPace(1000/minVal) : '—';
-    document.getElementById('legend-high').textContent = maxVal>0 ? _formatPace(1000/maxVal) : '—';
+    document.getElementById('legend-low').textContent  = minVal>0 ? _formatVelocity(minVal) : '—';
+    document.getElementById('legend-high').textContent = maxVal>0 ? _formatVelocity(maxVal) : '—';
   }
 }
 
@@ -708,22 +733,32 @@ function _drawCharts(data) {
     .domain(d3.extent(pts, d => d.t))
     .range([mL, W - mR]);
 
-  // ── Pace panel ─────────────────────────────────────────
+  // ── Velocity panel (pace for runs, speed for bikes) ────
   const paceY1 = mTop, paceY2 = mTop + paceH;
-  const paces  = pts.filter(d => d.v > 0.3).map(d => 1000/d.v);
-  const paceMin = d3.min(paces) * 0.92;
-  const paceMax = d3.max(paces) * 1.08;
-  // fast pace (low sec/km) → top of chart; slow (high sec/km) → bottom; bars grow upward
-  const paceScale = d3.scaleLinear().domain([paceMin, paceMax]).range([paceY1, paceY2]);
+  const validV = pts.filter(d => d.v > 0.3);
+  let paceScale;
+  if (IS_BIKE) {
+    const speeds = validV.map(d => d.v * 3.6);
+    const sMin = d3.min(speeds) * 0.92;
+    const sMax = d3.max(speeds) * 1.08;
+    paceScale = d3.scaleLinear().domain([sMin, sMax]).range([paceY2, paceY1]);
+  } else {
+    const paces = validV.map(d => 1000/d.v);
+    const paceMin = d3.min(paces) * 0.92;
+    const paceMax = d3.max(paces) * 1.08;
+    paceScale = d3.scaleLinear().domain([paceMin, paceMax]).range([paceY1, paceY2]);
+  }
+  const _toY = d => IS_BIKE ? paceScale(d.v * 3.6) : paceScale(1000/d.v);
+  const chartColor = IS_BIKE ? 'var(--color-azure)' : 'var(--color-mint)';
 
   // clip
   svg.append('defs').append('clipPath').attr('id','pace-clip')
     .append('rect').attr('x',mL).attr('y',paceY1).attr('width',W-mL-mR).attr('height',paceH);
 
-  // pace line
+  // velocity line
   const paceLine = d3.line()
     .x(d => xScale(d.t))
-    .y(d => d.v > 0.3 ? paceScale(1000/d.v) : null)
+    .y(d => d.v > 0.3 ? _toY(d) : null)
     .defined(d => d.v > 0.3)
     .curve(d3.curveBasis);
 
@@ -731,28 +766,28 @@ function _drawCharts(data) {
     .datum(pts)
     .attr('clip-path','url(#pace-clip)')
     .attr('fill','none')
-    .attr('stroke','var(--color-mint)')
+    .attr('stroke', chartColor)
     .attr('stroke-width',2)
     .attr('d', paceLine);
 
-  // pace fill
+  // velocity fill
   const paceArea = d3.area()
     .x(d => xScale(d.t))
     .y0(paceY2)
-    .y1(d => d.v > 0.3 ? paceScale(1000/d.v) : paceY2)
+    .y1(d => d.v > 0.3 ? _toY(d) : paceY2)
     .defined(d => d.v > 0.3)
     .curve(d3.curveBasis);
 
   svg.append('path')
     .datum(pts)
     .attr('clip-path','url(#pace-clip)')
-    .attr('fill','var(--color-mint)')
+    .attr('fill', chartColor)
     .attr('fill-opacity',0.12)
     .attr('d', paceArea);
 
-  // pace y-axis
+  // velocity y-axis
   const paceAxis = d3.axisLeft(paceScale).ticks(4)
-    .tickFormat(s => _formatPace(s));
+    .tickFormat(s => IS_BIKE ? `${s.toFixed(0)} km/h` : _formatPace(s));
   svg.append('g').attr('transform',`translate(${mL},0)`)
     .call(paceAxis)
     .call(g => g.select('.domain').remove())
@@ -924,14 +959,14 @@ function _drawCharts(data) {
       const p    = pts[i];
       vLine.attr('x1',xScale(p.t)).attr('x2',xScale(p.t)).style('display',null);
       if (p.v > 0.3) {
-        dotPace.attr('cx',xScale(p.t)).attr('cy',paceScale(1000/p.v)).style('display',null);
+        dotPace.attr('cx',xScale(p.t)).attr('cy',_toY(p)).style('display',null);
       }
       if (p.hr) {
         dotHr.attr('cx',xScale(p.t)).attr('cy',hrScale(p.hr))
           .attr('fill', _zoneColor(p.hr)).style('display',null);
       }
       let txt = _formatTime(p.t);
-      if (p.v > 0.3) txt += `  ${_formatPace(1000/p.v)}`;
+      if (p.v > 0.3) txt += `  ${_formatVelocity(p.v)}`;
       if (p.hr) txt += `  ${Math.round(p.hr)} bpm`;
       label.textContent = txt;
       label.classList.remove('hidden');
@@ -1109,7 +1144,7 @@ async function loadPlanCard(workoutDate, workoutType, durationMin) {
     const body = document.getElementById('plan-match-body');
     if (!card || !body) return;
 
-    const SPORT_COLORS = { run:'var(--color-mint)', strength:'var(--color-sky)', climbing:'var(--color-amber)' };
+    const SPORT_COLORS = { run:'var(--color-mint)', strength:'var(--color-sky)', climbing:'var(--color-amber)', bike:'var(--color-azure)', ebike:'var(--color-electric)' };
     const planned = match.workout_type.toLowerCase();
     const actual  = workoutType.toLowerCase();
     const plannedLabel = planned.charAt(0).toUpperCase() + planned.slice(1);

@@ -10,6 +10,7 @@ class WorkoutType(str, Enum):
 
     RUN = "run"
     BIKE = "bike"
+    EBIKE = "ebike"
     SWIM = "swim"
     STRENGTH = "strength"
     YOGA = "yoga"
@@ -57,6 +58,9 @@ class Workout(BaseModel):
     average_heartrate: float | None = None
     max_heartrate: float | None = None
 
+    # Power
+    average_watts: float | None = None
+
     # Elevation
     elevation_gain_meters: float | None = None
 
@@ -82,6 +86,20 @@ class Workout(BaseModel):
         if self.distance_meters is None:
             return None
         return self.distance_meters / 1000
+
+    @property
+    def speed_kmh(self) -> float | None:
+        """Average speed in km/h — useful for cycling."""
+        if not self.average_speed_mps:
+            return None
+        return self.average_speed_mps * 3.6
+
+    def speed_formatted(self) -> str | None:
+        """Speed as km/h with one decimal."""
+        speed = self.speed_kmh
+        if speed is None:
+            return None
+        return f"{speed:.1f} km/h"
 
     @property
     def pace_min_per_km(self) -> float | None:

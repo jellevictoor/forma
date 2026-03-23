@@ -19,15 +19,7 @@
       {% for slot in athlete.schedule_template %}
       <li class="flex items-center justify-between py-2 px-3 rounded-lg border border-edge bg-surface-alt text-sm">
         <span class="flex items-center gap-2">
-          {% if slot.workout_type.value == 'run' %}
-            <span class="w-2 h-2 rounded-full sport-run inline-block"></span>
-          {% elif slot.workout_type.value == 'strength' %}
-            <span class="w-2 h-2 rounded-full sport-strength inline-block"></span>
-          {% elif slot.workout_type.value == 'climbing' %}
-            <span class="w-2 h-2 rounded-full sport-climbing inline-block"></span>
-          {% else %}
-            <span class="w-2 h-2 rounded-full inline-block bg-edge"></span>
-          {% endif %}
+          <span class="w-2 h-2 rounded-full sport-{{ slot.workout_type.value }} inline-block"></span>
           <span class="text-primary">{{ day_names[slot.day_of_week] }}</span>
           <span class="text-muted">{{ slot.workout_type.value | replace('_', ' ') | title }}</span>
         </span>

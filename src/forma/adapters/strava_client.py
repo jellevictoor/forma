@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 STRAVA_TYPE_MAP = {
     "Run": WorkoutType.RUN,
     "Ride": WorkoutType.BIKE,
+    "EBikeRide": WorkoutType.EBIKE,
     "Swim": WorkoutType.SWIM,
     "Walk": WorkoutType.WALK,
     "Hike": WorkoutType.HIKE,
@@ -198,6 +199,7 @@ class StravaClient(StravaClientPort):
             max_speed_mps=activity.get("max_speed"),
             average_heartrate=activity.get("average_heartrate"),
             max_heartrate=activity.get("max_heartrate"),
+            average_watts=activity.get("average_watts"),
             elevation_gain_meters=activity.get("total_elevation_gain"),
             detail_fetched=False,
         )

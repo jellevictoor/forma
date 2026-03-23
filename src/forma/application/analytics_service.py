@@ -17,7 +17,7 @@ PR_DISTANCES_METERS = [1000.0, 5000.0, 10000.0, 21097.0, 42195.0]
 PAGE_SIZE = 20
 
 
-SPORTS = ("run", "strength", "climbing", "yoga", "hike", "walk", "swim", "bike", "cross_training")
+SPORTS = ("run", "strength", "climbing", "yoga", "hike", "walk", "swim", "bike", "ebike", "cross_training")
 VALID_MONTHS = {3, 6, 12}
 
 

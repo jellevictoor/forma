@@ -21,7 +21,7 @@
   {% set _sport_display = {
     'run': 'Running', 'strength': 'Strength', 'climbing': 'Climbing',
     'yoga': 'Yoga', 'hike': 'Hike', 'walk': 'Walk',
-    'swim': 'Swim', 'bike': 'Bike', 'cross_training': 'Cross training',
+    'swim': 'Swim', 'bike': 'Bike', 'ebike': 'E-bike', 'cross_training': 'Cross training',
   } %}
   <div class="inline-flex bg-surface-alt rounded-xl p-0.5 gap-0.5 flex-wrap">
     <a href="{% if date_from_str and date_to_str %}/activities/all/{{ date_from_str }}/{{ date_to_str }}/1{% else %}/activities/all/1{% endif %}"
@@ -172,7 +172,7 @@
 {% set _sport_colors = {
   'run': 'var(--color-mint)', 'strength': 'var(--color-sky)', 'climbing': 'var(--color-coral)',
   'yoga': 'var(--color-violet)', 'hike': 'var(--color-sage)', 'walk': 'var(--color-sage)',
-  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'cross_training': 'var(--color-sky)',
+  'swim': 'var(--color-azure)', 'bike': 'var(--color-azure)', 'ebike': 'var(--color-electric)', 'cross_training': 'var(--color-sky)',
 } %}
 {% set sport_color = _sport_colors.get(w.workout_type.value, 'var(--color-edge)') %}
 <a href="/activities/detail/{{ w.id }}"
@@ -182,17 +182,8 @@
 
   {# Sport dot + type #}
   <div class="shrink-0 flex flex-col items-center gap-1 w-12">
-    <span class="w-2.5 h-2.5 rounded-full
-      {%- if w.workout_type.value == 'run' %} sport-run
-      {%- elif w.workout_type.value == 'strength' %} sport-strength
-      {%- elif w.workout_type.value == 'climbing' %} sport-climbing
-      {%- else %} bg-edge{% endif %}"></span>
-    <span class="text-xs text-muted leading-none">
-      {%- if w.workout_type.value == 'run' %}Run
-      {%- elif w.workout_type.value == 'strength' %}Strength
-      {%- elif w.workout_type.value == 'climbing' %}Climbing
-      {%- else %}{{ w.workout_type.value | replace('_', ' ') | title }}{% endif -%}
-    </span>
+    <span class="w-2.5 h-2.5 rounded-full sport-{{ w.workout_type.value }}"></span>
+    <span class="text-xs text-muted leading-none">{{ _sport_display.get(w.workout_type.value, w.workout_type.value | replace('_', ' ') | title) }}</span>
   </div>
 
   {# Name + date #}
@@ -213,8 +204,13 @@
     {% if w.distance_km %}
     <span class="text-xs font-medium px-2.5 py-1 rounded-full" style="background:color-mix(in srgb, {{ sport_color }} 10%, transparent); color:{{ sport_color }}">{{ "%.1f"|format(w.distance_km) }} km</span>
     {% endif %}
-    {% if w.pace_formatted() %}
+    {% if w.workout_type.value in ['bike', 'ebike'] and w.speed_formatted() %}
+    <span class="text-xs text-muted bg-surface-alt px-2.5 py-1 rounded-full">{{ w.speed_formatted() }}</span>
+    {% elif w.pace_formatted() %}
     <span class="text-xs text-muted bg-surface-alt px-2.5 py-1 rounded-full">{{ w.pace_formatted() }}</span>
+    {% endif %}
+    {% if w.average_watts %}
+    <span class="text-xs text-muted bg-surface-alt px-2.5 py-1 rounded-full">{{ "%.0f"|format(w.average_watts) }} W</span>
     {% endif %}
     {% if w.average_heartrate %}
     <span class="text-xs text-muted bg-surface-alt px-2.5 py-1 rounded-full">{{ "%.0f"|format(w.average_heartrate) }} bpm</span>
