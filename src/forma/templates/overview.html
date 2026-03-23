@@ -73,15 +73,15 @@
 {# ── Form widget ──────────────────────────────────────────── #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mb-6">
   <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Readiness</p>
-  <div class="flex items-stretch gap-6 md:gap-10">
+  <div class="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-6 md:gap-10">
 
     {# Status + bars #}
     <div class="flex-1 min-w-0">
       <div class="flex items-baseline gap-3 mb-1">
-        <span id="form-status-word" class="text-5xl font-black tracking-tight leading-none">—</span>
-        <span id="form-tsb" class="text-xl font-bold tabular-nums text-muted">—</span>
+        <span id="form-status-word" class="text-3xl sm:text-5xl font-black tracking-tight leading-none">—</span>
+        <span id="form-tsb" class="text-lg sm:text-xl font-bold tabular-nums text-muted">—</span>
       </div>
-      <p id="form-interpretation" class="text-sm text-muted mb-5 leading-snug">Loading…</p>
+      <p id="form-interpretation" class="text-sm text-muted mb-4 sm:mb-5 leading-snug">Loading…</p>
 
       <div class="space-y-2">
         <div class="flex items-center gap-3">
@@ -103,7 +103,7 @@
     </div>
 
     {# 30-day TSB sparkline #}
-    <div class="w-28 md:w-40 shrink-0 flex flex-col">
+    <div class="w-full sm:w-28 md:w-40 shrink-0 flex flex-col">
       <p class="text-xs text-muted mb-2 text-right">30-day form</p>
       <div id="form-sparkline" class="flex-1" style="min-height:80px"></div>
     </div>
