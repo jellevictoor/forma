@@ -11,10 +11,19 @@ import sys
 from pathlib import Path
 
 # Add project root to path so we can import the config
-sys.path.insert(0, str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from playwright.async_api import async_playwright
-from playwright_config import BASE_URL, DEVICES, PAGES
+
+# Import inline to avoid module name conflict with playwright package
+import importlib.util
+spec = importlib.util.spec_from_file_location("pw_config", PROJECT_ROOT / "playwright.config.py")
+pw_config = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(pw_config)
+BASE_URL = pw_config.BASE_URL
+DEVICES = pw_config.DEVICES
+PAGES = pw_config.PAGES
 
 
 OUTPUT_DIR = Path("screenshots")
