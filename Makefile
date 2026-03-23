@@ -27,7 +27,13 @@ dev:
 #
 update:
 	@echo "── Pulling latest code..."
-	git pull
+	@BEFORE=$$(git rev-parse HEAD); \
+	git pull; \
+	AFTER=$$(git rev-parse HEAD); \
+	if [ "$$BEFORE" = "$$AFTER" ]; then \
+		echo "✓ Already up to date ($$(git rev-parse --short HEAD))"; \
+		exit 0; \
+	fi
 	@echo "── Running tests..."
 	$(MAKE) test
 	@echo "── Building new image..."
