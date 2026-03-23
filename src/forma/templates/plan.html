@@ -318,7 +318,7 @@ function dayCard(day) {
   const today = new Date(); today.setHours(0,0,0,0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const dTime = d.getTime();
-  const isNearFuture = dTime === today.getTime() || dTime === tomorrow.getTime();
+  const isToday = dTime === today.getTime();
   const isPast = dTime < today.getTime();
 
   const dayName = d.toLocaleDateString('en-GB', { weekday: 'long' });
@@ -356,7 +356,7 @@ function dayCard(day) {
             <div class="flex items-center gap-2 mt-3">
               <button type="button" onclick="toggleExercises(this)"
                       class="text-xs font-medium px-3 py-1.5 rounded-lg bg-surface-alt text-secondary transition-colors hover:text-primary cursor-pointer min-h-[36px]">${hasExercises ? 'Hide details' : 'Show details'}</button>
-              ${isNearFuture ? `<button type="button" onclick="skipDay('${day.date}')"
+              ${isToday ? `<button type="button" onclick="skipDay('${day.date}')"
                       class="skip-btn text-xs font-medium px-3 py-1.5 rounded-lg bg-surface-alt text-secondary transition-colors hover:text-coral cursor-pointer min-h-[36px]"
                       aria-label="Not today — move this workout">Not today</button>` : ''}
             </div>
