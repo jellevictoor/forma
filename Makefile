@@ -57,6 +57,10 @@ stop:
 	docker compose down
 	@echo "✓ All containers stopped"
 
+# ── Visual testing ────────────────────────────────────────────
+screenshots:
+	uv run python scripts/visual_compare.py
+
 # ── Operations ────────────────────────────────────────────────
 logs:
 	docker compose logs -f forma
