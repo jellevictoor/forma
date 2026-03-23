@@ -26,24 +26,24 @@ dev:
 #   5. health check (if fail → rolls back to previous image)
 #
 update:
-	@echo "── Pulling latest code..."
 	@BEFORE=$$(git rev-parse HEAD); \
+	echo "── Pulling latest code..."; \
 	git pull; \
 	AFTER=$$(git rev-parse HEAD); \
 	if [ "$$BEFORE" = "$$AFTER" ]; then \
 		echo "✓ Already up to date ($$(git rev-parse --short HEAD))"; \
 		exit 0; \
-	fi
-	@echo "── Running tests..."
-	$(MAKE) test
-	@echo "── Building new image..."
-	@docker tag forma-forma:latest forma-forma:rollback 2>/dev/null || true
-	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose build
-	@echo "── Starting new container..."
-	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d
-	@echo "── Checking health..."
-	@sleep 3
-	@if docker exec forma curl -sf http://localhost:8080/ > /dev/null 2>&1; then \
+	fi; \
+	echo "── Running tests..."; \
+	$(MAKE) test && \
+	echo "── Building new image..." && \
+	docker tag forma-forma:latest forma-forma:rollback 2>/dev/null; \
+	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose build && \
+	echo "── Starting new container..." && \
+	GIT_COMMIT=$$(git rev-parse --short HEAD) docker compose up -d && \
+	echo "── Checking health..." && \
+	sleep 3 && \
+	if docker exec forma curl -sf http://localhost:8080/ > /dev/null 2>&1; then \
 		echo "✓ Deployed $$(git rev-parse --short HEAD) — healthy"; \
 	else \
 		echo "✗ New container unhealthy — rolling back..."; \
