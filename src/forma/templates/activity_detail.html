@@ -173,6 +173,7 @@
   <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="effort-picker">
     {% for value, label, color in _effort_levels %}
     <button data-effort="{{ value }}"
+            data-active="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
             onclick="setEffort('{{ value }}')"
             aria-label="Rate effort as {{ label }}"
             aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
