@@ -149,6 +149,30 @@ In these cases: recalibrate using talk test + observed stable HR as the anchor. 
 
 ---
 
+## Running Metrics (Strava)
+
+### Grade Adjusted Pace (GAP)
+- Estimates equivalent flat-land pace for hilly runs
+- Uphill: GAP is faster than actual pace (more effort per distance)
+- Downhill: GAP is slower than actual pace (less effort per distance)
+- Adjustment grows with steeper grades; downhill adjustment peaks around -10% grade, then slightly less extreme
+- Does NOT account for terrain differences or technical difficulty of downhill running
+- Used as the basis for pace zone bucketing (enables flat vs hilly comparison)
+
+### Moving Time vs Elapsed Time
+- **Moving time**: excludes rest periods. Auto-detected (threshold: 30 min/mile) or device-pause-based. Used for non-competitive activities.
+- **Elapsed time**: total time including stops. Used for races, laps, segment efforts. Most fair for competitive activities.
+
+### Pace Zones (6 zones, based on recent race/time trial, bucketed by GAP)
+1. **Recovery** — very easy, used before/after hard workouts or as jog between intervals
+2. **Endurance** — comfortable "conversational" pace, bulk of mileage
+3. **Tempo** — marathon-like intensity, up-tempo
+4. **Threshold** — sustainable up to 60 minutes with difficulty, continuous or longer intervals
+5. **VO2 Max** — maximum oxygen consumption pace, typically intervals
+6. **Anaerobic** — extremely hard, short intervals or longer time trials
+
+---
+
 ## Running Guidelines
 
 Zone 2 is preferred for most runs.
@@ -308,3 +332,60 @@ Recovery: 10–20 min
 6. Speed
 
 Never reverse this order.
+
+---
+
+## Cycling Power Metrics (Strava)
+
+All metrics below apply to cycling with a power meter.
+
+### FTP (Functional Threshold Power)
+- Maximum average power sustainable for 1 continuous hour
+- Keystone for all power-based training metrics
+- **Testing**: best average power over 20 minutes (stresses same systems as 60 min, easier to reproduce)
+- Test tips: same conditions each time, fresh legs, proper warm-up
+- Retest every few weeks to a month during training
+
+### Weighted Average Power
+- Accounts for power variability (terrain, wind, grade)
+- Better effort indicator than simple average power
+- Represents equivalent steady-state wattage for the ride
+
+### Total Work
+- Expressed in kilojoules (kJ) — sum of watts over the ride
+- Close 1:1 ratio with calories expended
+
+### Intensity
+- Weighted Average Power ÷ FTP × 100%
+- Can exceed 100% for rides shorter than 1 hour
+- Zones:
+  - Endurance/Recovery: ≤65%
+  - Moderate: 65–80%
+  - Tempo: 80–95%
+  - Time Trial/Race: 95–105%
+  - Short TT/Race: >105%
+
+### Segment Intensity
+- Segment power ÷ best power for that duration (last 6 weeks)
+
+### Training Load
+- Based on power relative to FTP during the ride
+- Recovery guide:
+  - ≤125: ~24 hours recovery
+  - 125–250: 36–48 hours
+  - 250–400: at least 3 days
+  - 400+: at least 5 days
+
+### Power Curve
+- Best average power for durations from 1 second up to full ride length
+- Comparable across 6-week, yearly, or multi-year windows
+- Can display as Watts (W) or Watts/kg (W/kg)
+
+### Power Zones (7 zones, based on FTP)
+1. **Recovery** — social pace, minimal physiological effect, used between intervals
+2. **Endurance** — easy "all day" pace, conversation possible
+3. **Tempo** — brisk, maintainable for a few hours, requires concentration
+4. **Threshold** — moderate-to-hard, up to 1 hour, conversation difficult
+5. **VO2Max** — high leg fatigue, no conversation, 3–8 minutes
+6. **Anaerobic** — extreme fatigue, 30 seconds to 3 minutes
+7. **Neuromuscular** — sprinting, 1–20 seconds
