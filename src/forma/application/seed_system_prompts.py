@@ -2,7 +2,6 @@
 
 from forma.application.activity_analysis_service import _SYSTEM_INSTRUCTION as ANALYSIS_PROMPT
 from forma.application.goal_coaching_service import _SYSTEM_INSTRUCTION as COACHING_PROMPT
-from forma.application.training_insights import _SYSTEM_INSTRUCTION as INSIGHTS_PROMPT
 from forma.application.workout_planning_service import _SYSTEM_INSTRUCTION as PLANNING_PROMPT
 from forma.ports.system_prompt_repository import SystemPrompt, SystemPromptRepository
 
@@ -16,11 +15,6 @@ DEFAULTS = [
         service="goal-coach",
         label="Goal coaching",
         text=COACHING_PROMPT,
-    ),
-    SystemPrompt(
-        service="insights",
-        label="Training insights",
-        text=INSIGHTS_PROMPT,
     ),
     SystemPrompt(
         service="plan",

@@ -24,7 +24,6 @@ from forma.adapters.web.routes.goal_coach import router as goal_coach_router
 from forma.adapters.web.routes.overview import router as overview_router
 from forma.adapters.web.routes.activities import router as activities_router
 from forma.adapters.web.routes.analytics import router as analytics_router
-from forma.adapters.web.routes.insights import router as insights_router
 from forma.adapters.web.routes.plan import router as plan_router
 from forma.adapters.web.routes.profile import router as profile_router
 from forma.adapters.web.routes.progress import router as progress_router
@@ -177,7 +176,6 @@ def create_app() -> FastAPI:
     app.include_router(activities_router)
     app.include_router(analytics_router)
     app.include_router(progress_router)
-    app.include_router(insights_router)
     app.include_router(profile_router)
     app.include_router(plan_router)
     app.include_router(execution_router)

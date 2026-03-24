@@ -30,7 +30,6 @@ PAGES = [
     ("/analytics/run", "analytics"),
     ("/progress", "progress"),
     ("/profile", "profile"),
-    ("/insights", "insights"),
 ]
 
 # Desktop-only pages (skipped in mobile screenshots)

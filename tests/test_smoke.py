@@ -56,7 +56,6 @@ def _seed_db(pg_url):
         for svc, label in [
             ("activity-analysis", "Activity analysis"),
             ("goal-coach", "Goal coaching"),
-            ("insights", "Training insights"),
             ("plan", "Workout planning"),
         ]:
             await pool.execute(
@@ -108,8 +107,6 @@ def test_progress_page(client):
     assert client.get("/progress").status_code == 200
 
 
-def test_insights_page(client):
-    assert client.get("/insights").status_code == 200
 
 
 def test_plan_page(client):

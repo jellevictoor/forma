@@ -9,7 +9,6 @@ from forma.adapters.postgres_activity_analysis import PostgresActivityAnalysis
 from forma.adapters.postgres_analytics import PostgresAnalyticsRepository
 from forma.adapters.postgres_chat import PostgresChat
 from forma.adapters.postgres_execution_session import PostgresExecutionSession
-from forma.adapters.postgres_insights_cache import PostgresInsightsCache
 from forma.adapters.postgres_plan_cache import PostgresPlanCache
 from forma.adapters.postgres_pool import get_pool
 from forma.adapters.postgres_system_prompts import PostgresSystemPrompts
@@ -26,7 +25,6 @@ from forma.application.sync_all_activities import FullStravaSync
 from forma.application.plan_adherence import PlanAdherenceService
 from forma.application.plan_skip_service import PlanSkipService
 from forma.application.training_alerts import TrainingAlertsService
-from forma.application.training_insights import TrainingInsightsService
 from forma.application.workout_enrichment import WorkoutEnrichmentService
 
 from forma.application.weight_tracking_service import WeightTrackingService
@@ -41,17 +39,6 @@ from forma.ports.workout_repository import WorkoutRepository
 def _create_analytics_service() -> AnalyticsService:
     pool = get_pool()
     return AnalyticsService(PostgresAnalyticsRepository(pool), PostgresStorage(pool))
-
-
-@lru_cache
-def _create_insights_service() -> TrainingInsightsService:
-    pool = get_pool()
-    return TrainingInsightsService(
-        PostgresAnalyticsRepository(pool),
-        PostgresStorage(pool),
-        PostgresInsightsCache(pool),
-        PostgresSystemPrompts(pool),
-    )
 
 
 
@@ -75,8 +62,6 @@ async def get_training_alerts_service() -> TrainingAlertsService:
     return _create_training_alerts_service()
 
 
-async def get_insights_service() -> TrainingInsightsService:
-    return _create_insights_service()
 
 
 async def get_analytics_service() -> AnalyticsService:
