@@ -131,6 +131,27 @@
     </div>
   </div>
 
+  <!-- User feedback -->
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6 mt-6">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-4">User feedback</h2>
+    {% if feedback %}
+    <div class="space-y-3">
+      {% for fb in feedback %}
+      <div class="border-b border-edge pb-3 last:border-0 last:pb-0">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs text-secondary font-medium">{{ athlete_names.get(fb.athlete_id, '—') }}</span>
+          <span class="text-xs text-muted">{{ fb.created_at.strftime('%d %b %H:%M') if fb.created_at else '' }}</span>
+        </div>
+        <p class="text-sm text-primary">{{ fb.message }}</p>
+        <p class="text-xs text-muted mt-0.5 font-mono">{{ fb.page }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-muted text-center py-4">No feedback yet.</p>
+    {% endif %}
+  </div>
+
 </div>
 
 {# ═══════════════════════════════════════════════════════════ #}

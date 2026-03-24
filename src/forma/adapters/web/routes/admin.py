@@ -178,6 +178,16 @@ async def admin_page(
         for r in user_health_rows
     }
 
+    # User feedback
+    feedback_rows = await pool.fetch(
+        """
+        SELECT f.athlete_id, f.page, f.message, f.created_at
+        FROM feedback f
+        ORDER BY f.created_at DESC
+        LIMIT 20
+        """
+    )
+
     # System prompts + global default model
     prompt_repo = PostgresSystemPrompts(pool)
     system_prompts = await prompt_repo.list_all()
@@ -201,6 +211,7 @@ async def admin_page(
             "daily_active_json": daily_active,
             "user_health": user_health,
             "system_prompts": system_prompts,
+            "feedback": [dict(r) for r in feedback_rows],
             "global_default_model": global_default_model,
         },
     )

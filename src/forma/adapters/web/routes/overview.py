@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from starlette.responses import StreamingResponse
 
@@ -177,3 +177,22 @@ async def training_alerts_api(
 ):
     alerts = await alerts_service.check(athlete_id)
     return {"alerts": [a.model_dump() for a in alerts]}
+
+
+@router.post("/api/feedback")
+async def submit_feedback(
+    request: Request,
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    from forma.adapters.postgres_pool import get_pool
+    body = await request.json()
+    message = body.get("message", "").strip()
+    page = body.get("page", "")
+    if not message:
+        return JSONResponse({"error": "Message required"}, status_code=400)
+    pool = get_pool()
+    await pool.execute(
+        "INSERT INTO feedback (athlete_id, page, message) VALUES ($1, $2, $3)",
+        athlete_id, page, message,
+    )
+    return JSONResponse({"status": "sent"})

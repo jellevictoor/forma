@@ -39,6 +39,18 @@ async def _lifespan(app: FastAPI):
     logging.config.dictConfig(LOGGING_CONFIG)
     logger.info("forma starting up")
 
+    # Sentry error tracking
+    sentry_dsn = os.environ.get("SENTRY_DSN")
+    if sentry_dsn:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            traces_sample_rate=0.1,
+            release=_COMMIT_HASH,
+            environment="production" if not _DEV_MODE else "development",
+        )
+        logger.info("sentry initialized")
+
     from forma.config import get_settings
     from forma.adapters.postgres_pool import init_pool, close_pool
     from forma.adapters.postgres_migrations import run_migrations

@@ -168,6 +168,13 @@
           <span class="text-xs font-mono opacity-40" style="color:var(--color-nav-text)" title="Commit {{ request.state.commit_hash }}">{{ request.state.commit_hash }}</span>
         </div>
         <div class="flex items-center gap-0.5">
+          <button onclick="toggleFeedback()"
+                  class="nav-btn w-7 h-7 flex items-center justify-center rounded-full cursor-pointer" style="color:var(--color-nav-text)"
+                  title="Send feedback" aria-label="Send feedback">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
           <button id="sync-btn" onclick="triggerSync()"
                   class="nav-btn w-7 h-7 flex items-center justify-center rounded-full cursor-pointer" style="color:var(--color-nav-text)"
                   title="Sync from Strava" aria-label="Sync from Strava">
@@ -357,5 +364,51 @@
     });
   </script>
 
+  <!-- Feedback panel -->
+  <div id="feedback-panel" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div class="absolute inset-0 bg-black/40" onclick="toggleFeedback()"></div>
+    <div class="relative w-full sm:max-w-md bg-surface border-t sm:border border-edge sm:rounded-2xl shadow-lg p-5 sm:mb-0">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-primary">Send feedback</h3>
+        <button onclick="toggleFeedback()" class="text-muted hover:text-primary transition-colors cursor-pointer" aria-label="Close">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <textarea id="feedback-message" rows="3" placeholder="What's on your mind? Bug, idea, frustration — anything helps."
+        class="w-full px-3 py-2 border border-edge rounded-lg text-sm bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-mint/40 resize-none"></textarea>
+      <div class="flex items-center justify-between mt-3">
+        <span id="feedback-status" class="text-xs text-muted"></span>
+        <button onclick="sendFeedback()" id="feedback-send"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-mint transition-opacity hover:opacity-90 cursor-pointer">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleFeedback() {
+      document.getElementById('feedback-panel').classList.toggle('hidden');
+      const ta = document.getElementById('feedback-message');
+      if (!document.getElementById('feedback-panel').classList.contains('hidden')) ta.focus();
+    }
+    async function sendFeedback() {
+      const msg = document.getElementById('feedback-message');
+      const btn = document.getElementById('feedback-send');
+      const status = document.getElementById('feedback-status');
+      if (!msg.value.trim()) return;
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ message: msg.value, page: location.pathname }),
+        });
+        if (res.ok) {
+          status.textContent = 'Thank you!'; status.classList.add('text-mint');
+          msg.value = '';
+          setTimeout(() => { toggleFeedback(); status.textContent = ''; status.classList.remove('text-mint'); }, 1500);
+        } else { status.textContent = 'Failed to send'; }
+      } catch { status.textContent = 'Failed to send'; }
+      finally { btn.disabled = false; btn.textContent = 'Send'; }
+    }
+  </script>
 </body>
 </html>
