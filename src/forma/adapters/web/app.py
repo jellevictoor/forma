@@ -45,6 +45,7 @@ async def _lifespan(app: FastAPI):
         import sentry_sdk
         sentry_sdk.init(
             dsn=sentry_dsn,
+            send_default_pii=True,
             traces_sample_rate=0.1,
             release=_COMMIT_HASH,
             environment="production" if not _DEV_MODE else "development",
