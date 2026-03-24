@@ -70,19 +70,32 @@
 {# ── Training alerts ────────────────────────────────────────── #}
 <div id="alerts-container" class="hidden space-y-2 mb-4" role="alert" aria-live="polite"></div>
 
-{# ── Form widget ──────────────────────────────────────────── #}
-<div class="bg-surface rounded-2xl border border-edge shadow-sm p-4 sm:p-6 overflow-hidden mb-6">
-  <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Readiness</p>
-  <div class="flex flex-col sm:flex-row sm:items-stretch gap-4 sm:gap-6 md:gap-10">
+{# ── Readiness widget ─────────────────────────────────────── #}
+{# Mobile: compact single-line readiness #}
+<div class="md:hidden bg-surface rounded-2xl border border-edge shadow-sm p-4 overflow-hidden mb-4">
+  <div class="flex items-center justify-between">
+    <div class="flex items-baseline gap-2">
+      <p class="text-xs font-medium uppercase tracking-widest text-muted">Readiness</p>
+    </div>
+    <a href="/progress" class="text-xs text-muted hover:text-primary transition-colors">Details →</a>
+  </div>
+  <div class="flex items-baseline gap-3 mt-2">
+    <span id="form-status-word-mobile" class="text-2xl font-black tracking-tight leading-none">—</span>
+    <span id="form-tsb-mobile" class="text-sm font-bold tabular-nums text-muted">—</span>
+  </div>
+  <p id="form-interpretation-mobile" class="text-xs text-muted mt-1">Loading…</p>
+</div>
 
-    {# Status + bars #}
+{# Desktop: full readiness widget with bars + sparkline #}
+<div class="hidden md:block bg-surface rounded-2xl border border-edge shadow-sm p-6 overflow-hidden mb-6">
+  <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Readiness</p>
+  <div class="flex items-stretch gap-6 lg:gap-10">
     <div class="flex-1 min-w-0">
       <div class="flex items-baseline gap-3 mb-1">
-        <span id="form-status-word" class="text-3xl sm:text-5xl font-black tracking-tight leading-none">—</span>
-        <span id="form-tsb" class="text-lg sm:text-xl font-bold tabular-nums text-muted">—</span>
+        <span id="form-status-word" class="text-5xl font-black tracking-tight leading-none">—</span>
+        <span id="form-tsb" class="text-xl font-bold tabular-nums text-muted">—</span>
       </div>
-      <p id="form-interpretation" class="text-sm text-muted mb-4 sm:mb-5 leading-snug">Loading…</p>
-
+      <p id="form-interpretation" class="text-sm text-muted mb-5 leading-snug">Loading…</p>
       <div class="space-y-2">
         <div class="flex items-center gap-3">
           <span class="text-xs text-muted w-12 shrink-0">Fitness</span>
@@ -101,21 +114,18 @@
       </div>
       <p id="form-fitness-trend" class="hidden text-xs text-muted mt-3 pt-3 border-t border-edge"></p>
     </div>
-
-    {# 30-day TSB sparkline #}
-    <div class="w-full sm:w-28 md:w-40 shrink-0 flex flex-col">
+    <div class="w-28 lg:w-40 shrink-0 flex flex-col">
       <p class="text-xs text-muted mb-2 text-right">30-day form</p>
       <div id="form-sparkline" class="flex-1" style="min-height:80px"></div>
     </div>
-
   </div>
 </div>
 
 {# ── Goal + Next workout ──────────────────────────────────── #}
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
-  {# Goal card #}
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden">
+  {# Goal card — desktop only #}
+  <div class="hidden md:block bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Goal</h2>
       <a href="/plan" class="text-xs text-muted hover:text-primary transition-colors">Edit →</a>
@@ -167,9 +177,9 @@
 </div>
 
 {# ── Rolling 7-day KPIs ───────────────────────────────────── #}
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+<div class="flex md:grid md:grid-cols-4 gap-3 md:gap-4 mb-4 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory md:snap-none">
 
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden">
+  <div class="min-w-[160px] md:min-w-0 shrink-0 md:shrink bg-surface rounded-2xl border border-edge shadow-sm p-4 md:p-5 overflow-hidden snap-start">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Sessions</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-sessions">—</p>
     <p class="text-xs text-muted mt-1">last 7 days</p>
@@ -177,7 +187,7 @@
     <div id="spark-sessions" class="mt-3 -mx-1"></div>
   </div>
 
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden">
+  <div class="min-w-[160px] md:min-w-0 shrink-0 md:shrink bg-surface rounded-2xl border border-edge shadow-sm p-4 md:p-5 overflow-hidden snap-start">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Run distance</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-km">—</p>
     <p class="text-xs text-muted mt-1">km last 7 days</p>
@@ -185,7 +195,7 @@
     <div id="spark-km" class="mt-3 -mx-1"></div>
   </div>
 
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden">
+  <div class="min-w-[160px] md:min-w-0 shrink-0 md:shrink bg-surface rounded-2xl border border-edge shadow-sm p-4 md:p-5 overflow-hidden snap-start">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Training time</p>
     <p class="text-4xl font-bold text-primary tabular-nums" id="kpi-hours">—</p>
     <p class="text-xs text-muted mt-1">hours last 7 days</p>
@@ -193,7 +203,7 @@
     <div id="spark-hours" class="mt-3 -mx-1"></div>
   </div>
 
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden">
+  <div class="min-w-[160px] md:min-w-0 shrink-0 md:shrink bg-surface rounded-2xl border border-edge shadow-sm p-4 md:p-5 overflow-hidden snap-start">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-3">Streak</p>
     <p class="text-4xl font-bold tabular-nums text-primary" id="kpi-streak">—</p>
     <p class="text-xs text-muted mt-1">consecutive weeks</p>
@@ -201,6 +211,9 @@
   </div>
 
 </div>
+
+{# ── Desktop-only sections (hidden on mobile) ─────────────── #}
+<div class="hidden md:block">
 
 {# ── Zone 2 compliance ───────────────────────────────────────── #}
 <div id="zone2-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden mb-4">
@@ -234,7 +247,9 @@
   <div id="training-log-chart" class="chart-loading" style="overflow-x:auto;min-height:120px"></div>
 </div>
 
-{# ── Recent activities ────────────────────────────────────── #}
+</div>{# end desktop-only wrapper #}
+
+{# ── Recent activities (visible on all devices) ──────────── #}
 <div class="mb-6">
 
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-4 sm:p-6 overflow-hidden">
@@ -287,6 +302,8 @@
 
 </div>
 
+{# ── Desktop-only: charts + totals ────────────────────────────── #}
+<div class="hidden md:block">
 {# ── 12-week volume ───────────────────────────────────────────── #}
 <div class="bg-surface rounded-2xl border border-edge shadow-sm p-4 sm:p-6 overflow-hidden mb-6">
   <div class="flex items-center justify-between mb-5 flex-wrap gap-2">
@@ -360,6 +377,7 @@
   </div>
 
 </div>
+</div>{# end desktop-only charts + totals #}
 
 <script>
 // ── Shared fetch cache ────────────────────────────────────────────
@@ -468,6 +486,7 @@ function countUp(el, target, decimals = 0, duration = 700) {
     else if (form > -20) { label = 'BUILDING';   color = 'var(--color-amber)';    interp = 'Heavy load — recovery will bring gains.'; }
     else                 { label = 'OVERLOADED'; color = 'var(--color-negative)'; interp = 'Too much stress accumulated — prioritise rest.'; }
 
+    // Desktop readiness
     const statusEl = document.getElementById('form-status-word');
     statusEl.textContent = label;
     statusEl.style.color = color;
@@ -480,6 +499,14 @@ function countUp(el, target, decimals = 0, duration = 700) {
     const tsbEl = document.getElementById('form-tsb');
     tsbEl.textContent = readiness + '/100';
     tsbEl.style.color = color;
+
+    // Mobile readiness (compact)
+    const mobileStatus = document.getElementById('form-status-word-mobile');
+    const mobileTsb = document.getElementById('form-tsb-mobile');
+    const mobileInterp = document.getElementById('form-interpretation-mobile');
+    if (mobileStatus) { mobileStatus.textContent = label; mobileStatus.style.color = color; }
+    if (mobileTsb) { mobileTsb.textContent = readiness + '/100'; mobileTsb.style.color = color; }
+    if (mobileInterp) { mobileInterp.textContent = interp; }
 
     // Count consecutive days in current form zone (from most recent backwards)
     let streakDays = 0;
