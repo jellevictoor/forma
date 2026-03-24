@@ -55,7 +55,7 @@ class PlanAdherenceService:
     def _compute_status(self, planned, actual, today: date) -> str:
         if planned.workout_type == "rest":
             return "completed" if not actual else "swapped"
-        if planned.day > today:
+        if planned.day >= today:
             return "upcoming"
         if not actual:
             return "missed"
