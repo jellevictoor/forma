@@ -183,11 +183,25 @@ async def admin_page(
         """
         SELECT name, COUNT(*) AS cnt, MAX(plan_date) AS last_used
         FROM exercise_catalog
-        GROUP BY name ORDER BY cnt DESC LIMIT 15
+        GROUP BY name ORDER BY cnt DESC LIMIT 20
         """
+    )
+    exercise_by_category = await pool.fetch(
+        """
+        SELECT category, COUNT(*) AS cnt
+        FROM exercise_catalog
+        GROUP BY category ORDER BY cnt DESC
+        """
+    )
+    exercise_total = await pool.fetchval(
+        "SELECT COUNT(*) FROM exercise_catalog"
+    )
+    exercise_unique = await pool.fetchval(
+        "SELECT COUNT(DISTINCT name) FROM exercise_catalog"
     )
 
     # User feedback
+    feedback_count = await pool.fetchval("SELECT COUNT(*) FROM feedback") or 0
     feedback_rows = await pool.fetch(
         """
         SELECT f.athlete_id, f.page, f.message, f.created_at
@@ -221,7 +235,11 @@ async def admin_page(
             "user_health": user_health,
             "system_prompts": system_prompts,
             "exercise_stats": [dict(r) for r in exercise_stats],
+            "exercise_by_category": [dict(r) for r in exercise_by_category],
+            "exercise_total": exercise_total or 0,
+            "exercise_unique": exercise_unique or 0,
             "feedback": [dict(r) for r in feedback_rows],
+            "feedback_count": feedback_count,
             "global_default_model": global_default_model,
         },
     )
