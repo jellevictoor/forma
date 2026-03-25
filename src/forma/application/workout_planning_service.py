@@ -180,10 +180,15 @@ class WorkoutPlanningService:
         return {w.start_time.date() for w in window_workouts}
 
     async def _save_to_catalog(self, athlete_id: str, day: date, exercises: dict) -> None:
-        """Save generated exercises to the catalog for tracking diversity."""
+        """Save generated exercises to the catalog. Replaces any existing entries for the same day."""
         try:
             from forma.adapters.postgres_pool import get_pool
             pool = get_pool()
+            # Replace, not append — handles regeneration cleanly
+            await pool.execute(
+                "DELETE FROM exercise_catalog WHERE athlete_id = $1 AND plan_date = $2",
+                athlete_id, day,
+            )
             for category, items in exercises.items():
                 for item in items:
                     # Normalize: strip sets/reps prefix, take just the exercise name
