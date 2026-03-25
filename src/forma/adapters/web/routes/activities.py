@@ -66,19 +66,22 @@ async def activity_detail(
             workout = workout.model_copy(update=updates)
     # Lazy plan matching — if not matched yet, try now
     if workout and not workout.planned_description:
-        from forma.adapters.postgres_plan_cache import PostgresPlanCache
-        from forma.adapters.postgres_pool import get_pool
-        from forma.domain.plan_match import match_workout_to_plan
-        plan_cache = PostgresPlanCache(get_pool())
-        cached_plan = await plan_cache.get(athlete_id)
-        if cached_plan:
-            match = match_workout_to_plan(workout, cached_plan.days)
-            if match:
-                updates = {"planned_description": match.description}
-                if match.exercises:
-                    updates["planned_exercises"] = match.exercises
-                workout = workout.model_copy(update=updates)
-                await workout_repo.save_workout(workout)
+        try:
+            from forma.adapters.postgres_plan_cache import PostgresPlanCache
+            from forma.adapters.postgres_pool import get_pool
+            from forma.domain.plan_match import match_workout_to_plan
+            plan_cache = PostgresPlanCache(get_pool())
+            cached_plan = await plan_cache.get(athlete_id)
+            if cached_plan:
+                match = match_workout_to_plan(workout, cached_plan.days)
+                if match:
+                    updates = {"planned_description": match.description}
+                    if match.exercises:
+                        updates["planned_exercises"] = match.exercises
+                    workout = workout.model_copy(update=updates)
+                    await workout_repo.save_workout(workout)
+        except RuntimeError:
+            pass  # pool not available (e.g. in tests)
 
     cached_analysis = await analysis_service.get_cached(activity_id)
     chat_messages = await analysis_service.get_chat_messages(activity_id)
