@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from forma.domain.athlete import SyncState
+from forma.domain.plan_match import match_workout_to_plan
 from forma.ports.athlete_repository import AthleteRepository
+from forma.ports.plan_cache_repository import PlanCacheRepository
 from forma.ports.strava import StravaClient, StravaRateLimitError
 from forma.ports.workout_repository import WorkoutRepository
 
@@ -43,10 +45,12 @@ class FullStravaSync:
         strava_client: StravaClient,
         workout_repo: WorkoutRepository,
         athlete_repo: AthleteRepository,
+        plan_cache: PlanCacheRepository | None = None,
     ) -> None:
         self._strava = strava_client
         self._workouts = workout_repo
         self._athletes = athlete_repo
+        self._plan_cache = plan_cache
 
     async def execute(
         self,
@@ -184,11 +188,21 @@ class FullStravaSync:
             workout = workout.model_copy(update={
                 "id": existing.id,
                 "perceived_effort": existing.perceived_effort,
+                "planned_description": existing.planned_description,
                 "detail_fetched": existing.detail_fetched,
             })
             logger.debug("updated activity %s (%s)", activity["id"], workout.name)
         else:
             logger.debug("saved new activity %s (%s)", activity["id"], workout.name)
+
+        # Match to plan if no planned description yet
+        if not workout.planned_description and self._plan_cache:
+            cached_plan = await self._plan_cache.get(athlete_id)
+            if cached_plan:
+                desc = match_workout_to_plan(workout, cached_plan.days)
+                if desc:
+                    workout = workout.model_copy(update={"planned_description": desc})
+                    logger.info("matched %s to plan: %s", workout.name, desc[:60])
 
         await self._workouts.save_workout(workout)
         return 1

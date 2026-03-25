@@ -196,6 +196,8 @@ Respond with only the JSON, no other text."""
             lines.append(f"  Notes: <athlete_data>{w.private_note}</athlete_data>")
         if w.perceived_effort:
             lines.append(f"  Perceived effort: {w.perceived_effort.value}")
+        if w.planned_description:
+            lines.append(f"  PLANNED: {w.planned_description}")
         return "\n".join(lines)
 
     def _format_workout_line(self, w: Workout) -> str:

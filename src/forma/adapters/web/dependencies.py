@@ -171,7 +171,7 @@ async def get_strava_sync(request: Request) -> AsyncIterator[FullStravaSync]:
     """Create a FullStravaSync using the authenticated athlete's stored Strava tokens."""
     client, storage = await _create_strava_client(request)
     try:
-        yield FullStravaSync(client, storage, storage)
+        yield FullStravaSync(client, storage, storage, PostgresPlanCache(get_pool()))
     finally:
         await client.close()
 
