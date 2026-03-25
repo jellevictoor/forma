@@ -178,6 +178,15 @@ async def admin_page(
         for r in user_health_rows
     }
 
+    # Exercise catalog stats
+    exercise_stats = await pool.fetch(
+        """
+        SELECT name, COUNT(*) AS cnt, MAX(plan_date) AS last_used
+        FROM exercise_catalog
+        GROUP BY name ORDER BY cnt DESC LIMIT 15
+        """
+    )
+
     # User feedback
     feedback_rows = await pool.fetch(
         """
@@ -211,6 +220,7 @@ async def admin_page(
             "daily_active_json": daily_active,
             "user_health": user_health,
             "system_prompts": system_prompts,
+            "exercise_stats": [dict(r) for r in exercise_stats],
             "feedback": [dict(r) for r in feedback_rows],
             "global_default_model": global_default_model,
         },
