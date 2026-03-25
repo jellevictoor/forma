@@ -55,11 +55,11 @@ class PlanAdherenceService:
     def _compute_status(self, planned, actual, today: date) -> str:
         if planned.workout_type == "rest":
             return "completed" if not actual else "swapped"
+        if actual:
+            actual_types = {w.workout_type.value for w in actual}
+            if planned.workout_type in actual_types:
+                return "completed"
+            return "swapped"
         if planned.day >= today:
             return "upcoming"
-        if not actual:
-            return "missed"
-        actual_types = {w.workout_type.value for w in actual}
-        if planned.workout_type in actual_types:
-            return "completed"
-        return "swapped"
+        return "missed"
