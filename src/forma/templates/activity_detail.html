@@ -335,7 +335,7 @@
               aria-pressed="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
               class="effort-btn py-2.5 px-2 rounded-xl text-xs font-medium text-center cursor-pointer transition-colors border hover:opacity-80 min-h-[44px] {% if workout.perceived_effort and workout.perceived_effort.value == value %}border-current{% else %}border-transparent bg-surface-alt text-muted{% endif %}"
               {% if workout.perceived_effort and workout.perceived_effort.value == value %}
-              style="background:color-mix(in srgb, {{ color }} 12%, transparent);color:{{ color }}"
+              style="background:color-mix(in srgb, {{ color }} 20%, transparent);color:{{ color }}"
               {% endif %}>
         {{ label }}
       </button>
@@ -1417,7 +1417,7 @@ async function setEffort(value) {
     const c = effortColors[value];
     current.classList.remove('bg-surface-alt', 'text-muted', 'border-transparent');
     current.classList.add('border-current');
-    current.style.background = `color-mix(in srgb, ${c} 12%, transparent)`;
+    current.style.background = `color-mix(in srgb, ${c} 20%, transparent)`;
     current.style.color = c;
     current.dataset.active = 'true';
     current.setAttribute('aria-pressed', 'true');
