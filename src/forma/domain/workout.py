@@ -68,8 +68,9 @@ class Workout(BaseModel):
     private_note: str = ""
     perceived_effort: PerceivedEffort | None = None
 
-    # Plan matching — description from the matched planned day
+    # Plan matching — from the matched planned day
     planned_description: str = ""
+    planned_exercises: dict[str, list[str]] | None = None
 
     # Full Strava API response — stored verbatim so no field is ever lost
     strava_raw: dict | None = None

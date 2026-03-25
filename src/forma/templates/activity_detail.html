@@ -160,6 +160,22 @@
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Planned</h2>
   </div>
   <p class="text-sm text-secondary leading-relaxed">{{ workout.planned_description }}</p>
+  {% if workout.planned_exercises %}
+  <div class="mt-3 pt-3 border-t border-edge space-y-2">
+    {% for section, items in workout.planned_exercises.items() %}
+    {% if items %}
+    <div>
+      <p class="text-xs font-medium uppercase tracking-widest text-muted mb-1">{{ section }}</p>
+      <ul class="text-xs text-secondary space-y-0.5">
+        {% for item in items %}
+        <li class="flex gap-2"><span class="text-muted shrink-0">·</span>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 

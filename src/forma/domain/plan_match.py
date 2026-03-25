@@ -1,5 +1,7 @@
 """Match synced activities to planned workouts."""
 
+from dataclasses import dataclass
+
 from forma.domain.workout import Workout
 from forma.ports.plan_cache_repository import PlannedDay
 
@@ -16,6 +18,12 @@ TYPE_COMPATIBILITY = {
 }
 
 
+@dataclass
+class PlanMatch:
+    description: str
+    exercises: dict[str, list[str]] | None
+
+
 def types_compatible(plan_type: str, workout_type: str) -> bool:
     """Check if a workout type is compatible with a planned type."""
     if plan_type == workout_type:
@@ -24,10 +32,10 @@ def types_compatible(plan_type: str, workout_type: str) -> bool:
     return workout_type in compatible
 
 
-def match_workout_to_plan(workout: Workout, plan_days: list[PlannedDay]) -> str:
-    """Find the planned description for a workout, if it matches a plan day.
+def match_workout_to_plan(workout: Workout, plan_days: list[PlannedDay]) -> PlanMatch | None:
+    """Find the matching plan day for a workout.
 
-    Returns the planned description string, or empty string if no match.
+    Returns PlanMatch with description + exercises, or None if no match.
     """
     workout_date = workout.start_time.date()
     workout_type = workout.workout_type.value
@@ -38,6 +46,7 @@ def match_workout_to_plan(workout: Workout, plan_days: list[PlannedDay]) -> str:
         if day.workout_type == "rest":
             continue
         if types_compatible(day.workout_type, workout_type):
-            return day.description
+            exercises = day.exercises if day.exercises else None
+            return PlanMatch(description=day.description, exercises=exercises)
 
-    return ""
+    return None

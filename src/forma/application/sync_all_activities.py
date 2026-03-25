@@ -199,10 +199,13 @@ class FullStravaSync:
         if not workout.planned_description and self._plan_cache:
             cached_plan = await self._plan_cache.get(athlete_id)
             if cached_plan:
-                desc = match_workout_to_plan(workout, cached_plan.days)
-                if desc:
-                    workout = workout.model_copy(update={"planned_description": desc})
-                    logger.info("matched %s to plan: %s", workout.name, desc[:60])
+                match = match_workout_to_plan(workout, cached_plan.days)
+                if match:
+                    updates = {"planned_description": match.description}
+                    if match.exercises:
+                        updates["planned_exercises"] = match.exercises
+                    workout = workout.model_copy(update=updates)
+                    logger.info("matched %s to plan: %s", workout.name, match.description[:60])
 
         await self._workouts.save_workout(workout)
         return 1
