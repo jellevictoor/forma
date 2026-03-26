@@ -402,7 +402,18 @@ function appendMessage(container, role, text) {
   return wrapper;
 }
 
-// For the "thinking" placeholder, update with rendered markdown when response arrives
+function createThinkingBubble(container) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'flex justify-start';
+  const bubble = document.createElement('div');
+  bubble.className = 'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-surface-alt text-secondary prose-chat';
+  bubble.innerHTML = '<span class="inline-flex gap-1 items-center"><span class="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:0ms"></span><span class="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:150ms"></span><span class="w-1.5 h-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:300ms"></span></span>';
+  wrapper.appendChild(bubble);
+  container.appendChild(wrapper);
+  container.scrollTop = container.scrollHeight;
+  return wrapper;
+}
+
 function updateBubble(wrapper, text) {
   const bubble = wrapper.querySelector('div');
   bubble.innerHTML = renderMarkdown(text);
@@ -429,7 +440,7 @@ async function sendChatMessage(event, workoutId) {
   sendBtn.disabled = true;
 
   appendMessage(messages, 'user', message);
-  const thinkingRow = appendMessage(messages, 'model', '…');
+  const thinkingRow = createThinkingBubble(messages);
 
   try {
     const res = await fetch(`/activities/detail/${workoutId}/chat`, {
@@ -1443,9 +1454,9 @@ async function setEffort(value) {
   const label = effortLabels[value] || value;
   const message = `This felt ${label}`;
 
+  btns.forEach(b => b.disabled = true);
   appendMessage(messages, 'user', message);
-  const thinkingRow = appendMessage(messages, 'model', '...');
-  messages.scrollTop = messages.scrollHeight;
+  const thinkingRow = createThinkingBubble(messages);
 
   try {
     const res = await fetch(`/activities/detail/{{ workout.id }}/chat`, {
@@ -1466,6 +1477,8 @@ async function setEffort(value) {
     thinkingRow.remove();
     console.error('Chat request failed:', err);
     showChatError('Could not reach the server. Please try again.');
+  } finally {
+    btns.forEach(b => b.disabled = false);
   }
 }
 

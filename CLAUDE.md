@@ -112,6 +112,7 @@ Routes are thin — no business logic, only call the `AnalyticsService`.
 - **Never use inline `style="color:var(--color-*)"` or `style="background:var(--color-*)"` in templates** — use semantic Tailwind classes instead (`text-primary`, `text-muted`, `text-secondary`, `bg-surface`, `bg-surface-alt`, `border-edge`)
 - The same rule applies to JS-generated HTML strings (e.g. inside `innerHTML = \`...\``)
 - Always give feedback on submitted actions (loading state, success, error)
+- **Always show a busy/loading indicator** while waiting for a backend response — the user must see that something is happening (spinner, animated dots, disabled button, skeleton, etc.)
 - Use Tailwind info/warning/error utility classes for feedback
 
 ### Page header pattern (every page)
