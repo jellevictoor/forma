@@ -32,11 +32,13 @@ def estimate_recovery_hours(
         elif hr_pct < 0.65:
             base_hours = int(base_hours * 0.7)
 
-    # Form adjustment — fatigued athletes need more recovery
-    if form < -15:
-        base_hours = int(base_hours * 1.4)
-    elif form < -5:
-        base_hours = int(base_hours * 1.2)
+    # Form adjustment — fatigued athletes need more recovery (Banister thresholds)
+    if form < -30:
+        base_hours = int(base_hours * 1.5)
+    elif form < -10:
+        base_hours = int(base_hours * 1.3)
+    elif form < 0:
+        base_hours = int(base_hours * 1.1)
     elif form > 10:
         base_hours = int(base_hours * 0.8)
 

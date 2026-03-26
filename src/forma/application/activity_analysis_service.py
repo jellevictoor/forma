@@ -133,12 +133,21 @@ class ActivityAnalysisService:
             recent_block = "  No previous similar workouts on record."
 
         form = ff["form"]
-        if form > 5:
-            form_context = "positive — athlete is fresh, can push harder"
-        elif form < -10:
-            form_context = "negative — fatigue accumulated, prioritise recovery"
+        ctl = ff["fitness"]
+        atl = ff["fatigue"]
+        overload_ratio = atl / ctl if ctl > 5 else 2.0
+        if form > 10:
+            form_context = "fresh — ready for quality sessions"
+        elif form > 0:
+            form_context = "good form — normal training"
+        elif form > -10 and overload_ratio < 1.5:
+            form_context = "normal training fatigue — productive loading zone"
+        elif form > -10:
+            form_context = "moderate fatigue with high relative load — favour easy sessions"
+        elif form > -30:
+            form_context = "fatigued — reduce intensity, add extra rest"
         else:
-            form_context = "neutral — balanced training load"
+            form_context = "exhausted — recovery needed"
 
         return f"""Analyse this workout in the context of the athlete's profile, current training load, and goals.
 

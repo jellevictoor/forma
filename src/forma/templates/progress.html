@@ -253,7 +253,7 @@
     traj.innerHTML = [
       trajCard('Fitness now', last.fitness.toFixed(1), `<span class="${changeColor} font-medium">${changeDir} ${Math.abs(changePct)}%</span> over ${dayCount} days`),
       trajCard('Peak fitness', peak.fitness.toFixed(1), peak.date),
-      trajCard('Current form', (last.form >= 0 ? '+' : '') + last.form.toFixed(1), last.form > 0 ? 'Fresh' : last.form > -10 ? 'Training' : 'Building'),
+      trajCard('Current form', (last.form >= 0 ? '+' : '') + last.form.toFixed(1), last.form > 10 ? 'Peaking' : last.form > 0 ? 'Fresh' : last.form > -10 ? 'Training' : last.form > -30 ? 'Building' : 'Overloaded'),
       trajCard('Training days', trainingDays, `of ${dayCount} days (${Math.round(trainingDays/dayCount*100)}%)`)
     ].join('');
     traj.classList.remove('hidden');

@@ -480,11 +480,13 @@ function countUp(el, target, decimals = 0, duration = 700) {
     const { fitness, fatigue, form } = data[data.length - 1];
 
     let label, color, interp;
+    const ratio = fatigue / (fitness || 1);
     if (form > 10)       { label = 'PEAKING';    color = 'var(--color-mint)';     interp = 'Peak performance window — race or test yourself.'; }
     else if (form > 0)   { label = 'FRESH';      color = 'var(--color-mint)';     interp = 'Well-rested and ready to perform.'; }
-    else if (form > -10) { label = 'TRAINING';   color = 'var(--color-amber)';    interp = 'In the training zone — building fitness.'; }
-    else if (form > -20) { label = 'BUILDING';   color = 'var(--color-amber)';    interp = 'Heavy load — recovery will bring gains.'; }
-    else                 { label = 'OVERLOADED'; color = 'var(--color-negative)'; interp = 'Too much stress accumulated — prioritise rest.'; }
+    else if (form > -10 && ratio < 1.5) { label = 'TRAINING'; color = 'var(--color-amber)'; interp = 'In the training zone — building fitness.'; }
+    else if (form > -10) { label = 'TRAINING';   color = 'var(--color-amber)';    interp = 'High relative load — keep sessions easy.'; }
+    else if (form > -30) { label = 'BUILDING';   color = 'var(--color-amber)';    interp = 'Heavy load — favour easy sessions and extra rest.'; }
+    else                 { label = 'OVERLOADED'; color = 'var(--color-negative)'; interp = 'Recovery needed — prioritise rest.'; }
 
     // Desktop readiness
     const statusEl = document.getElementById('form-status-word');
@@ -513,8 +515,8 @@ function countUp(el, target, decimals = 0, duration = 700) {
     for (let i = data.length - 1; i >= 0; i--) {
       const f = data[i].form;
       const sameZone = (form > 10 && f > 10) || (form > 0 && form <= 10 && f > 0 && f <= 10)
-        || (form > -10 && form <= 0 && f > -10 && f <= 0) || (form > -20 && form <= -10 && f > -20 && f <= -10)
-        || (form <= -20 && f <= -20);
+        || (form > -10 && form <= 0 && f > -10 && f <= 0) || (form > -30 && form <= -10 && f > -30 && f <= -10)
+        || (form <= -30 && f <= -30);
       if (!sameZone) break;
       streakDays++;
     }
