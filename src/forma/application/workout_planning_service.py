@@ -397,12 +397,18 @@ LAST WEEK ACTUAL VOLUME:
 - Total run distance: {last_week_km:.1f} km
 - 10% cap for this week: max {max_next_week_minutes} minutes total{f', max {max_next_week_km} km running' if max_next_week_km else ''}
 
-RULES:
-- Honour the fixed schedule constraints exactly (sport and day).
-- For optional days, prefer rest unless the athlete is fresh (form > 0) and volume is below cap.
-- For unconstrained days, choose rest or optional cross-training based on load and form.
-- Adjust intensity based on form score: high fatigue means lower intensity.
-- NEVER exceed the 10% volume cap above. This is a hard limit.
+PLANNING PRINCIPLES:
+- Think like a coach: alternate hard and easy days. Never stack 2+ quality sessions back-to-back.
+- Every week needs at least 2 full rest days. More when form is negative.
+- A "recovery" run (15-25 min, very easy) counts as a rest day — use workout_type "rest" with a description mentioning an optional short recovery jog. Do NOT mark active recovery as a training session.
+- Vary the stimulus: avoid 3+ consecutive days of the same sport. Break run blocks with rest, cross-training, or strength.
+- When form is negative (fatigued): prioritise rest and recovery. Only include sessions from fixed schedule constraints, and cap those at easy/recovery intensity. Fill unconstrained days with rest.
+- When form is positive (fresh): the athlete can handle more volume and higher intensity.
+
+HARD RULES:
+- Honour fixed schedule constraints exactly (sport and day).
+- For optional days, prefer rest unless form > 0 and weekly volume is below the cap.
+- NEVER exceed the 10% volume cap: max {max_next_week_minutes} minutes total{f', max {max_next_week_km} km running' if max_next_week_km else ''}.
 - Total weekly duration must not exceed {min(max_minutes, max_next_week_minutes):.0f} minutes.
 - Intensity values: "recovery", "easy", "moderate", "tempo", "threshold".
 - Workout type values: "run", "strength", "climbing", "rest", "walk", "cross_training".
