@@ -389,3 +389,34 @@ All metrics below apply to cycling with a power meter.
 5. **VO2Max** — high leg fatigue, no conversation, 3–8 minutes
 6. **Anaerobic** — extreme fatigue, 30 seconds to 3 minutes
 7. **Neuromuscular** — sprinting, 1–20 seconds
+
+## form/fitness Workflows
+
+### 1. Data Initialization
+1.  **Establish Thresholds:** Verify the athlete's **Functional Threshold Power (FTP)** or threshold heart rate is current. 
+2.  **Calculate TSS:** Assign a TSS to every training session based on intensity and duration.
+3.  **Bootstrap Period:** Allow at least **42 days** of consistent data entry to generate an accurate CTL baseline.
+
+### 2. Metric Calculation
+1.  **Calculate CTL:** Use an exponential moving average where the impact of a workout halves approximately every **14.7 days** (based on a 42-day constant).
+2.  **Calculate ATL:** Use an exponential moving average where the impact halves every **2.4 days** (based on a 7-day constant).
+3.  **Compute TSB:** Use the formula: $TSB_{today} = CTL_{yesterday} - ATL_{yesterday}$.
+
+### 3. Training Adjustment and Tapering
+1.  **Loading Phase:** Progressively increase CTL to build fitness.
+2.  **Tapering Phase:** Reduce training volume (TSS) while maintaining some intensity to allow ATL to drop faster than CTL.
+3.  **Performance Check:** Aim for a specific positive TSB target on race day to ensure readiness.
+
+## If/Then Decision Rules
+*   **IF** TSB is between **-10 and -30**, **THEN** the athlete is in a productive loading zone for building fitness.
+*   **IF** TSB drops below **-30** (or **-50** for highly fit athletes), **THEN** trigger a recovery period to avoid extreme strain or overtraining.
+*   **IF** TSB is between **+5 and +25**, **THEN** the athlete is "fresh" and primed for peak performance or testing.
+*   **IF** TSB exceeds **+25**, **THEN** the athlete is likely extensively recovered and may begin losing fitness.
+*   **IF** internal load (sRPE) is high while external load (TSS/Power) is low, **THEN** investigate for negative training adaptation or illness.
+
+## Guardrails and Common Pitfalls
+*   **Threshold Accuracy:** Metrics are invalid if FTP/thresholds are not updated every **~6 weeks**.
+*   **SMA vs. EWMA:** Do not mix smoothing methods when comparing TSB (e.g., don't use an SMA-based CTL with an EWMA-based ATL).
+*   **ACWR Limitations:** Avoid relying solely on the **Acute-to-Chronic Workload Ratio (ACWR)** as its use for injury prediction is highly questionable compared to TSB.
+*   **Composite Noise:** In multi-sport contexts, be cautious of composite scores; individual sport-specific metrics (e.g., cycling-only TSB) are often more reflective of actual fatigue than combined swim-bike-run values.
+*   **Saturation Effect:** Be aware that as CTL increases, more TSS is required just to maintain that fitness level, making continued growth progressively harder.

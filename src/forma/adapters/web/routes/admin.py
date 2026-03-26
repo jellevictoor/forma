@@ -10,8 +10,6 @@ from fastapi.templating import Jinja2Templates
 
 from forma.adapters.postgres_pool import get_pool
 from forma.adapters.postgres_storage import PostgresStorage
-from forma.adapters.postgres_system_prompts import PostgresSystemPrompts
-from forma.ports.system_prompt_repository import SystemPrompt
 from forma.adapters.web.dependencies import get_athlete_id
 from forma.domain.athlete import Role
 
@@ -211,14 +209,6 @@ async def admin_page(
         """
     )
 
-    # System prompts + global default model
-    prompt_repo = PostgresSystemPrompts(pool)
-    system_prompts = await prompt_repo.list_all()
-    # Filter out the _default entry from the service list
-    global_default_entry = next((p for p in system_prompts if p.service == "_default"), None)
-    system_prompts = [p for p in system_prompts if p.service != "_default"]
-    global_default_model = global_default_entry.model if global_default_entry else ""
-
     return templates.TemplateResponse(
         request,
         "admin.html",
@@ -233,14 +223,12 @@ async def admin_page(
             "daily_cost_json": daily_cost,
             "daily_active_json": daily_active,
             "user_health": user_health,
-            "system_prompts": system_prompts,
             "exercise_stats": [dict(r) for r in exercise_stats],
             "exercise_by_category": [dict(r) for r in exercise_by_category],
             "exercise_total": exercise_total or 0,
             "exercise_unique": exercise_unique or 0,
             "feedback": [dict(r) for r in feedback_rows],
             "feedback_count": feedback_count,
-            "global_default_model": global_default_model,
         },
     )
 
@@ -342,33 +330,3 @@ async def delete_athlete(
     pool = get_pool()
     await PostgresStorage(pool).delete(target_id)
     return JSONResponse({"status": "deleted"})
-
-
-@router.post("/prompts/{service}")
-async def save_prompt(
-    service: str,
-    athlete_id: Annotated[str, Depends(_require_admin)],
-    payload: dict,
-):
-    text = payload.get("text", "").strip()
-    if not text:
-        return JSONResponse({"error": "Prompt text cannot be empty"}, status_code=400)
-    model = payload.get("model", "").strip()
-    pool = get_pool()
-    repo = PostgresSystemPrompts(pool)
-    existing = await repo.get(service)
-    label = existing.label if existing else service
-    await repo.save(SystemPrompt(service=service, label=label, text=text, model=model))
-    return JSONResponse({"status": "saved"})
-
-
-@router.post("/default-model")
-async def save_default_model(
-    athlete_id: Annotated[str, Depends(_require_admin)],
-    payload: dict,
-):
-    model = payload.get("model", "").strip()
-    pool = get_pool()
-    repo = PostgresSystemPrompts(pool)
-    await repo.save(SystemPrompt(service="_default", label="Global default", text="", model=model))
-    return JSONResponse({"status": "saved"})

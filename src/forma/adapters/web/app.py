@@ -61,9 +61,6 @@ async def _lifespan(app: FastAPI):
         pool = _get_pool_safe()
         if pool:
             await run_migrations(pool)
-            from forma.adapters.postgres_system_prompts import PostgresSystemPrompts
-            from forma.application.seed_system_prompts import seed as seed_prompts
-            await seed_prompts(PostgresSystemPrompts(pool))
         logger.info("database ready")
     else:
         logger.warning("DATABASE_URL not set — running without PostgreSQL")

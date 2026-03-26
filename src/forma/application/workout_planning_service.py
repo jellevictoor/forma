@@ -5,10 +5,9 @@ import logging
 import re
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
+from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.ports.athlete_repository import AthleteRepository
-from forma.ports.system_prompt_repository import SystemPromptRepository
 from forma.ports.plan_cache_repository import (
     CachedWeeklyPlan,
     PlannedDay,
@@ -102,20 +101,11 @@ class WorkoutPlanningService:
         workout_repo: WorkoutRepository,
         analytics_repo: WorkoutAnalyticsRepository,
         plan_cache_repo: PlanCacheRepository,
-        prompt_repo: SystemPromptRepository | None = None,
     ) -> None:
         self._athletes = athlete_repo
         self._workouts = workout_repo
         self._analytics = analytics_repo
         self._cache = plan_cache_repo
-        self._prompts = prompt_repo
-
-    async def _resolve_llm_config(self) -> tuple[str, str]:
-        if self._prompts:
-            prompt = await self._prompts.get("plan")
-            if prompt:
-                return prompt.text, prompt.model or await get_global_default_model()
-        return _SYSTEM_INSTRUCTION, await get_global_default_model()
 
     async def get_fitness_state(self, athlete_id: str) -> dict:
         """Return current CTL/ATL/form for display."""
@@ -185,7 +175,7 @@ class WorkoutPlanningService:
         workouts_with_notes = [w for w in recent_workouts if w.private_note]
         recent_exercises = await self._get_recent_exercise_names(athlete_id)
         prompt = self._build_exercises_prompt(athlete, day, workout_type, description, workouts_with_notes, recent_exercises)
-        system, model = await self._resolve_llm_config()
+        system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         exercises = self._call_llm_for_exercises(prompt, system, model, athlete_id)
         await self._cache.update_day_exercises(athlete_id, day, exercises)
         await self._save_to_catalog(athlete_id, day, exercises)
@@ -202,7 +192,7 @@ class WorkoutPlanningService:
         ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
-        system, model = await self._resolve_llm_config()
+        system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         return self._call_llm_for_plan(prompt, system, model, athlete_id)
 
     async def _completed_dates_in_window(self, athlete_id: str) -> set[date]:

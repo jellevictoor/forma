@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
+from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
 
 from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
 from forma.domain.workout import Workout
@@ -15,7 +15,6 @@ from forma.ports.activity_analysis_repository import (
 )
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.chat_repository import ChatMessage, ChatRepository
-from forma.ports.system_prompt_repository import SystemPromptRepository
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
 logger = logging.getLogger(__name__)
@@ -40,21 +39,12 @@ class ActivityAnalysisService:
         athlete_repo: AthleteRepository,
         cache_repo: ActivityAnalysisRepository,
         chat_repo: ChatRepository,
-        prompt_repo: SystemPromptRepository | None = None,
     ) -> None:
         self._workouts = workout_repo
         self._analytics = analytics_repo
         self._athletes = athlete_repo
         self._cache = cache_repo
         self._chat = chat_repo
-        self._prompts = prompt_repo
-
-    async def _resolve_llm_config(self) -> tuple[str, str]:
-        if self._prompts:
-            prompt = await self._prompts.get("activity-analysis")
-            if prompt:
-                return prompt.text, prompt.model or await get_global_default_model()
-        return _SYSTEM_INSTRUCTION, await get_global_default_model()
 
     async def get_cached(self, workout_id: str) -> CachedActivityAnalysis | None:
         return await self._cache.get(workout_id)
@@ -74,7 +64,7 @@ class ActivityAnalysisService:
         ff = await self._fitness_freshness_at(athlete_id, workout.start_time.date(), max_hr)
 
         prompt = self._build_prompt(workout, athlete, recent_similar, ff)
-        system, model = await self._resolve_llm_config()
+        system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         analysis = self._call_llm(prompt, system, model, athlete_id)
 
         await self._cache.save(workout_id, analysis)
@@ -236,7 +226,7 @@ Respond with only the JSON, no other text."""
         athlete = await self._athletes.get(athlete_id)
         history = await self._chat.list_messages(workout_id)
         context = self._build_chat_context(workout, athlete)
-        system, model = await self._resolve_llm_config()
+        system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         response = self._call_llm_chat(context, history, message, system, model, athlete_id)
 
         await self._chat.append_message(workout_id, "user", message)

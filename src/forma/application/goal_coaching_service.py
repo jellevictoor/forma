@@ -6,12 +6,11 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
-from forma.application.llm import check_ai_access, generate as llm_generate, get_global_default_model
+from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
 
 from forma.domain.athlete import Athlete, Goal, GoalMilestone, GoalType
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.chat_repository import ChatRepository
-from forma.ports.system_prompt_repository import SystemPromptRepository
 from forma.ports.workout_repository import WorkoutRepository
 
 logger = logging.getLogger(__name__)
@@ -169,21 +168,11 @@ class GoalCoachingService:
         athlete_repo: AthleteRepository,
         workout_repo: WorkoutRepository,
         chat_repo: ChatRepository,
-        prompt_repo: SystemPromptRepository | None = None,
     ) -> None:
         self._athletes = athlete_repo
         self._workouts = workout_repo
         self._chat = chat_repo
-        self._prompts = prompt_repo
         self._snapshot_cache: dict[str, tuple] = {}
-
-    async def _resolve_llm_config(self) -> tuple[str, str]:
-        if self._prompts:
-            prompt = await self._prompts.get("goal-coach")
-            if prompt:
-                return prompt.text, prompt.model or await get_global_default_model()
-        return _SYSTEM_INSTRUCTION, await get_global_default_model()
-        self._snapshot_cache: dict[str, tuple[TrainingSnapshot, datetime]] = {}
 
     async def build_snapshot(self, athlete_id: str) -> TrainingSnapshot:
         cached_entry = self._snapshot_cache.get(athlete_id)
@@ -241,7 +230,7 @@ class GoalCoachingService:
         await self._chat.clear_messages(conv_key)
 
         logger.info("goal coaching: generating opening message for %s", athlete_id)
-        system, model = await self._resolve_llm_config()
+        system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         opening = llm_generate(
             model=model,
             system=system,
@@ -273,7 +262,7 @@ class GoalCoachingService:
         messages.append({"role": "user", "content": message})
 
         logger.info("goal coaching: chat turn for %s (history len %d)", athlete_id, len(history))
-        system, model = await self._resolve_llm_config()
+        system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         reply = llm_generate(
             model=model,
             system=system,

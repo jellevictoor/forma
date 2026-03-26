@@ -52,19 +52,6 @@ def _seed_db(pg_url):
             "smoke-workout-1", ATHLETE_ID, workout_data,
         )
 
-        # Seed system prompts
-        for svc, label in [
-            ("activity-analysis", "Activity analysis"),
-            ("goal-coach", "Goal coaching"),
-            ("plan", "Workout planning"),
-        ]:
-            await pool.execute(
-                """INSERT INTO system_prompts (service, label, text)
-                   VALUES ($1, $2, 'Test prompt.')
-                   ON CONFLICT (service) DO NOTHING""",
-                svc, label,
-            )
-
         await pool.close()
 
     asyncio.get_event_loop_policy().new_event_loop().run_until_complete(_seed())
