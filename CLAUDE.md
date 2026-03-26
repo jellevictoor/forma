@@ -35,6 +35,13 @@ This project follows **Hexagonal Architecture** (Ports & Adapters) with a clear 
 - always run `uv run pytest tests/test_smoke.py` before committing — these catch DI wiring, missing attributes, and template errors that unit tests miss
 - always use uv as dependency management and build tool
 
+### Error handling
+
+- **Never silently swallow errors** — no empty `catch {}` blocks
+- Backend: let exceptions propagate as 500s so they reach Sentry. Only catch when you can meaningfully handle/recover.
+- Frontend: always `console.error` caught errors AND show user-facing feedback (toast, inline error, etc.)
+- API calls in JS must check `res.ok` and surface the error message to the user
+
 ### General rules
 
     Follow standard conventions.
