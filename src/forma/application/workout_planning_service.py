@@ -367,14 +367,20 @@ class WorkoutPlanningService:
         max_next_week_km = round(last_week_km * 1.1, 1) if last_week_km > 0 else None
 
         form = ff["form"]
+        ctl = ff["fitness"]
+        atl = ff["fatigue"]
+        # ATL/CTL ratio captures relative overload better than absolute TSB
+        overload_ratio = atl / ctl if ctl > 5 else 2.0
         if form > 10:
             form_context = "fresh — ready for a quality session or goal event"
         elif form > 0:
             form_context = "good form — normal training, can include moderate intensity"
-        elif form > -10:
-            form_context = "normal training fatigue — standard easy/moderate mix"
-        elif form > -15:
-            form_context = "tired — favour easy sessions, avoid intensity, add an extra rest day"
+        elif form > -10 and overload_ratio < 1.5:
+            form_context = "normal training fatigue — productive loading zone, easy/moderate mix"
+        elif form > -10 and overload_ratio >= 1.5:
+            form_context = "moderate fatigue with high relative load (ATL/CTL ratio high) — favour easy sessions, avoid intensity"
+        elif form > -30:
+            form_context = "fatigued — reduce intensity to easy/recovery, add an extra rest day"
         else:
             form_context = "exhausted — recovery week, mostly rest with 1-2 light sessions max"
 
@@ -391,9 +397,10 @@ PLAN WINDOW (open days — already-completed days are excluded):
 {plan_window}
 
 CURRENT STATE:
-- Fitness (CTL): {ff['fitness']:.0f}
-- Fatigue (ATL): {ff['fatigue']:.0f}
+- Fitness (CTL): {ctl:.0f}
+- Fatigue (ATL): {atl:.0f}
 - Form (TSB): {form:.0f} — {form_context}
+- ATL/CTL ratio: {overload_ratio:.2f} {'(high — acute load significantly exceeds chronic base)' if overload_ratio >= 1.5 else '(normal)'}
 {f"- {week_context}" if week_context else ""}
 - Last week volume: {last_week_minutes:.0f} min, {last_week_km:.1f} km running
 
@@ -424,12 +431,12 @@ COACHING PRINCIPLES — follow these like an experienced coach would:
 
 3. VARY THE STIMULUS. Never schedule 3+ consecutive days of the same sport. Break run blocks with rest, cross-training, or strength. A typical good week: run → rest → strength → rest → run → cross/mobility → rest.
 
-4. RESPECT FATIGUE STATE (TSB/Form thresholds for recreational athletes).
+4. RESPECT FATIGUE STATE. Use both Form (TSB) and the ATL/CTL ratio to judge fatigue.
    - Form > 10 (fresh): can handle quality sessions, tempo work, or race prep.
    - Form 0 to 10 (good): normal training with moderate intensity.
-   - Form -10 to 0 (normal fatigue): standard training zone. Easy/moderate mix. This is where most training happens.
-   - Form -10 to -15 (tired): yellow flag. Reduce intensity to easy/recovery. Add 1 extra rest day. Still train — just lighter.
-   - Form < -15 (exhausted): recovery week. Mostly rest with 1-2 light sessions max. Override schedule as needed.
+   - Form -10 to 0 (normal fatigue): productive loading zone. Easy/moderate mix. This is where fitness is built.
+   - Form -10 to -30 (fatigued): still a productive loading zone per Banister model, but favour easy sessions. If ATL/CTL ratio > 1.5, the athlete is working harder than their base supports — add an extra rest day and keep intensity easy.
+   - Form < -30 (exhausted): recovery week. Mostly rest with 1-2 light sessions max. Override schedule as needed.
 
 5. ACTIVE RECOVERY ≠ TRAINING. A 15-25 min very easy jog or walk aids recovery. Mark these as workout_type "rest" with a description like "Rest day — optional 20 min recovery jog if feeling good." Do not count active recovery toward training volume.
 

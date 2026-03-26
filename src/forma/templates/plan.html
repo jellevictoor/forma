@@ -476,10 +476,12 @@ function renderPlan(plan) {
     const ctl  = plan.fitness.fitness ?? 0;
     const atl  = plan.fitness.fatigue ?? 0;
     let formLabel, formColor;
+    const ratio = atl / (ctl || 1);
     if (form > 10)       { formLabel = 'Fresh — ready to push'; formColor = 'var(--color-mint)'; }
     else if (form > 0)   { formLabel = 'Good form — normal training'; formColor = 'var(--color-mint)'; }
-    else if (form > -10) { formLabel = 'Normal training fatigue'; formColor = 'var(--color-text-secondary)'; }
-    else if (form > -15) { formLabel = 'Tired — favour easy sessions'; formColor = 'var(--color-amber)'; }
+    else if (form > -10 && ratio < 1.5) { formLabel = 'Building fitness'; formColor = 'var(--color-text-secondary)'; }
+    else if (form > -10) { formLabel = 'High relative load — keep it easy'; formColor = 'var(--color-amber)'; }
+    else if (form > -30) { formLabel = 'Fatigued — favour easy sessions'; formColor = 'var(--color-amber)'; }
     else                 { formLabel = 'Exhausted — recovery needed'; formColor = 'var(--color-coral)'; }
     const row = document.getElementById('plan-fitness-row');
     document.getElementById('plan-fitness-text').innerHTML =
