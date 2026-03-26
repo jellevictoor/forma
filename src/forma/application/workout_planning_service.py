@@ -393,6 +393,8 @@ class WorkoutPlanningService:
 
         return f"""You are a sports coach planning the next 7 days for a recreational athlete. Your priority order: (1) injury prevention, (2) consistency, (3) aerobic base, (4) strength, (5) performance.
 
+Today is {today.strftime('%A %d %B %Y')}. A training week runs Monday to Sunday. When describing sessions, refer to the calendar week they belong to (e.g. "this week" for Mon–Sun containing today, "next week" for the following Mon–Sun). Do not treat the 7-day plan window as "a week" — it may span two calendar weeks.
+
 PLAN WINDOW (open days — already-completed days are excluded):
 {plan_window}
 
@@ -441,6 +443,7 @@ COACHING PRINCIPLES — follow these like an experienced coach would:
 5. ACTIVE RECOVERY ≠ TRAINING. A 15-25 min very easy jog or walk aids recovery. Mark these as workout_type "rest" with a description like "Rest day — optional 20 min recovery jog if feeling good." Do not count active recovery toward training volume.
 
 6. SCHEDULE PREFERENCES ARE GUIDELINES, NOT COMMANDS. The schedule shows what the athlete would LIKE to do on a given day. But a good coach overrides the schedule when the athlete is fatigued. When form < -5, you may replace scheduled sessions with rest. Always explain why in the description.
+   - IMPORTANT: only schedule a sport on the days specified in the schedule preferences. Do NOT invent extra sessions of a sport beyond what the schedule defines. For unconstrained days, choose rest or a DIFFERENT activity type from what's already in the plan.
 
 7. VOLUME LIMITS.
    - Max weekly duration: {min(max_minutes, max_next_week_minutes):.0f} min (10% rule: last week was {last_week_minutes:.0f} min).
