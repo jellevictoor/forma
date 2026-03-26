@@ -215,6 +215,12 @@ const SPORT_CLASS = {
   climbing: 'sport-climbing',
 };
 
+const SPORT_LABEL = {
+  run: 'Running', strength: 'Strength', climbing: 'Climbing',
+  yoga: 'Yoga', hike: 'Hike', walk: 'Walk',
+  swim: 'Swim', bike: 'Bike', ebike: 'E-bike', cross_training: 'Cross training',
+};
+
 function sportDot(type) {
   const cls = SPORT_CLASS[type] || 'bg-edge';
   return `<span class="w-2 h-2 rounded-full inline-block shrink-0 mt-1.5 ${cls}"></span>`;
@@ -330,6 +336,7 @@ function dayCard(day) {
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div class="flex items-center gap-2">
               <span class="font-semibold text-sm text-primary">${dayName}</span>
+              ${!isRest ? `<span class="text-xs font-medium" style="color:${SPORT_COLOR[day.workout_type] || 'var(--color-text-muted)'}">${SPORT_LABEL[day.workout_type] || day.workout_type}</span>` : ''}
               <span class="text-xs text-muted">${dateStr}</span>
             </div>
             ${!isRest ? `
