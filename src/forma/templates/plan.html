@@ -54,10 +54,17 @@
           {% endfor %}
         </select>
       </div>
-      <label class="flex items-center gap-2 text-sm text-muted cursor-pointer">
-        <input type="checkbox" name="is_optional" value="true" class="rounded border-edge">
-        Optional
-      </label>
+      <div>
+        <label class="block text-xs text-muted mb-1">Commitment</label>
+        <input type="hidden" name="is_optional" id="is-optional-input" value="false">
+        <div class="inline-flex rounded-lg border border-edge overflow-hidden">
+          <button type="button" id="seg-fixed" onclick="setSlotType(false)"
+                  class="px-3 py-2 text-sm font-medium transition-colors bg-surface-alt text-primary">Fixed</button>
+          <button type="button" id="seg-optional" onclick="setSlotType(true)"
+                  title="Only plan a session if you're fresh enough"
+                  class="px-3 py-2 text-sm font-medium transition-colors bg-surface text-muted">Optional</button>
+        </div>
+      </div>
       <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-mint transition-opacity hover:opacity-90">Add slot</button>
     </form>
   </div>
@@ -156,6 +163,23 @@
 </div>
 
 <script>
+function setSlotType(isOptional) {
+  document.getElementById('is-optional-input').value = isOptional ? 'true' : 'false';
+  const fixed = document.getElementById('seg-fixed');
+  const optional = document.getElementById('seg-optional');
+  if (isOptional) {
+    optional.classList.replace('bg-surface', 'bg-surface-alt');
+    optional.classList.replace('text-muted', 'text-primary');
+    fixed.classList.replace('bg-surface-alt', 'bg-surface');
+    fixed.classList.replace('text-primary', 'text-muted');
+  } else {
+    fixed.classList.replace('bg-surface', 'bg-surface-alt');
+    fixed.classList.replace('text-muted', 'text-primary');
+    optional.classList.replace('bg-surface-alt', 'bg-surface');
+    optional.classList.replace('text-primary', 'text-muted');
+  }
+}
+
 {% set max_hr = athlete.max_heartrate if athlete and athlete.max_heartrate else (220 - athlete.age if athlete and athlete.age else 185) %}
 {% set vt1 = athlete.aerobic_threshold_bpm if athlete and athlete.aerobic_threshold_bpm else none %}
 const MAX_HR = {{ max_hr }};
