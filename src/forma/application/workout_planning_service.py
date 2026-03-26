@@ -299,6 +299,17 @@ class WorkoutPlanningService:
 
         recent_block = "\n".join(fmt_workout(w) for w in recent_workouts) or "  None"
 
+        # Compute consecutive training days leading into the plan window
+        this_week = [w for w in recent_workouts if w.start_time.date() >= today - timedelta(days=7)]
+        consecutive_days = 0
+        for i in range(1, 8):
+            check_date = today - timedelta(days=i)
+            if check_date in completed_dates or any(w.start_time.date() == check_date for w in this_week):
+                consecutive_days += 1
+            else:
+                break
+        week_context = f"The athlete has trained {consecutive_days} consecutive day(s) leading into this plan window." if consecutive_days > 0 else ""
+
         goal_lines = [f"  - {g.goal_type.value}: {g.description} (since {g.set_at.strftime('%Y-%m-%d')})" for g in athlete.goals]
         goals_block = "\n".join(goal_lines) or "  (no goals set)"
 
@@ -364,15 +375,22 @@ class WorkoutPlanningService:
             for d in next_7_days
         )
 
-        return f"""Generate a training plan for the open days listed below. Days not listed already have a completed workout and must be skipped.
+        return f"""You are a sports coach planning the next 7 days for a recreational athlete. Your priority order: (1) injury prevention, (2) consistency, (3) aerobic base, (4) strength, (5) performance.
 
-PLAN WINDOW (open days only):
+PLAN WINDOW (open days — already-completed days are excluded):
 {plan_window}
 
-FIXED SCHEDULE CONSTRAINTS (you MUST honour these on the specified days):
+CURRENT STATE:
+- Fitness (CTL): {ff['fitness']:.0f}
+- Fatigue (ATL): {ff['fatigue']:.0f}
+- Form (TSB): {form:.0f} — {form_context}
+{f"- {week_context}" if week_context else ""}
+- Last week volume: {last_week_minutes:.0f} min, {last_week_km:.1f} km running
+
+SCHEDULE PREFERENCES:
 {schedule_block}
 {self._optional_block(optional_block)}
-RECENT TRAINING (last 20 sessions):
+RECENT TRAINING (last 20 sessions — look at the pattern, not just the list):
 {recent_block}
 
 <athlete_data>
@@ -387,29 +405,32 @@ ATHLETE PROFILE:
 - Notes: {athlete.notes or '(none)'}
 </athlete_data>
 
-CURRENT FITNESS STATE:
-- Fitness (chronic load): {ff['fitness']:.0f}
-- Fatigue (acute load): {ff['fatigue']:.0f}
-- Form: {form:.0f} — {form_context}
+COACHING PRINCIPLES — follow these like an experienced coach would:
 
-LAST WEEK ACTUAL VOLUME:
-- Total duration: {last_week_minutes:.0f} minutes
-- Total run distance: {last_week_km:.1f} km
-- 10% cap for this week: max {max_next_week_minutes} minutes total{f', max {max_next_week_km} km running' if max_next_week_km else ''}
+1. RECOVERY IS TRAINING. Rest days are not wasted days. A well-rested athlete improves; an overtrained one gets injured. Plan at least 2 full rest days per week. More when form is negative.
 
-PLANNING PRINCIPLES:
-- Think like a coach: alternate hard and easy days. Never stack 2+ quality sessions back-to-back.
-- Every week needs at least 2 full rest days. More when form is negative.
-- A "recovery" run (15-25 min, very easy) counts as a rest day — use workout_type "rest" with a description mentioning an optional short recovery jog. Do NOT mark active recovery as a training session.
-- Vary the stimulus: avoid 3+ consecutive days of the same sport. Break run blocks with rest, cross-training, or strength.
-- When form is negative (fatigued): prioritise rest and recovery. Only include sessions from fixed schedule constraints, and cap those at easy/recovery intensity. Fill unconstrained days with rest.
-- When form is positive (fresh): the athlete can handle more volume and higher intensity.
+2. NEVER STACK HARD DAYS. Alternate hard and easy. After 2 consecutive training days, the next day must be rest or active recovery. After 3+ consecutive training days before the plan window, start with rest.
 
-HARD RULES:
-- Honour fixed schedule constraints exactly (sport and day).
-- For optional days, prefer rest unless form > 0 and weekly volume is below the cap.
-- NEVER exceed the 10% volume cap: max {max_next_week_minutes} minutes total{f', max {max_next_week_km} km running' if max_next_week_km else ''}.
-- Total weekly duration must not exceed {min(max_minutes, max_next_week_minutes):.0f} minutes.
+3. VARY THE STIMULUS. Never schedule 3+ consecutive days of the same sport. Break run blocks with rest, cross-training, or strength. A typical good week: run → rest → strength → rest → run → cross/mobility → rest.
+
+4. RESPECT FATIGUE STATE.
+   - Form > 5 (fresh): normal training, can include 1 quality session.
+   - Form -5 to 5 (neutral): standard easy/moderate mix.
+   - Form < -5 (tired): reduce volume 20-30%. Favour easy/recovery intensity. Convert unconstrained days to rest.
+   - Form < -10 (exhausted): recovery week. Most days should be rest. Only keep 1-2 easy sessions from the schedule. Replace the others with rest even if the schedule says otherwise.
+
+5. ACTIVE RECOVERY ≠ TRAINING. A 15-25 min very easy jog or walk aids recovery. Mark these as workout_type "rest" with a description like "Rest day — optional 20 min recovery jog if feeling good." Do not count active recovery toward training volume.
+
+6. SCHEDULE PREFERENCES ARE GUIDELINES, NOT COMMANDS. The schedule shows what the athlete would LIKE to do on a given day. But a good coach overrides the schedule when the athlete is fatigued. When form < -5, you may replace scheduled sessions with rest. Always explain why in the description.
+
+7. VOLUME LIMITS.
+   - Max weekly duration: {min(max_minutes, max_next_week_minutes):.0f} min (10% rule: last week was {last_week_minutes:.0f} min).
+   {f"- Max weekly run distance: {max_next_week_km} km." if max_next_week_km else ""}
+   - These are hard caps. Never exceed them.
+
+8. OPTIONAL DAYS default to rest. Only plan a session on optional days if form > 0 AND weekly volume is well below the cap. Keep it lightweight (recovery, mobility, 20-30 min max).
+
+OUTPUT FORMAT:
 - Intensity values: "recovery", "easy", "moderate", "tempo", "threshold".
 - Workout type values: "run", "strength", "climbing", "rest", "walk", "cross_training".
 
