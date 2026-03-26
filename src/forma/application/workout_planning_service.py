@@ -301,12 +301,16 @@ class WorkoutPlanningService:
 
         recent_block = "\n".join(fmt_workout(w) for w in recent_workouts) or "  None"
 
-        # Compute consecutive training days leading into the plan window
-        this_week = [w for w in recent_workouts if w.start_time.date() >= today - timedelta(days=7)]
+        # Compute consecutive TRAINING days (exclude low-effort: ebike, walk, yoga)
+        low_effort_types = {"ebike", "walk", "yoga"}
+        training_workouts = [
+            w for w in recent_workouts
+            if w.workout_type.value not in low_effort_types
+        ]
         consecutive_days = 0
         for i in range(1, 8):
             check_date = today - timedelta(days=i)
-            if check_date in completed_dates or any(w.start_time.date() == check_date for w in this_week):
+            if any(w.start_time.date() == check_date for w in training_workouts):
                 consecutive_days += 1
             else:
                 break
@@ -363,12 +367,16 @@ class WorkoutPlanningService:
         max_next_week_km = round(last_week_km * 1.1, 1) if last_week_km > 0 else None
 
         form = ff["form"]
-        if form > 5:
-            form_context = "positive — athlete is fresh, can push harder"
-        elif form < -10:
-            form_context = "negative — fatigue accumulated, prioritise recovery"
+        if form > 10:
+            form_context = "fresh — ready for a quality session or goal event"
+        elif form > 0:
+            form_context = "good form — normal training, can include moderate intensity"
+        elif form > -10:
+            form_context = "normal training fatigue — standard easy/moderate mix"
+        elif form > -15:
+            form_context = "tired — favour easy sessions, avoid intensity, add an extra rest day"
         else:
-            form_context = "neutral — balanced training load"
+            form_context = "exhausted — recovery week, mostly rest with 1-2 light sessions max"
 
         max_minutes = (athlete.max_hours_per_week or 10) * 60
 
@@ -393,6 +401,7 @@ SCHEDULE PREFERENCES:
 {schedule_block}
 {self._optional_block(optional_block)}
 LAST 7 DAYS (what the athlete actually did — look at the pattern):
+Note: e-bike, walks, and yoga are low-effort and should be treated as rest/active recovery, not training.
 {recent_block}
 
 <athlete_data>
@@ -415,11 +424,12 @@ COACHING PRINCIPLES — follow these like an experienced coach would:
 
 3. VARY THE STIMULUS. Never schedule 3+ consecutive days of the same sport. Break run blocks with rest, cross-training, or strength. A typical good week: run → rest → strength → rest → run → cross/mobility → rest.
 
-4. RESPECT FATIGUE STATE.
-   - Form > 5 (fresh): normal training, can include 1 quality session.
-   - Form -5 to 5 (neutral): standard easy/moderate mix.
-   - Form < -5 (tired): reduce volume 20-30%. Favour easy/recovery intensity. Convert unconstrained days to rest.
-   - Form < -10 (exhausted): recovery week. Most days should be rest. Only keep 1-2 easy sessions from the schedule. Replace the others with rest even if the schedule says otherwise.
+4. RESPECT FATIGUE STATE (TSB/Form thresholds for recreational athletes).
+   - Form > 10 (fresh): can handle quality sessions, tempo work, or race prep.
+   - Form 0 to 10 (good): normal training with moderate intensity.
+   - Form -10 to 0 (normal fatigue): standard training zone. Easy/moderate mix. This is where most training happens.
+   - Form -10 to -15 (tired): yellow flag. Reduce intensity to easy/recovery. Add 1 extra rest day. Still train — just lighter.
+   - Form < -15 (exhausted): recovery week. Mostly rest with 1-2 light sessions max. Override schedule as needed.
 
 5. ACTIVE RECOVERY ≠ TRAINING. A 15-25 min very easy jog or walk aids recovery. Mark these as workout_type "rest" with a description like "Rest day — optional 20 min recovery jog if feeling good." Do not count active recovery toward training volume.
 

@@ -476,9 +476,11 @@ function renderPlan(plan) {
     const ctl  = plan.fitness.fitness ?? 0;
     const atl  = plan.fitness.fatigue ?? 0;
     let formLabel, formColor;
-    if (form > 5)        { formLabel = 'Well rested — good to push'; formColor = 'var(--color-mint)'; }
-    else if (form < -10) { formLabel = 'Tired — favour recovery';   formColor = 'var(--color-amber)'; }
-    else                 { formLabel = 'Balanced — steady training'; formColor = 'var(--color-text-secondary)'; }
+    if (form > 10)       { formLabel = 'Fresh — ready to push'; formColor = 'var(--color-mint)'; }
+    else if (form > 0)   { formLabel = 'Good form — normal training'; formColor = 'var(--color-mint)'; }
+    else if (form > -10) { formLabel = 'Normal training fatigue'; formColor = 'var(--color-text-secondary)'; }
+    else if (form > -15) { formLabel = 'Tired — favour easy sessions'; formColor = 'var(--color-amber)'; }
+    else                 { formLabel = 'Exhausted — recovery needed'; formColor = 'var(--color-coral)'; }
     const row = document.getElementById('plan-fitness-row');
     document.getElementById('plan-fitness-text').innerHTML =
       `<span style="color:${formColor}">${formLabel}</span> <span class="text-muted">(CTL ${ctl.toFixed(0)} · ATL ${atl.toFixed(0)} · Form ${form.toFixed(0)})</span>`;
