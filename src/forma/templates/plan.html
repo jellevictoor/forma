@@ -12,19 +12,22 @@
   <!-- Schedule template -->
   <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
     <h2 class="text-xs font-medium uppercase tracking-widest text-muted mb-1">Schedule template</h2>
-    <p class="text-sm text-muted mb-5">Define your recurring workout slots. These are used as hard constraints when generating the plan.</p>
+    <p class="text-sm text-muted mb-5">Define your recurring workout slots. Fixed slots are hard constraints; optional slots are only planned when you're fresh.</p>
 
-    {% if athlete and athlete.schedule_template %}
+    {% if sorted_slots %}
     <ul class="space-y-2 mb-6">
-      {% for slot in athlete.schedule_template %}
+      {% for original_idx, slot in sorted_slots %}
       <li class="flex items-center justify-between py-2 px-3 rounded-lg border border-edge bg-surface-alt text-sm">
         <span class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full sport-{{ slot.workout_type.value }} inline-block"></span>
           <span class="text-primary">{{ day_names[slot.day_of_week] }}</span>
           <span class="text-muted">{{ slot.workout_type.value | replace('_', ' ') | title }}</span>
+          {% if slot.is_optional %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-sky/10 border border-sky/30 text-sky">Optional</span>
+          {% endif %}
         </span>
         <button
-          onclick="deleteSlot({{ loop.index0 }})"
+          onclick="deleteSlot({{ original_idx }})"
           type="button"
           class="text-xs font-medium text-secondary hover:text-coral transition-colors cursor-pointer">Remove</button>
       </li>
@@ -51,6 +54,10 @@
           {% endfor %}
         </select>
       </div>
+      <label class="flex items-center gap-2 text-sm text-muted cursor-pointer">
+        <input type="checkbox" name="is_optional" value="true" class="rounded border-edge">
+        Optional
+      </label>
       <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-mint transition-opacity hover:opacity-90">Add slot</button>
     </form>
   </div>

@@ -81,6 +81,7 @@ class ScheduleTemplateSlot(BaseModel):
 
     workout_type: WorkoutType
     day_of_week: int = Field(ge=0, le=6)  # 0 = Monday, 6 = Sunday
+    is_optional: bool = False
 
 
 class Athlete(BaseModel):

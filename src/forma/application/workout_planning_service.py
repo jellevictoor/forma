@@ -257,15 +257,33 @@ class WorkoutPlanningService:
         ff = compute_fitness_freshness(daily_efforts, display_days=1)
         return ff[-1] if ff else {"fitness": 0.0, "fatigue": 0.0, "form": 0.0}
 
+    @staticmethod
+    def _optional_block(optional_lines: str) -> str:
+        if not optional_lines:
+            return ""
+        return (
+            "\nOPTIONAL DAYS (only plan a session if the athlete is fresh AND on track with goals):\n"
+            + optional_lines
+            + "\n- If form < 0 or weekly volume is near the cap, make these rest days instead."
+            + "\n- Optional sessions should be lightweight: recovery, mobility, short easy session (20-30 min max).\n"
+        )
+
     def _build_plan_prompt(self, athlete, recent_workouts: list, ff: dict, completed_dates: set) -> str:
         today = date.today()
         next_7_days = [d for d in (today + timedelta(days=i) for i in range(7)) if d not in completed_dates]
 
-        slot_lines = [
+        fixed_slots = [s for s in athlete.schedule_template if not s.is_optional]
+        optional_slots = [s for s in athlete.schedule_template if s.is_optional]
+        fixed_lines = [
             f"  - {_DAY_NAMES[s.day_of_week]}: {s.workout_type.value}"
-            for s in athlete.schedule_template
+            for s in fixed_slots
         ]
-        schedule_block = "\n".join(slot_lines) if slot_lines else "  (no fixed schedule defined)"
+        schedule_block = "\n".join(fixed_lines) if fixed_lines else "  (no fixed schedule defined)"
+        optional_lines = [
+            f"  - {_DAY_NAMES[s.day_of_week]}: {s.workout_type.value}"
+            for s in optional_slots
+        ]
+        optional_block = "\n".join(optional_lines) if optional_lines else ""
 
         def fmt_workout(w) -> str:
             line = f"  - {w.start_time.strftime('%a %b %d')} {w.workout_type.value} {w.duration_minutes:.0f}min"
@@ -353,7 +371,7 @@ PLAN WINDOW (open days only):
 
 FIXED SCHEDULE CONSTRAINTS (you MUST honour these on the specified days):
 {schedule_block}
-
+{self._optional_block(optional_block)}
 RECENT TRAINING (last 20 sessions):
 {recent_block}
 
@@ -381,6 +399,7 @@ LAST WEEK ACTUAL VOLUME:
 
 RULES:
 - Honour the fixed schedule constraints exactly (sport and day).
+- For optional days, prefer rest unless the athlete is fresh (form > 0) and volume is below cap.
 - For unconstrained days, choose rest or optional cross-training based on load and form.
 - Adjust intensity based on form score: high fatigue means lower intensity.
 - NEVER exceed the 10% volume cap above. This is a hard limit.

@@ -48,11 +48,18 @@ async def plan_page(
 ):
     athlete = await profile_service.get_profile(athlete_id)
     workout_types = [wt for wt in WorkoutType if wt != WorkoutType.REST]
+    today_dow = date.today().weekday()
+    sorted_slots = []
+    if athlete and athlete.schedule_template:
+        indexed = list(enumerate(athlete.schedule_template))
+        indexed.sort(key=lambda pair: (pair[1].day_of_week - today_dow) % 7)
+        sorted_slots = indexed
     return templates.TemplateResponse(
         request,
         "plan.html",
         {
             "athlete": athlete,
+            "sorted_slots": sorted_slots,
             "workout_types": workout_types,
             "day_names": _DAY_NAMES,
             "day_names_enumerated": list(enumerate(_DAY_NAMES)),
@@ -67,8 +74,13 @@ async def add_template_slot(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
     workout_type: Annotated[str, Form()],
     day_of_week: Annotated[int, Form()],
+    is_optional: Annotated[bool, Form()] = False,
 ):
-    slot = ScheduleTemplateSlot(workout_type=WorkoutType(workout_type), day_of_week=day_of_week)
+    slot = ScheduleTemplateSlot(
+        workout_type=WorkoutType(workout_type),
+        day_of_week=day_of_week,
+        is_optional=is_optional,
+    )
     await profile_service.add_schedule_slot(athlete_id, slot)
     return RedirectResponse(url="/plan", status_code=303)
 
