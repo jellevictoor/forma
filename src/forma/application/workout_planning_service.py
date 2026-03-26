@@ -196,7 +196,9 @@ class WorkoutPlanningService:
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
         max_hr = athlete.max_heartrate or (220 - athlete.age if athlete.age else 185)
-        recent_workouts = await self._workouts.get_recent(athlete_id, count=20)
+        recent_workouts = await self._workouts.list_workouts_for_athlete(
+            athlete_id, start_date=date.today() - timedelta(days=7), limit=20,
+        )
         ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
@@ -390,7 +392,7 @@ CURRENT STATE:
 SCHEDULE PREFERENCES:
 {schedule_block}
 {self._optional_block(optional_block)}
-RECENT TRAINING (last 20 sessions — look at the pattern, not just the list):
+LAST 7 DAYS (what the athlete actually did — look at the pattern):
 {recent_block}
 
 <athlete_data>
