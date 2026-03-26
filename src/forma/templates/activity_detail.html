@@ -1310,24 +1310,23 @@ async function runAnalysis(workoutId) {
   const content = document.getElementById('analysis-content');
   const errorEl = document.getElementById('analysis-error');
 
-  btn.disabled = true;
-  spinner.classList.remove('hidden');
-  errorEl.classList.add('hidden');
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  if (errorEl) errorEl.classList.add('hidden');
 
   try {
     const res = await fetch(`/activities/detail/${workoutId}/analyse`, { method: 'POST' });
     const data = await res.json();
 
     if (!res.ok) {
-      errorEl.textContent = data.error || 'Analysis failed. Please try again.';
-      errorEl.classList.remove('hidden');
-      btn.disabled = false;
-      spinner.classList.add('hidden');
+      if (errorEl) { errorEl.textContent = data.error || 'Analysis failed. Please try again.'; errorEl.classList.remove('hidden'); }
+      if (btn) btn.disabled = false;
+      if (spinner) spinner.classList.add('hidden');
       return;
     }
 
     if (placeholder) placeholder.classList.add('hidden');
-    btn.classList.add('hidden');
+    if (btn) btn.classList.add('hidden');
 
     content.innerHTML = `
       <dl class="space-y-4 text-sm">
@@ -1356,10 +1355,9 @@ async function runAnalysis(workoutId) {
 
     document.getElementById('chat-input').focus();
   } catch {
-    errorEl.textContent = 'Something went wrong. Please try again.';
-    errorEl.classList.remove('hidden');
-    btn.disabled = false;
-    spinner.classList.add('hidden');
+    if (errorEl) { errorEl.textContent = 'Something went wrong. Please try again.'; errorEl.classList.remove('hidden'); }
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
   }
 }
 </script>
@@ -1420,16 +1418,15 @@ async function setEffort(value) {
 
   if (!newValue) return;
 
-  // Auto-trigger analysis if not already done
+  // Auto-trigger analysis in background (don't block chat)
   const analysisSection = document.getElementById('analysis-section');
   const analysisContent = document.getElementById('analysis-content');
   if (analysisContent && analysisContent.classList.contains('hidden')) {
     analysisSection.classList.remove('hidden');
-    document.getElementById('analysis-loading').classList.remove('hidden');
-    try {
-      await runAnalysis('{{ workout.id }}');
-    } catch {}
-    document.getElementById('analysis-loading')?.classList.add('hidden');
+    document.getElementById('analysis-loading')?.classList.remove('hidden');
+    runAnalysis('{{ workout.id }}').catch(() => {}).finally(() => {
+      document.getElementById('analysis-loading')?.classList.add('hidden');
+    });
   }
 
   // Send effort to coach chat for follow-up conversation
