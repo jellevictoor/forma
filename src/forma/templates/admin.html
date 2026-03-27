@@ -25,6 +25,8 @@
           class="admin-tab px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors border-b-2 border-transparent text-muted hover:text-primary">Exercises</button>
   <button onclick="switchTab('feedback')" data-tab="feedback" role="tab" aria-selected="false"
           class="admin-tab px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors border-b-2 border-transparent text-muted hover:text-primary">Feedback</button>
+  <button onclick="switchTab('ai')" data-tab="ai" role="tab" aria-selected="false"
+          class="admin-tab px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors border-b-2 border-transparent text-muted hover:text-primary">AI model</button>
 </div>
 
 {% set cost_30d = stats.cost_30d or 0 %}
@@ -249,6 +251,47 @@
     {% else %}
     <p class="text-sm text-muted text-center py-4">No feedback yet.</p>
     {% endif %}
+  </div>
+
+</div>
+
+{# ═══════════════════════════════════════════════════════════ #}
+{# TAB: AI model                                              #}
+{# ═══════════════════════════════════════════════════════════ #}
+<div id="tab-ai" class="tab-panel hidden">
+
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Model selection</h2>
+        <p class="text-xs text-muted mt-1">Select the LLM used for plan generation, activity analysis, and coaching</p>
+      </div>
+      <span id="model-saved" class="hidden text-xs font-medium text-mint">Saved</span>
+    </div>
+
+    <div class="space-y-2">
+      {% for m in models %}
+      <label class="flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-colors
+        {% if m.active %}border-mint bg-mint/5{% elif not m.has_key %}border-edge bg-surface-alt opacity-50{% else %}border-edge hover:border-mint/40{% endif %}"
+        {% if not m.has_key %}title="API key not configured ({{ m.env_key }})"{% endif %}>
+        <input type="radio" name="model" value="{{ m.id }}"
+               {% if m.active %}checked{% endif %}
+               {% if not m.has_key %}disabled{% endif %}
+               onchange="saveModel('{{ m.id }}')"
+               class="accent-mint w-4 h-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium {% if m.has_key %}text-primary{% else %}text-muted{% endif %}">{{ m.name }}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full {% if m.speed == 'Fast' %}bg-mint/10 text-mint{% else %}bg-sky/10 text-sky{% endif %}">{{ m.speed }}</span>
+            {% if not m.has_key %}
+            <span class="text-xs px-2 py-0.5 rounded-full bg-coral/10 text-coral">No API key</span>
+            {% endif %}
+          </div>
+          <p class="text-xs text-muted mt-0.5">{{ m.provider | title }} · ${{ m.input_cost }}/MTok in · ${{ m.output_cost }}/MTok out</p>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
   </div>
 
 </div>
@@ -513,6 +556,22 @@
     }
   });
 })();
+
+async function saveModel(modelId) {
+  try {
+    const res = await fetch('/admin/model', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ model: modelId }),
+    });
+    if (!res.ok) throw new Error(`${res.status}`);
+    const saved = document.getElementById('model-saved');
+    saved.classList.remove('hidden');
+    setTimeout(() => saved.classList.add('hidden'), 2000);
+  } catch (err) {
+    console.error('Failed to save model:', err);
+  }
+}
 
 function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));

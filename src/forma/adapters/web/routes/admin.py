@@ -209,6 +209,18 @@ async def admin_page(
         """
     )
 
+    # Model config
+    import os
+    from forma.application.llm import AVAILABLE_MODELS, get_active_model
+    active_model = await get_active_model()
+    models_with_status = []
+    for m in AVAILABLE_MODELS:
+        models_with_status.append({
+            **m,
+            "active": m["id"] == active_model,
+            "has_key": bool(os.environ.get(m["env_key"])),
+        })
+
     return templates.TemplateResponse(
         request,
         "admin.html",
@@ -229,8 +241,23 @@ async def admin_page(
             "exercise_unique": exercise_unique or 0,
             "feedback": [dict(r) for r in feedback_rows],
             "feedback_count": feedback_count,
+            "models": models_with_status,
+            "active_model": active_model,
         },
     )
+
+
+@router.post("/model")
+async def save_model(
+    athlete_id: Annotated[str, Depends(_require_admin)],
+    payload: dict,
+):
+    from forma.application.llm import set_active_model
+    model_id = payload.get("model", "").strip()
+    if not model_id:
+        return JSONResponse({"error": "No model specified"}, status_code=400)
+    await set_active_model(model_id)
+    return JSONResponse({"status": "saved", "model": model_id})
 
 
 @router.post("/athletes/{target_id}/block")

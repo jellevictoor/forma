@@ -61,6 +61,8 @@ async def _lifespan(app: FastAPI):
         pool = _get_pool_safe()
         if pool:
             await run_migrations(pool)
+            from forma.application.llm import load_active_model
+            await load_active_model()
         logger.info("database ready")
     else:
         logger.warning("DATABASE_URL not set — running without PostgreSQL")

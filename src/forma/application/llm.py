@@ -12,6 +12,44 @@ litellm.suppress_debug_info = True
 
 DEFAULT_MODEL = "gemini/gemini-2.5-flash"
 
+AVAILABLE_MODELS = [
+    {"id": "gemini/gemini-2.5-flash", "name": "Gemini 2.5 Flash", "provider": "gemini", "env_key": "GEMINI_API_KEY", "input_cost": 0.15, "output_cost": 0.60, "speed": "Fast"},
+    {"id": "gemini/gemini-2.5-pro", "name": "Gemini 2.5 Pro", "provider": "gemini", "env_key": "GEMINI_API_KEY", "input_cost": 1.25, "output_cost": 5.00, "speed": "Smart"},
+    {"id": "anthropic/claude-sonnet-4-5-20250514", "name": "Claude Sonnet 4.5", "provider": "anthropic", "env_key": "ANTHROPIC_API_KEY", "input_cost": 3.00, "output_cost": 15.00, "speed": "Smart"},
+    {"id": "anthropic/claude-haiku-4-5-20251001", "name": "Claude Haiku 4.5", "provider": "anthropic", "env_key": "ANTHROPIC_API_KEY", "input_cost": 0.80, "output_cost": 4.00, "speed": "Fast"},
+    {"id": "openai/gpt-4o", "name": "GPT-4o", "provider": "openai", "env_key": "OPENAI_API_KEY", "input_cost": 2.50, "output_cost": 10.00, "speed": "Smart"},
+    {"id": "openai/gpt-4o-mini", "name": "GPT-4o Mini", "provider": "openai", "env_key": "OPENAI_API_KEY", "input_cost": 0.15, "output_cost": 0.60, "speed": "Fast"},
+]
+
+
+async def get_active_model() -> str:
+    """Read the active model from DB config, fall back to DEFAULT_MODEL."""
+    try:
+        from forma.adapters.postgres_pool import get_pool
+        pool = get_pool()
+        row = await pool.fetchrow(
+            "SELECT model FROM system_prompts WHERE service = '_default'"
+        )
+        if row and row["model"]:
+            return row["model"]
+    except Exception:
+        pass
+    return DEFAULT_MODEL
+
+
+async def set_active_model(model_id: str) -> None:
+    """Persist the active model choice and update the cache."""
+    global _active_model_cache
+    from forma.adapters.postgres_pool import get_pool
+    pool = get_pool()
+    await pool.execute(
+        """INSERT INTO system_prompts (service, label, text, model, updated_at)
+           VALUES ('_default', 'Global default', '', $1, NOW())
+           ON CONFLICT (service) DO UPDATE SET model = $1, updated_at = NOW()""",
+        model_id,
+    )
+    _active_model_cache = model_id
+
 
 class AIQuotaExceeded(Exception):
     """Raised when a user's AI access is disabled or their token cap is reached."""
@@ -51,6 +89,30 @@ async def check_ai_access(athlete_id: str) -> None:
         logger.warning("failed to check AI access for %s: %s", athlete_id, exc)
 
 
+_active_model_cache: str | None = None
+
+
+def _resolve_active_model() -> str:
+    """Return the cached active model. Updated via set_active_model() or load_active_model()."""
+    return _active_model_cache or DEFAULT_MODEL
+
+
+async def load_active_model() -> str:
+    """Read active model from DB and update the cache. Call at startup."""
+    global _active_model_cache
+    try:
+        from forma.adapters.postgres_pool import get_pool
+        pool = get_pool()
+        row = await pool.fetchrow(
+            "SELECT model FROM system_prompts WHERE service = '_default'"
+        )
+        if row and row["model"]:
+            _active_model_cache = row["model"]
+    except Exception:
+        pass
+    return _resolve_active_model()
+
+
 def generate(
     *,
     model: str = DEFAULT_MODEL,
@@ -65,6 +127,9 @@ def generate(
     Use `prompt` for simple single-turn calls.
     Use `messages` for multi-turn conversations (OpenAI format: role/content).
     """
+    # Resolve active model from DB if caller passed the default
+    if model == DEFAULT_MODEL:
+        model = _resolve_active_model()
     msgs = _build_messages(system, prompt, messages)
     response = litellm.completion(model=model, messages=msgs)
     text = response.choices[0].message.content or ""
