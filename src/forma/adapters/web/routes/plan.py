@@ -115,12 +115,18 @@ async def get_plan(
     })
 
 
+class PlanRefreshRequest(BaseModel):
+    instructions: str = ""
+
+
 @router.post("/api/plan/refresh")
 async def refresh_plan(
     planning_service: Annotated[WorkoutPlanningService, Depends(get_workout_planning_service)],
     athlete_id: Annotated[str, Depends(get_athlete_id)],
+    body: PlanRefreshRequest | None = None,
 ):
-    cached = await planning_service.generate_and_cache(athlete_id)
+    instructions = body.instructions if body else ""
+    cached = await planning_service.generate_and_cache(athlete_id, instructions=instructions)
     fitness = await planning_service.get_fitness_state(athlete_id)
     return JSONResponse({
         "cached": True,

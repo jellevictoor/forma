@@ -141,6 +141,21 @@
 
     </div>
 
+    <!-- Coach instructions -->
+    <div class="mb-5">
+      <label for="coach-instructions" class="block text-xs font-medium uppercase tracking-widest text-muted mb-2">Coach instructions</label>
+      <div class="flex gap-2">
+        <input type="text" id="coach-instructions"
+               placeholder="e.g. I want to run tomorrow, make Friday a rest day, taper for Sunday race"
+               class="flex-1 px-3 py-2 border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary placeholder-muted">
+        <button type="button" id="plan-instruct-btn" onclick="refreshWithInstructions()"
+                class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-mint transition-opacity hover:opacity-90 cursor-pointer shrink-0">
+          Regenerate
+        </button>
+      </div>
+      <p id="coach-instructions-active" class="hidden text-xs text-mint mt-1.5"></p>
+    </div>
+
     <!-- Loading skeleton -->
     <div id="plan-skeleton" class="space-y-3">
       <div class="animate-pulse h-16 rounded-xl bg-surface-alt"></div>
@@ -508,19 +523,36 @@ function showSkeleton() {
   document.getElementById('plan-rationale').classList.add('hidden');
 }
 
-async function refreshPlan() {
+async function refreshWithInstructions() {
+  const input = document.getElementById('coach-instructions');
+  const instructions = input.value.trim();
+  await refreshPlan(instructions);
+  if (instructions) {
+    const active = document.getElementById('coach-instructions-active');
+    active.textContent = `Applied: "${instructions}"`;
+    active.classList.remove('hidden');
+  }
+}
+
+async function refreshPlan(instructions) {
   const refreshBtn = document.getElementById('plan-refresh-btn');
   const generateBtn = document.getElementById('plan-generate-btn');
+  const instructBtn = document.getElementById('plan-instruct-btn');
   const icon = document.getElementById('plan-refresh-icon');
 
   refreshBtn.disabled = true;
   generateBtn.disabled = true;
+  instructBtn.disabled = true;
+  instructBtn.textContent = 'Generating…';
   if (icon) icon.classList.add('animate-spin');
   document.getElementById('plan-stale-badge').classList.add('hidden');
   showSkeleton();
 
+  const body = instructions ? JSON.stringify({ instructions }) : undefined;
+  const headers = instructions ? { 'Content-Type': 'application/json' } : undefined;
+
   try {
-    const plan = await fetch('/api/plan/refresh', { method: 'POST' }).then(r => r.json());
+    const plan = await fetch('/api/plan/refresh', { method: 'POST', headers, body }).then(r => r.json());
     document.getElementById('plan-skeleton').classList.add('hidden');
     renderPlan(plan);
     refreshBtn.classList.remove('hidden');
@@ -532,6 +564,8 @@ async function refreshPlan() {
   } finally {
     refreshBtn.disabled = false;
     generateBtn.disabled = false;
+    instructBtn.disabled = false;
+    instructBtn.textContent = 'Regenerate';
     if (icon) icon.classList.remove('animate-spin');
   }
 }

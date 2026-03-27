@@ -128,11 +128,11 @@ class WorkoutPlanningService:
         )
         return cached
 
-    async def generate_and_cache(self, athlete_id: str) -> CachedWeeklyPlan:
+    async def generate_and_cache(self, athlete_id: str, instructions: str = "") -> CachedWeeklyPlan:
         """Generate via Gemini, persist to cache, and return."""
         await check_ai_access(athlete_id)
-        logger.info("generating weekly plan for athlete %s", athlete_id)
-        plan = await self._generate(athlete_id)
+        logger.info("generating weekly plan for athlete %s (instructions: %s)", athlete_id, instructions[:60] if instructions else "none")
+        plan = await self._generate(athlete_id, instructions=instructions)
         if not plan.days:
             raise ValueError("Gemini returned an empty plan — not caching")
         recent = await self._workouts.get_recent(athlete_id, count=1)
@@ -181,7 +181,7 @@ class WorkoutPlanningService:
         await self._save_to_catalog(athlete_id, day, exercises)
         return exercises
 
-    async def _generate(self, athlete_id: str) -> WeeklyPlan:
+    async def _generate(self, athlete_id: str, instructions: str = "") -> WeeklyPlan:
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
@@ -191,7 +191,7 @@ class WorkoutPlanningService:
         )
         ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
-        prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates)
+        prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates, instructions)
         system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
         return self._call_llm_for_plan(prompt, system, model, athlete_id)
 
@@ -250,6 +250,15 @@ class WorkoutPlanningService:
         return ff[-1] if ff else {"fitness": 0.0, "fatigue": 0.0, "form": 0.0}
 
     @staticmethod
+    def _instructions_block(instructions: str) -> str:
+        if not instructions:
+            return ""
+        return (
+            "ATHLETE REQUEST (honour this if it doesn't conflict with injury prevention):\n"
+            + instructions + "\n\n"
+        )
+
+    @staticmethod
     def _rest_block(rest_lines: str) -> str:
         if not rest_lines:
             return ""
@@ -269,7 +278,7 @@ class WorkoutPlanningService:
             + "\n- Optional sessions should be lightweight: recovery, mobility, short easy session (20-30 min max).\n"
         )
 
-    def _build_plan_prompt(self, athlete, recent_workouts: list, ff: dict, completed_dates: set) -> str:
+    def _build_plan_prompt(self, athlete, recent_workouts: list, ff: dict, completed_dates: set, instructions: str = "") -> str:
         today = date.today()
         next_7_days = [d for d in (today + timedelta(days=i) for i in range(7)) if d not in completed_dates]
 
@@ -458,7 +467,7 @@ OUTPUT FORMAT:
 - Intensity values: "recovery", "easy", "moderate", "tempo", "threshold".
 - Workout type values: "run", "strength", "climbing", "rest", "walk", "cross_training".
 
-Respond with a JSON object:
+{self._instructions_block(instructions)}Respond with a JSON object:
 {{
   "rationale": "1 concise sentence explaining why this week is structured this way",
   "days": [
