@@ -294,7 +294,6 @@
     <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="effort-picker">
       {% for value, label, color in _effort_levels %}
       <button data-effort="{{ value }}"
-              data-color="{{ color }}"
               data-active="{{ 'true' if workout.perceived_effort and workout.perceived_effort.value == value else 'false' }}"
               onclick="setEffort('{{ value }}')"
               aria-label="Rate effort as {{ label }}"
@@ -1368,13 +1367,14 @@ async function runAnalysis(workoutId) {
 }
 </script>
 <script>
-const effortColors = {
-  very_easy: 'sky',
-  easy: 'mint',
-  moderate: 'amber',
-  hard: 'coral',
-  very_hard: 'coral',
-  maximum: 'coral',
+// Full class names so Tailwind CDN can discover them
+const effortClasses = {
+  very_easy: { bg: 'bg-sky/20',   text: 'text-sky',   border: 'border-sky' },
+  easy:      { bg: 'bg-mint/20',  text: 'text-mint',  border: 'border-mint' },
+  moderate:  { bg: 'bg-amber/20', text: 'text-amber', border: 'border-amber' },
+  hard:      { bg: 'bg-coral/20', text: 'text-coral', border: 'border-coral' },
+  very_hard: { bg: 'bg-coral/20', text: 'text-coral', border: 'border-coral' },
+  maximum:   { bg: 'bg-coral/20', text: 'text-coral', border: 'border-coral' },
 };
 
 const effortLabels = {
@@ -1394,17 +1394,17 @@ async function setEffort(value) {
   const newValue = wasActive ? null : value;
 
   btns.forEach(b => {
-    const col = b.dataset.color;
-    b.classList.remove(`bg-${col}/20`, `text-${col}`, `border-${col}`);
+    const cls = effortClasses[b.dataset.effort];
+    b.classList.remove(cls.bg, cls.text, cls.border);
     b.classList.add('bg-surface-alt', 'text-muted', 'border-transparent');
     b.dataset.active = 'false';
     b.setAttribute('aria-pressed', 'false');
   });
 
   if (!wasActive) {
-    const c = effortColors[value];
+    const cls = effortClasses[value];
     current.classList.remove('bg-surface-alt', 'text-muted', 'border-transparent');
-    current.classList.add(`bg-${c}/20`, `text-${c}`, `border-${c}`);
+    current.classList.add(cls.bg, cls.text, cls.border);
     current.dataset.active = 'true';
     current.setAttribute('aria-pressed', 'true');
   }
