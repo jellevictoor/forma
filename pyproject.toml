@@ -14,7 +14,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "python-multipart>=0.0.21",
     "asyncpg>=0.31.0",
-    "litellm>=1.82.6",
+    "litellm==1.82.6",
     "sentry-sdk>=2.55.0",
 ]
 
