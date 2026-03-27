@@ -6,7 +6,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 
 from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
-from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
+from forma.domain.fitness_freshness import CTL_SEED_DAYS, classify_form, compute_fitness_freshness, compute_overload_ratio
 from forma.ports.athlete_repository import AthleteRepository
 from forma.ports.plan_cache_repository import (
     CachedWeeklyPlan,
@@ -14,8 +14,11 @@ from forma.ports.plan_cache_repository import (
     PlanCacheRepository,
     WeeklyPlan,
 )
+from forma.domain.workout import WorkoutType
 from forma.ports.workout_analytics_repository import WorkoutAnalyticsRepository
 from forma.ports.workout_repository import WorkoutRepository
+
+LOW_EFFORT_TYPES = frozenset({WorkoutType.EBIKE, WorkoutType.WALK, WorkoutType.YOGA})
 logger = logging.getLogger(__name__)
 
 
@@ -132,11 +135,9 @@ class WorkoutPlanningService:
         """Generate via Gemini, persist to cache, and return."""
         await check_ai_access(athlete_id)
         logger.info("generating weekly plan for athlete %s (instructions: %s)", athlete_id, instructions[:60] if instructions else "none")
-        plan = await self._generate(athlete_id, instructions=instructions)
+        plan, latest_activity_at = await self._generate(athlete_id, instructions=instructions)
         if not plan.days:
             raise ValueError("Gemini returned an empty plan — not caching")
-        recent = await self._workouts.get_recent(athlete_id, count=1)
-        latest_activity_at = recent[0].start_time if recent else None
         await self._cache.save(athlete_id, plan, latest_activity_at)
         return CachedWeeklyPlan(
             days=plan.days,
@@ -181,7 +182,8 @@ class WorkoutPlanningService:
         await self._save_to_catalog(athlete_id, day, exercises)
         return exercises
 
-    async def _generate(self, athlete_id: str, instructions: str = "") -> WeeklyPlan:
+    async def _generate(self, athlete_id: str, instructions: str = "") -> tuple[WeeklyPlan, datetime | None]:
+        """Generate a plan and return (plan, latest_activity_at)."""
         athlete = await self._athletes.get(athlete_id)
         if athlete is None:
             raise ValueError(f"Athlete {athlete_id} not found")
@@ -189,11 +191,13 @@ class WorkoutPlanningService:
         recent_workouts = await self._workouts.list_workouts_for_athlete(
             athlete_id, start_date=date.today() - timedelta(days=7), limit=20,
         )
+        latest_activity_at = recent_workouts[0].start_time if recent_workouts else None
         ff = await self._current_fitness_freshness(athlete_id, max_hr)
         completed_dates = await self._completed_dates_in_window(athlete_id)
         prompt = self._build_plan_prompt(athlete, recent_workouts, ff, completed_dates, instructions)
         system, model = _SYSTEM_INSTRUCTION, DEFAULT_MODEL
-        return self._call_llm_for_plan(prompt, system, model, athlete_id)
+        plan = self._call_llm_for_plan(prompt, system, model, athlete_id)
+        return plan, latest_activity_at
 
     async def _completed_dates_in_window(self, athlete_id: str) -> set[date]:
         today = date.today()
@@ -213,15 +217,17 @@ class WorkoutPlanningService:
                 "DELETE FROM exercise_catalog WHERE athlete_id = $1 AND plan_date = $2",
                 athlete_id, day,
             )
+            rows = []
             for category, items in exercises.items():
                 for item in items:
-                    # Normalize: strip sets/reps prefix, take just the exercise name
                     name = _normalize_exercise_name(item)
                     if name:
-                        await pool.execute(
-                            "INSERT INTO exercise_catalog (athlete_id, name, category, plan_date) VALUES ($1, $2, $3, $4)",
-                            athlete_id, name, category, day,
-                        )
+                        rows.append((athlete_id, name, category, day))
+            if rows:
+                await pool.executemany(
+                    "INSERT INTO exercise_catalog (athlete_id, name, category, plan_date) VALUES ($1, $2, $3, $4)",
+                    rows,
+                )
         except Exception as exc:
             logger.warning("failed to save exercises to catalog: %s", exc)
 
@@ -282,9 +288,9 @@ class WorkoutPlanningService:
         today = date.today()
         next_7_days = [d for d in (today + timedelta(days=i) for i in range(7)) if d not in completed_dates]
 
-        fixed_slots = [s for s in athlete.schedule_template if not s.is_optional and s.workout_type.value != "rest"]
-        rest_slots = [s for s in athlete.schedule_template if s.workout_type.value == "rest"]
-        optional_slots = [s for s in athlete.schedule_template if s.is_optional and s.workout_type.value != "rest"]
+        fixed_slots = [s for s in athlete.schedule_template if not s.is_optional and s.workout_type != WorkoutType.REST]
+        rest_slots = [s for s in athlete.schedule_template if s.workout_type == WorkoutType.REST]
+        optional_slots = [s for s in athlete.schedule_template if s.is_optional and s.workout_type != WorkoutType.REST]
         fixed_lines = [
             f"  - {_DAY_NAMES[s.day_of_week]}: {s.workout_type.value}"
             for s in fixed_slots
@@ -313,10 +319,9 @@ class WorkoutPlanningService:
         recent_block = "\n".join(fmt_workout(w) for w in recent_workouts) or "  None"
 
         # Compute consecutive TRAINING days (exclude low-effort: ebike, walk, yoga)
-        low_effort_types = {"ebike", "walk", "yoga"}
         training_workouts = [
             w for w in recent_workouts
-            if w.workout_type.value not in low_effort_types
+            if w.workout_type not in LOW_EFFORT_TYPES
         ]
         consecutive_days = 0
         for i in range(1, 8):
@@ -380,20 +385,8 @@ class WorkoutPlanningService:
         form = ff["form"]
         ctl = ff["fitness"]
         atl = ff["fatigue"]
-        # ATL/CTL ratio captures relative overload better than absolute TSB
-        overload_ratio = atl / ctl if ctl > 5 else 2.0
-        if form > 10:
-            form_context = "fresh — ready for a quality session or goal event"
-        elif form > 0:
-            form_context = "good form — normal training, can include moderate intensity"
-        elif form > -10 and overload_ratio < 1.5:
-            form_context = "normal training fatigue — productive loading zone, easy/moderate mix"
-        elif form > -10 and overload_ratio >= 1.5:
-            form_context = "moderate fatigue with high relative load (ATL/CTL ratio high) — favour easy sessions, avoid intensity"
-        elif form > -30:
-            form_context = "fatigued — reduce intensity to easy/recovery, add an extra rest day"
-        else:
-            form_context = "exhausted — recovery week, mostly rest with 1-2 light sessions max"
+        overload_ratio = compute_overload_ratio(ctl, atl)
+        form_context = classify_form(form, ctl, atl)
 
         max_minutes = (athlete.max_hours_per_week or 10) * 60
 

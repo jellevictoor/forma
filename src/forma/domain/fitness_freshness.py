@@ -41,3 +41,27 @@ def compute_fitness_freshness(daily_efforts: list[dict], display_days: int) -> l
         current += timedelta(days=1)
 
     return result
+
+
+def classify_form(form: float, ctl: float, atl: float) -> str:
+    """Classify form/fatigue state using Banister model thresholds.
+
+    Returns a human-readable context string for use in LLM prompts and UI.
+    """
+    overload_ratio = atl / ctl if ctl > 5 else 2.0
+    if form > 10:
+        return "fresh — ready for a quality session or goal event"
+    if form > 0:
+        return "good form — normal training, can include moderate intensity"
+    if form > -10 and overload_ratio < 1.5:
+        return "normal training fatigue — productive loading zone, easy/moderate mix"
+    if form > -10:
+        return "moderate fatigue with high relative load (ATL/CTL ratio high) — favour easy sessions, avoid intensity"
+    if form > -30:
+        return "fatigued — reduce intensity to easy/recovery, add an extra rest day"
+    return "exhausted — recovery week, mostly rest with 1-2 light sessions max"
+
+
+def compute_overload_ratio(ctl: float, atl: float) -> float:
+    """ATL/CTL ratio — captures relative overload better than absolute TSB."""
+    return atl / ctl if ctl > 5 else 2.0

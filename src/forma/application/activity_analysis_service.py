@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from forma.application.llm import DEFAULT_MODEL, check_ai_access, generate as llm_generate
 
-from forma.domain.fitness_freshness import CTL_SEED_DAYS, compute_fitness_freshness
+from forma.domain.fitness_freshness import CTL_SEED_DAYS, classify_form, compute_fitness_freshness
 from forma.domain.workout import Workout
 from forma.ports.activity_analysis_repository import (
     ActivityAnalysis,
@@ -123,21 +123,7 @@ class ActivityAnalysisService:
             recent_block = "  No previous similar workouts on record."
 
         form = ff["form"]
-        ctl = ff["fitness"]
-        atl = ff["fatigue"]
-        overload_ratio = atl / ctl if ctl > 5 else 2.0
-        if form > 10:
-            form_context = "fresh — ready for quality sessions"
-        elif form > 0:
-            form_context = "good form — normal training"
-        elif form > -10 and overload_ratio < 1.5:
-            form_context = "normal training fatigue — productive loading zone"
-        elif form > -10:
-            form_context = "moderate fatigue with high relative load — favour easy sessions"
-        elif form > -30:
-            form_context = "fatigued — reduce intensity, add extra rest"
-        else:
-            form_context = "exhausted — recovery needed"
+        form_context = classify_form(form, ff["fitness"], ff["fatigue"])
 
         return f"""Analyse this workout in the context of the athlete's profile, current training load, and goals.
 

@@ -1321,14 +1321,9 @@ async function loadHrChart(workoutId) {
 }
 
 async function runAnalysis(workoutId) {
-  const btn = document.getElementById('analyse-btn');
-  const spinner = document.getElementById('analyse-spinner');
-  const placeholder = document.getElementById('analysis-placeholder');
   const content = document.getElementById('analysis-content');
   const errorEl = document.getElementById('analysis-error');
 
-  if (btn) btn.disabled = true;
-  if (spinner) spinner.classList.remove('hidden');
   if (errorEl) errorEl.classList.add('hidden');
 
   try {
@@ -1337,13 +1332,8 @@ async function runAnalysis(workoutId) {
 
     if (!res.ok) {
       if (errorEl) { errorEl.textContent = data.error || 'Analysis failed. Please try again.'; errorEl.classList.remove('hidden'); }
-      if (btn) btn.disabled = false;
-      if (spinner) spinner.classList.add('hidden');
       return;
     }
-
-    if (placeholder) placeholder.classList.add('hidden');
-    if (btn) btn.classList.add('hidden');
 
     content.innerHTML = `
       <dl class="space-y-4 text-sm">
@@ -1371,10 +1361,9 @@ async function runAnalysis(workoutId) {
     content.classList.remove('hidden');
 
     document.getElementById('chat-input').focus();
-  } catch {
+  } catch (err) {
+    console.error('Analysis failed:', err);
     if (errorEl) { errorEl.textContent = 'Something went wrong. Please try again.'; errorEl.classList.remove('hidden'); }
-    if (btn) btn.disabled = false;
-    if (spinner) spinner.classList.add('hidden');
   }
 }
 </script>
