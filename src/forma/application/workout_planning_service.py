@@ -250,6 +250,15 @@ class WorkoutPlanningService:
         return ff[-1] if ff else {"fitness": 0.0, "fatigue": 0.0, "form": 0.0}
 
     @staticmethod
+    def _rest_block(rest_lines: str) -> str:
+        if not rest_lines:
+            return ""
+        return (
+            "\nREST DAYS (athlete CANNOT train on these days — always mark as rest):\n"
+            + rest_lines + "\n"
+        )
+
+    @staticmethod
     def _optional_block(optional_lines: str) -> str:
         if not optional_lines:
             return ""
@@ -264,13 +273,16 @@ class WorkoutPlanningService:
         today = date.today()
         next_7_days = [d for d in (today + timedelta(days=i) for i in range(7)) if d not in completed_dates]
 
-        fixed_slots = [s for s in athlete.schedule_template if not s.is_optional]
-        optional_slots = [s for s in athlete.schedule_template if s.is_optional]
+        fixed_slots = [s for s in athlete.schedule_template if not s.is_optional and s.workout_type.value != "rest"]
+        rest_slots = [s for s in athlete.schedule_template if s.workout_type.value == "rest"]
+        optional_slots = [s for s in athlete.schedule_template if s.is_optional and s.workout_type.value != "rest"]
         fixed_lines = [
             f"  - {_DAY_NAMES[s.day_of_week]}: {s.workout_type.value}"
             for s in fixed_slots
         ]
         schedule_block = "\n".join(fixed_lines) if fixed_lines else "  (no fixed schedule defined)"
+        rest_lines = [f"  - {_DAY_NAMES[s.day_of_week]}" for s in rest_slots]
+        rest_block = "\n".join(rest_lines) if rest_lines else ""
         optional_lines = [
             f"  - {_DAY_NAMES[s.day_of_week]}: {s.workout_type.value}"
             for s in optional_slots
@@ -398,7 +410,7 @@ CURRENT STATE:
 
 SCHEDULE PREFERENCES:
 {schedule_block}
-{self._optional_block(optional_block)}
+{self._rest_block(rest_block)}{self._optional_block(optional_block)}
 LAST 7 DAYS (what the athlete actually did — look at the pattern):
 Note: e-bike, walks, and yoga are low-effort and should be treated as rest/active recovery, not training.
 {recent_block}

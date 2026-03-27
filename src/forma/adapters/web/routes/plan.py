@@ -47,7 +47,7 @@ async def plan_page(
     athlete_id: Annotated[str, Depends(get_athlete_id)],
 ):
     athlete = await profile_service.get_profile(athlete_id)
-    workout_types = [wt for wt in WorkoutType if wt != WorkoutType.REST]
+    workout_types = [wt for wt in WorkoutType if wt != WorkoutType.OTHER]
     today_dow = date.today().weekday()
     sorted_slots = []
     if athlete and athlete.schedule_template:

@@ -47,14 +47,15 @@
         </select>
       </div>
       <div>
-        <label class="block text-xs text-muted mb-1">Sport</label>
-        <select name="workout_type" class="text-sm rounded-lg border border-edge px-3 py-2 focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary">
+        <label class="block text-xs text-muted mb-1">Activity</label>
+        <select name="workout_type" id="slot-type-select" onchange="onSlotTypeChange()"
+                class="text-sm rounded-lg border border-edge px-3 py-2 focus:outline-none focus:ring-2 focus:ring-mint/40 bg-surface text-primary">
           {% for wt in workout_types %}
           <option value="{{ wt.value }}">{{ wt.value | replace('_', ' ') | title }}</option>
           {% endfor %}
         </select>
       </div>
-      <div>
+      <div id="commitment-control">
         <label class="block text-xs text-muted mb-1">Commitment</label>
         <input type="hidden" name="is_optional" id="is-optional-input" value="false">
         <div class="inline-flex rounded-lg border border-edge overflow-hidden">
@@ -163,6 +164,17 @@
 </div>
 
 <script>
+function onSlotTypeChange() {
+  const val = document.getElementById('slot-type-select').value;
+  const ctrl = document.getElementById('commitment-control');
+  if (val === 'rest') {
+    ctrl.classList.add('hidden');
+    document.getElementById('is-optional-input').value = 'false';
+  } else {
+    ctrl.classList.remove('hidden');
+  }
+}
+
 function setSlotType(isOptional) {
   document.getElementById('is-optional-input').value = isOptional ? 'true' : 'false';
   const fixed = document.getElementById('seg-fixed');
