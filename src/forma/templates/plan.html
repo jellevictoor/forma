@@ -572,8 +572,8 @@ async function refreshPlan(instructions) {
   }
 }
 
-document.getElementById('plan-refresh-btn').addEventListener('click', refreshPlan);
-document.getElementById('plan-generate-btn').addEventListener('click', refreshPlan);
+document.getElementById('plan-refresh-btn').addEventListener('click', () => refreshPlan());
+document.getElementById('plan-generate-btn').addEventListener('click', () => refreshPlan());
 
 (async function loadPlan() {
   try {
