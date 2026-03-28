@@ -240,7 +240,7 @@
   <div id="sidebar-overlay" class="fixed inset-0 z-30 bg-black/50 hidden md:hidden" onclick="toggleSidebar()"></div>
 
   <!-- ── Main content ──────────────────────────────────────── -->
-  <main class="flex-1 md:pl-56 pt-14 md:pt-0 min-h-screen">
+  <main class="flex-1 md:pl-56 pt-14 md:pt-0 min-h-screen overflow-x-hidden">
     <div class="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8">
       {% block content %}{% endblock %}
     </div>
