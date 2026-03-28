@@ -24,6 +24,7 @@ from forma.application.sync_all_activities import FullStravaSync
 from forma.application.plan_adherence import PlanAdherenceService
 from forma.application.plan_skip_service import PlanSkipService
 from forma.application.training_alerts import TrainingAlertsService
+from forma.application.weekly_recap_service import WeeklyRecapService
 from forma.application.workout_enrichment import WorkoutEnrichmentService
 
 from forma.application.weight_tracking_service import WeightTrackingService
@@ -135,6 +136,21 @@ def _create_plan_skip_service() -> PlanSkipService:
 
 async def get_plan_skip_service() -> PlanSkipService:
     return _create_plan_skip_service()
+
+
+@lru_cache
+def _create_weekly_recap_service() -> WeeklyRecapService:
+    pool = get_pool()
+    return WeeklyRecapService(
+        PostgresStorage(pool),
+        PostgresStorage(pool),
+        PostgresAnalyticsRepository(pool),
+        PostgresPlanCache(pool),
+    )
+
+
+async def get_weekly_recap_service() -> WeeklyRecapService:
+    return _create_weekly_recap_service()
 
 
 async def _create_strava_client(request: Request) -> tuple[StravaClient, PostgresStorage]:

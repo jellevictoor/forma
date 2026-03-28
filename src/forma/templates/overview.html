@@ -193,6 +193,27 @@
 
 </div>
 
+{# ── Weekly recap ────────────────────────────────────────── #}
+<div id="weekly-recap-card" class="hidden bg-surface rounded-2xl border border-edge shadow-sm p-4 sm:p-5 overflow-hidden mb-4">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Week in review</h2>
+    <span id="recap-week-label" class="text-xs text-muted"></span>
+  </div>
+
+  {# Adherence dots #}
+  <div id="recap-adherence" class="flex gap-2 mb-3"></div>
+
+  {# Stats row #}
+  <div class="flex items-center gap-4 text-xs text-muted mb-3" id="recap-stats">
+    <span id="recap-sessions"></span>
+    <span id="recap-volume"></span>
+    <span id="recap-fitness"></span>
+  </div>
+
+  {# Coach note #}
+  <div id="recap-coach-note" class="text-sm text-secondary leading-relaxed"></div>
+</div>
+
 {# ── Rolling 7-day KPIs ───────────────────────────────────── #}
 <div class="flex md:grid md:grid-cols-4 gap-3 md:gap-4 mb-4 overflow-x-auto pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory md:snap-none">
 
@@ -735,6 +756,76 @@ function renderSparkline(containerId, values, color) {
   svg.append('path').datum(values).attr('d', line)
     .style('fill', 'none').style('stroke', color).style('stroke-width', 2);
 }
+
+// ── Weekly recap ─────────────────────────────────────────────────
+(async function() {
+  try {
+    const data = await fetchCached('/api/overview/weekly-recap');
+    const card = document.getElementById('weekly-recap-card');
+    if (!data || (!data.adherence?.has_plan && !data.coach_note)) return;
+
+    card.classList.remove('hidden');
+
+    // Week label
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    document.getElementById('recap-week-label').textContent = dayNames[data.day_of_week];
+
+    // Adherence dots
+    const SPORT_COLOR = {
+      run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+      yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+      swim: 'var(--color-azure)', bike: 'var(--color-azure)', ebike: 'var(--color-electric)',
+      cross_training: 'var(--color-sky)', rest: 'var(--color-surface-alt)',
+    };
+    const adherenceEl = document.getElementById('recap-adherence');
+    if (data.adherence?.has_plan && data.adherence.days) {
+      adherenceEl.innerHTML = data.adherence.days.map(d => {
+        const color = d.status === 'completed' ? SPORT_COLOR[d.planned_type] || 'var(--color-mint)'
+          : d.status === 'swapped' ? SPORT_COLOR[d.actual_type] || 'var(--color-amber)'
+          : d.status === 'missed' ? 'var(--color-surface-alt)'
+          : 'transparent';
+        const border = d.status === 'upcoming' ? 'border: 1.5px dotted var(--color-muted)' :
+          d.status === 'missed' ? 'border: 1.5px dashed var(--color-negative)' : '';
+        const dateObj = new Date(d.date + 'T00:00:00');
+        const dayLbl = ['M','T','W','T','F','S','S'][dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
+        const title = d.status === 'completed' ? `${d.planned_type} ✓`
+          : d.status === 'swapped' ? `Planned ${d.planned_type}, did ${d.actual_type}`
+          : d.status === 'missed' ? `Missed ${d.planned_type}`
+          : `${d.planned_type} (upcoming)`;
+        return `<div class="flex flex-col items-center gap-1" title="${title}">
+          <span class="text-[10px] text-muted">${dayLbl}</span>
+          <div class="w-5 h-5 rounded-full" style="background:${color};${border}"></div>
+        </div>`;
+      }).join('');
+    }
+
+    // Stats
+    const v = data.volume;
+    if (v) {
+      const sessEl = document.getElementById('recap-sessions');
+      const volEl = document.getElementById('recap-volume');
+      const fitEl = document.getElementById('recap-fitness');
+
+      sessEl.innerHTML = `<strong class="text-primary">${v.current.sessions}</strong> sessions`;
+      const minDelta = v.current.minutes - v.previous.minutes;
+      const deltaColor = minDelta >= 0 ? 'text-mint' : 'text-coral';
+      const sign = minDelta >= 0 ? '+' : '';
+      volEl.innerHTML = `<strong class="text-primary">${v.current.minutes}</strong> min <span class="${deltaColor}">${sign}${minDelta}</span>`;
+
+      if (data.fitness_trend?.fitness_delta !== undefined) {
+        const fd = data.fitness_trend.fitness_delta;
+        const fColor = fd >= 0 ? 'text-mint' : 'text-coral';
+        const fSign = fd >= 0 ? '+' : '';
+        fitEl.innerHTML = `Fitness <span class="${fColor}">${fSign}${fd}</span>`;
+      }
+    }
+
+    // Coach note
+    if (data.coach_note) {
+      document.getElementById('recap-coach-note').textContent = data.coach_note;
+    }
+  } catch (e) { console.error('weekly recap failed:', e); }
+})();
 
 // ── KPIs (rolling 7-day) ─────────────────────────────────────────
 (async function() {

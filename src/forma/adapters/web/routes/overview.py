@@ -17,11 +17,13 @@ from forma.adapters.web.dependencies import (
     get_athlete_profile_service,
     get_strava_sync,
     get_training_alerts_service,
+    get_weekly_recap_service,
 )
 from forma.application.analytics_service import AnalyticsService
 from forma.application.athlete_profile_service import AthleteProfileService
 from forma.application.sync_all_activities import FullStravaSync, SyncProgress
 from forma.application.training_alerts import TrainingAlertsService
+from forma.application.weekly_recap_service import WeeklyRecapService
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/forma/templates")
@@ -177,6 +179,14 @@ async def training_alerts_api(
 ):
     alerts = await alerts_service.check(athlete_id)
     return {"alerts": [a.model_dump() for a in alerts]}
+
+
+@router.get("/api/overview/weekly-recap")
+async def weekly_recap_api(
+    recap_service: Annotated[WeeklyRecapService, Depends(get_weekly_recap_service)],
+    athlete_id: Annotated[str, Depends(get_athlete_id)],
+):
+    return await recap_service.generate_recap(athlete_id)
 
 
 @router.post("/api/feedback")
