@@ -215,6 +215,15 @@
 
 </div>
 
+{# ── Mobile training log (30 days) ──────────────────────────── #}
+<div class="md:hidden bg-surface rounded-2xl border border-edge shadow-sm p-4 overflow-hidden mb-4">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Training log · last 30 days</h2>
+    <div id="training-log-legend-mobile" class="flex gap-2 text-xs text-muted"></div>
+  </div>
+  <div id="training-log-chart-mobile" class="chart-loading" style="min-height:80px"></div>
+</div>
+
 {# ── Desktop-only sections (hidden on mobile) ─────────────── #}
 <div class="hidden md:block">
 
@@ -1164,6 +1173,101 @@ async function skipFromDashboard(dayDate) {
                 ).join(''));
           })
           .on('mouseleave', () => tip.style('opacity', 0));
+      } else {
+        cell.style('fill', 'var(--color-surface-alt)').style('fill-opacity', 1);
+      }
+    }
+  }
+})();
+
+// ── Mobile training log (30-day compact heatmap) ────────────────
+(async function() {
+  const mContainer = document.getElementById('training-log-chart-mobile');
+  if (!mContainer) return;
+  const workouts = await fetchCached('/api/overview/training-log');
+  mContainer.classList.remove('chart-loading');
+  if (!workouts.length) {
+    mContainer.innerHTML = '<p class="text-center text-muted py-4 text-sm">No training data yet.</p>';
+    return;
+  }
+
+  const COLOR = {
+    run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
+    yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', ebike: 'var(--color-electric)',
+    cross_training: 'var(--color-sky)',
+  };
+  const SPORT_LABEL = {
+    run: 'Run', strength: 'Strength', climbing: 'Climbing',
+    yoga: 'Yoga', hike: 'Hike', walk: 'Walk', swim: 'Swim',
+    bike: 'Bike', ebike: 'E-bike', cross_training: 'Cross',
+  };
+  const SPORT_CSS = {
+    run: 'sport-run', strength: 'sport-strength', climbing: 'sport-climbing',
+    yoga: 'sport-yoga', hike: 'sport-hike', walk: 'sport-walk',
+    swim: 'sport-swim', bike: 'sport-bike', ebike: 'sport-ebike',
+    cross_training: 'sport-cross_training',
+  };
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysBack = 30;
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - daysBack + 1);
+  // Snap to Monday
+  startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
+
+  const byDate = {};
+  const seenTypes = new Set();
+  for (const w of workouts) {
+    if (!byDate[w.date]) byDate[w.date] = [];
+    byDate[w.date].push(w);
+    seenTypes.add(w.workout_type);
+  }
+
+  // Legend
+  const mLegend = document.getElementById('training-log-legend-mobile');
+  if (mLegend) {
+    const orderedTypes = ['run', 'strength', 'climbing'].filter(t => seenTypes.has(t));
+    const extras = [...seenTypes].filter(t => !orderedTypes.includes(t));
+    mLegend.innerHTML = [...orderedTypes, ...extras].map(t =>
+      `<span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-sm ${SPORT_CSS[t] || 'bg-edge'}"></span>${SPORT_LABEL[t] || t}</span>`
+    ).join('');
+  }
+
+  const totalDays = Math.ceil((today - startDate) / 86400000) + 1;
+  const totalWeeks = Math.ceil(totalDays / 7);
+  const CELL = 11, GAP = 2, STEP = CELL + GAP;
+  const mL = 18, mT = 4;
+  const DAY_LABELS = ['M', '', 'W', '', 'F', '', ''];
+
+  const svg = d3.select(mContainer).append('svg')
+    .attr('viewBox', `0 0 ${mL + totalWeeks * STEP} ${mT + 7 * STEP}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('width', '100%').style('height', 'auto');
+
+  DAY_LABELS.forEach((lbl, i) => {
+    if (!lbl) return;
+    svg.append('text').attr('x', mL - 3).attr('y', mT + i * STEP + CELL - 2)
+      .attr('font-size', '8').style('fill', 'var(--color-chart-axis)')
+      .attr('text-anchor', 'end').text(lbl);
+  });
+
+  for (let w = 0; w < totalWeeks; w++) {
+    for (let dow = 0; dow < 7; dow++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + w * 7 + dow);
+      if (d > today) continue;
+      const ds = localDateStr(d);
+      const entries = byDate[ds];
+
+      const cell = svg.append('rect')
+        .attr('x', mL + w * STEP).attr('y', mT + dow * STEP)
+        .attr('width', CELL).attr('height', CELL).attr('rx', 2);
+
+      if (entries) {
+        const primary = entries.reduce((a, b) => a.duration_seconds > b.duration_seconds ? a : b);
+        cell.style('fill', COLOR[primary.workout_type] || 'var(--color-edge)')
+          .style('fill-opacity', Math.min(0.3 + entries.length * 0.35, 1));
       } else {
         cell.style('fill', 'var(--color-surface-alt)').style('fill-opacity', 1);
       }
