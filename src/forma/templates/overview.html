@@ -40,18 +40,18 @@
 {% block content %}
 
 {# ── Greeting ─────────────────────────────────────────────── #}
-<div class="mb-6 flex items-start justify-between gap-6">
-  <div>
+<div class="mb-6 flex items-start justify-between gap-4 sm:gap-6">
+  <div class="min-w-0">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-1" id="greeting-date"></p>
-    <h1 class="text-3xl font-bold text-primary" id="greeting">forma</h1>
-    <p class="text-xs text-muted mt-1" id="week-context"></p>
+    <h1 class="text-2xl sm:text-3xl font-bold text-primary" id="greeting">forma</h1>
+    <p class="text-xs text-muted mt-1 hidden sm:block" id="week-context"></p>
   </div>
   {# Week strip — 7 day dots #}
-  <div class="shrink-0 hidden sm:block">
+  <div class="shrink-0">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-2 text-right">This week</p>
-    <div class="flex gap-2" id="week-strip">
-      <div class="animate-pulse flex gap-2">
-        {% for _ in range(7) %}<div class="w-7 h-7 rounded-full bg-surface-alt"></div>{% endfor %}
+    <div class="flex gap-1.5 sm:gap-2" id="week-strip">
+      <div class="animate-pulse flex gap-1.5 sm:gap-2">
+        {% for _ in range(7) %}<div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-alt"></div>{% endfor %}
       </div>
     </div>
   </div>
@@ -165,7 +165,7 @@
   </div>
 
   {# Next workout from plan — loaded async #}
-  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-5 overflow-hidden" id="next-workout-card">
+  <div class="bg-surface rounded-2xl border border-edge shadow-sm p-4 sm:p-5 overflow-hidden" id="next-workout-card">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-xs font-medium uppercase tracking-widest text-muted">Up next</h2>
       <span class="text-xs text-muted" id="next-workout-day"></span>
@@ -495,9 +495,9 @@ function countUp(el, target, decimals = 0, duration = 700) {
       ? entries.map(e => e.name || e.workout_type).join(', ')
       : hasPlannedWorkout ? `Planned: ${planned.workout_type} (${planned.intensity})` : '';
 
-    return `<div class="flex flex-col items-center gap-1.5" title="${title}">
-      <span class="text-xs ${labelClass}">${lbl}</span>
-      <div class="w-7 h-7 rounded-full flex items-center justify-center relative"
+    return `<div class="flex flex-col items-center gap-1 sm:gap-1.5" title="${title}">
+      <span class="text-[10px] sm:text-xs ${labelClass}">${lbl}</span>
+      <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center relative"
            style="background:${dotBg};${borderStyle}">
         ${isToday ? `<div class="absolute inset-0 rounded-full ring-2 ring-offset-1" style="ring-color:${dotBg || 'var(--color-edge)'}"></div>` : ''}
         ${entries.length > 1 ? `<span class="text-xs font-bold leading-none" style="color:var(--color-nav)">${entries.length}</span>` : ''}
