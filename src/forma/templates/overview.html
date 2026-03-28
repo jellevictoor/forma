@@ -509,7 +509,7 @@ function countUp(el, target, decimals = 0, duration = 700) {
       borderStyle = `border: 2px dashed ${COLOR[planned.workout_type] || 'var(--color-edge)'}`;
     } else if (isFuture) {
       dotBg = 'transparent';
-      borderStyle = 'border: 1.5px dotted var(--color-edge)';
+      borderStyle = 'border: 1.5px dotted var(--color-muted)';
     } else {
       dotBg = 'var(--color-surface-alt)';
       borderStyle = '';
@@ -547,12 +547,12 @@ function countUp(el, target, decimals = 0, duration = 700) {
 
     let label, color, interp;
     const ratio = fatigue / (fitness || 1);
-    if (form > 10)       { label = 'PEAKING';    color = 'var(--color-mint)';     interp = 'Peak performance window — race or test yourself.'; }
-    else if (form > 0)   { label = 'FRESH';      color = 'var(--color-mint)';     interp = 'Well-rested and ready to perform.'; }
+    if (form > 10)       { label = 'PEAK';     color = 'var(--color-mint)';     interp = 'Peak performance window — race or test yourself.'; }
+    else if (form > 0)   { label = 'READY';    color = 'var(--color-mint)';     interp = 'Well-rested and ready to perform.'; }
     else if (form > -10 && ratio < 1.5) { label = 'TRAINING'; color = 'var(--color-amber)'; interp = 'In the training zone — building fitness.'; }
-    else if (form > -10) { label = 'TRAINING';   color = 'var(--color-amber)';    interp = 'High relative load — keep sessions easy.'; }
-    else if (form > -30) { label = 'BUILDING';   color = 'var(--color-amber)';    interp = 'Heavy load — favour easy sessions and extra rest.'; }
-    else                 { label = 'OVERLOADED'; color = 'var(--color-negative)'; interp = 'Recovery needed — prioritise rest.'; }
+    else if (form > -10) { label = 'TRAINING'; color = 'var(--color-amber)';    interp = 'High relative load — keep sessions easy.'; }
+    else if (form > -30) { label = 'BUILDING'; color = 'var(--color-amber)';    interp = 'Heavy load — favour easy sessions and extra rest.'; }
+    else                 { label = 'RECOVER';  color = 'var(--color-amber)';    interp = 'Rest is part of training — prioritise sleep and recovery.'; }
 
     // Desktop readiness
     const statusEl = document.getElementById('form-status-word');
