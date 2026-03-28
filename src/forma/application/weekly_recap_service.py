@@ -13,11 +13,10 @@ from forma.ports.workout_repository import WorkoutRepository
 logger = logging.getLogger(__name__)
 
 _SYSTEM = (
-    "You are a calm, experienced sports coach writing a brief weekly training recap for a recreational athlete. "
-    "Be honest, specific, and action-oriented. Reference actual sessions by name. "
-    "Never guilt-trip for missed sessions — reframe missed days as recovery. "
-    "End with one clear recommendation for next week. "
-    "Keep it to 2-3 sentences max. No bullet points, no headers."
+    "You are a calm, experienced sports coach writing a weekly training recap. "
+    "STRICT RULES: exactly 2 sentences. First sentence: what went well (reference specific sessions). "
+    "Second sentence: one concrete recommendation for next week. "
+    "Never guilt-trip missed sessions. No bullet points, no headers, no filler."
 )
 
 
@@ -81,10 +80,14 @@ class WeeklyRecapService:
         return athlete, this_week, prev_week, cached_plan
 
     def _compute_adherence(self, cached_plan, this_week, week_start, today) -> dict:
-        if not cached_plan or not cached_plan.days:
-            return {"has_plan": False}
+        # Always show Mon-Sun, merging plan + actual workouts
+        plan_by_date = {}
+        has_plan = False
+        if cached_plan and cached_plan.days:
+            has_plan = True
+            for d in cached_plan.days:
+                plan_by_date[d.day] = d
 
-        plan_days = [d for d in cached_plan.days if week_start <= d.day <= today]
         workouts_by_date = {}
         for w in this_week:
             d = w.start_time.date()
@@ -96,36 +99,45 @@ class WeeklyRecapService:
         total_planned = 0
         days = []
 
-        for planned in plan_days:
-            actual = workouts_by_date.get(planned.day, [])
-            if planned.workout_type == "rest":
-                status = "completed" if not actual else "swapped"
+        for i in range(7):
+            day = week_start + timedelta(days=i)
+            planned = plan_by_date.get(day)
+            actual = workouts_by_date.get(day, [])
+            planned_type = planned.workout_type if planned else None
+            is_future = day > today
+
+            if planned and planned_type != "rest":
+                total_planned += 1
+                if actual:
+                    actual_types = {w.workout_type.value for w in actual}
+                    if planned_type in actual_types:
+                        status = "completed"
+                        completed += 1
+                    else:
+                        status = "swapped"
+                        swapped += 1
+                elif is_future:
+                    status = "upcoming"
+                else:
+                    status = "missed"
+                    missed += 1
             elif actual:
-                actual_types = {w.workout_type.value for w in actual}
-                status = "completed" if planned.workout_type in actual_types else "swapped"
-            elif planned.day >= today:
+                # No plan or rest day, but worked out
+                status = "extra"
+            elif is_future:
                 status = "upcoming"
             else:
-                status = "missed"
-
-            if planned.workout_type != "rest":
-                total_planned += 1
-                if status == "completed":
-                    completed += 1
-                elif status == "swapped":
-                    swapped += 1
-                elif status == "missed":
-                    missed += 1
+                status = "rest"
 
             days.append({
-                "date": planned.day.isoformat(),
-                "planned_type": planned.workout_type,
+                "date": day.isoformat(),
+                "planned_type": planned_type or "rest",
                 "status": status,
                 "actual_type": actual[0].workout_type.value if actual else None,
             })
 
         return {
-            "has_plan": True,
+            "has_plan": has_plan,
             "completed": completed,
             "swapped": swapped,
             "missed": missed,

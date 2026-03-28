@@ -200,8 +200,11 @@
     <span id="recap-week-label" class="text-xs text-muted"></span>
   </div>
 
-  {# Adherence dots #}
-  <div id="recap-adherence" class="flex gap-2 mb-3"></div>
+  {# Adherence dots + summary #}
+  <div class="flex items-center gap-4 mb-3">
+    <div id="recap-adherence" class="flex gap-2"></div>
+    <span id="recap-adherence-summary" class="text-xs text-muted ml-auto"></span>
+  </div>
 
   {# Stats row #}
   <div class="flex items-center gap-4 text-xs text-muted mb-3" id="recap-stats">
@@ -762,7 +765,7 @@ function renderSparkline(containerId, values, color) {
   try {
     const data = await fetchCached('/api/overview/weekly-recap');
     const card = document.getElementById('weekly-recap-card');
-    if (!data || (!data.adherence?.has_plan && !data.coach_note)) return;
+    if (!data || !data.volume?.current?.sessions) return;
 
     card.classList.remove('hidden');
 
@@ -778,25 +781,47 @@ function renderSparkline(containerId, values, color) {
       cross_training: 'var(--color-sky)', rest: 'var(--color-surface-alt)',
     };
     const adherenceEl = document.getElementById('recap-adherence');
-    if (data.adherence?.has_plan && data.adherence.days) {
+    if (data.adherence?.days?.length) {
       adherenceEl.innerHTML = data.adherence.days.map(d => {
-        const color = d.status === 'completed' ? SPORT_COLOR[d.planned_type] || 'var(--color-mint)'
-          : d.status === 'swapped' ? SPORT_COLOR[d.actual_type] || 'var(--color-amber)'
-          : d.status === 'missed' ? 'var(--color-surface-alt)'
-          : 'transparent';
-        const border = d.status === 'upcoming' ? 'border: 1.5px dotted var(--color-muted)' :
-          d.status === 'missed' ? 'border: 1.5px dashed var(--color-negative)' : '';
+        let color, border = '';
+        const actualColor = SPORT_COLOR[d.actual_type] || 'var(--color-edge)';
+        const plannedColor = SPORT_COLOR[d.planned_type] || 'var(--color-edge)';
+
+        if (d.status === 'completed') {
+          color = plannedColor;
+        } else if (d.status === 'swapped' || d.status === 'extra') {
+          color = actualColor;
+        } else if (d.status === 'missed') {
+          color = 'transparent';
+          border = 'border: 1.5px dashed var(--color-negative)';
+        } else if (d.status === 'upcoming') {
+          color = d.planned_type !== 'rest' ? 'transparent' : 'var(--color-surface-alt)';
+          border = d.planned_type !== 'rest' ? `border: 1.5px dashed ${plannedColor}` : '';
+        } else {
+          color = 'var(--color-surface-alt)';
+        }
+
         const dateObj = new Date(d.date + 'T00:00:00');
         const dayLbl = ['M','T','W','T','F','S','S'][dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
         const title = d.status === 'completed' ? `${d.planned_type} ✓`
           : d.status === 'swapped' ? `Planned ${d.planned_type}, did ${d.actual_type}`
+          : d.status === 'extra' ? `${d.actual_type} (unplanned)`
           : d.status === 'missed' ? `Missed ${d.planned_type}`
-          : `${d.planned_type} (upcoming)`;
+          : d.status === 'upcoming' && d.planned_type !== 'rest' ? `${d.planned_type} (upcoming)`
+          : 'Rest';
         return `<div class="flex flex-col items-center gap-1" title="${title}">
           <span class="text-[10px] text-muted">${dayLbl}</span>
           <div class="w-5 h-5 rounded-full" style="background:${color};${border}"></div>
         </div>`;
       }).join('');
+    }
+
+    // Adherence summary
+    const a = data.adherence;
+    if (a?.has_plan && a.total_planned > 0) {
+      const summaryEl = document.getElementById('recap-adherence-summary');
+      const pct = Math.round((a.completed / a.total_planned) * 100);
+      summaryEl.innerHTML = `<strong class="text-primary">${a.completed}</strong>/${a.total_planned} planned`;
     }
 
     // Stats
