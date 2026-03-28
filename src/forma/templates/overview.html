@@ -424,11 +424,15 @@ function countUp(el, target, decimals = 0, duration = 700) {
 
 // ── Week strip ───────────────────────────────────────────────────
 (async function() {
-  const workouts = await fetchCached('/api/overview/training-log');
+  const [workouts, planData] = await Promise.all([
+    fetchCached('/api/overview/training-log'),
+    fetchCached('/api/plan').catch(() => ({ cached: false, days: [] })),
+  ]);
   const COLOR = {
     run: 'var(--color-mint)', strength: 'var(--color-sky)', climbing: 'var(--color-coral)',
     yoga: 'var(--color-violet)', hike: 'var(--color-sage)', walk: 'var(--color-sage)',
-    swim: 'var(--color-azure)', bike: 'var(--color-azure)', cross_training: 'var(--color-sky)',
+    swim: 'var(--color-azure)', bike: 'var(--color-azure)', ebike: 'var(--color-electric)',
+    cross_training: 'var(--color-sky)',
   };
   const now = new Date();
   const dow = (now.getDay() + 6) % 7;
@@ -441,6 +445,11 @@ function countUp(el, target, decimals = 0, duration = 700) {
     byDate[w.date].push(w);
   }
 
+  const planByDate = {};
+  if (planData.cached && planData.days) {
+    for (const d of planData.days) planByDate[d.date] = d;
+  }
+
   const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const container = document.getElementById('week-strip');
   container.innerHTML = DAY_LABELS.map((lbl, i) => {
@@ -449,23 +458,36 @@ function countUp(el, target, decimals = 0, duration = 700) {
     const entries = byDate[ds] || [];
     const isToday = ds === todayStr;
     const isFuture = d > now && ds !== todayStr;
+    const planned = isFuture ? planByDate[ds] : null;
+    const hasPlannedWorkout = planned && planned.workout_type !== 'rest';
 
-    let dotBg = 'var(--color-surface-alt)';
+    let dotBg, borderStyle;
     if (entries.length) {
       const primary = entries.reduce((a, b) =>
         a.duration_seconds > b.duration_seconds ? a : b);
       dotBg = COLOR[primary.workout_type] || 'var(--color-edge)';
+      borderStyle = '';
+    } else if (hasPlannedWorkout) {
+      dotBg = 'transparent';
+      borderStyle = `border: 2px dashed ${COLOR[planned.workout_type] || 'var(--color-edge)'}`;
+    } else if (isFuture) {
+      dotBg = 'transparent';
+      borderStyle = 'border: 1.5px dotted var(--color-edge)';
+    } else {
+      dotBg = 'var(--color-surface-alt)';
+      borderStyle = '';
     }
 
     const labelClass = isToday ? 'font-bold text-primary' : 'text-muted';
-    const opacity = isFuture ? 'opacity-30' : '';
-    const title = entries.map(e => e.name || e.workout_type).join(', ');
+    const title = entries.length
+      ? entries.map(e => e.name || e.workout_type).join(', ')
+      : hasPlannedWorkout ? `Planned: ${planned.workout_type} (${planned.intensity})` : '';
 
-    return `<div class="flex flex-col items-center gap-1.5 ${opacity}" title="${title}">
+    return `<div class="flex flex-col items-center gap-1.5" title="${title}">
       <span class="text-xs ${labelClass}">${lbl}</span>
       <div class="w-7 h-7 rounded-full flex items-center justify-center relative"
-           style="background:${dotBg}">
-        ${isToday ? `<div class="absolute inset-0 rounded-full ring-2 ring-offset-1" style="ring-color:${dotBg}"></div>` : ''}
+           style="background:${dotBg};${borderStyle}">
+        ${isToday ? `<div class="absolute inset-0 rounded-full ring-2 ring-offset-1" style="ring-color:${dotBg || 'var(--color-edge)'}"></div>` : ''}
         ${entries.length > 1 ? `<span class="text-xs font-bold leading-none" style="color:var(--color-nav)">${entries.length}</span>` : ''}
       </div>
     </div>`;
