@@ -39,19 +39,52 @@
 
 {% block content %}
 
-{# ── Greeting ─────────────────────────────────────────────── #}
-<div class="mb-6 flex items-start justify-between gap-4 sm:gap-6">
-  <div class="min-w-0">
+{# ── Mobile welcome hero (greeting + readiness + week strip) ─ #}
+<div class="md:hidden mb-5">
+  <p class="text-xs font-medium uppercase tracking-widest text-muted mb-1" id="greeting-date-mobile"></p>
+  <h1 class="text-2xl font-bold text-primary mb-3" id="greeting-mobile">forma</h1>
+
+  {# Readiness — the core "how am I" answer #}
+  <div class="flex items-baseline gap-3">
+    <span id="form-status-word-mobile" class="text-3xl font-black tracking-tight leading-none">—</span>
+    <span id="form-tsb-mobile" class="text-sm font-bold tabular-nums text-muted">—</span>
+  </div>
+  <p id="form-interpretation-mobile" class="text-xs text-muted mt-1.5">Loading…</p>
+
+  {# Inline stats row: fitness, fatigue, details link #}
+  <div class="flex items-center gap-4 mt-2.5 text-xs text-muted">
+    <span>Fitness <strong class="text-secondary tabular-nums" id="form-fitness-mobile">—</strong></span>
+    <span>Fatigue <strong class="text-secondary tabular-nums" id="form-fatigue-mobile">—</strong></span>
+    <a href="/progress" class="ml-auto text-muted hover:text-primary transition-colors">Details →</a>
+  </div>
+
+  {# 30-day form sparkline #}
+  <div id="form-sparkline-mobile" class="mt-3" style="height:56px"></div>
+
+  {# Week strip — inline, no card #}
+  <div class="flex items-center justify-between mt-4">
+    <p class="text-xs font-medium uppercase tracking-widest text-muted">This week</p>
+  </div>
+  <div class="flex gap-1.5 mt-2" id="week-strip-mobile">
+    <div class="animate-pulse flex gap-1.5">
+      {% for _ in range(7) %}<div class="w-6 h-6 rounded-full bg-surface-alt"></div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ── Desktop greeting ────────────────────────────────────── #}
+<div class="hidden md:flex mb-6 items-start justify-between gap-6">
+  <div>
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-1" id="greeting-date"></p>
-    <h1 class="text-2xl sm:text-3xl font-bold text-primary" id="greeting">forma</h1>
-    <p class="text-xs text-muted mt-1 hidden sm:block" id="week-context"></p>
+    <h1 class="text-3xl font-bold text-primary" id="greeting">forma</h1>
+    <p class="text-xs text-muted mt-1" id="week-context"></p>
   </div>
   {# Week strip — 7 day dots #}
   <div class="shrink-0">
     <p class="text-xs font-medium uppercase tracking-widest text-muted mb-2 text-right">This week</p>
-    <div class="flex gap-1.5 sm:gap-2" id="week-strip">
-      <div class="animate-pulse flex gap-1.5 sm:gap-2">
-        {% for _ in range(7) %}<div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-alt"></div>{% endfor %}
+    <div class="flex gap-2" id="week-strip">
+      <div class="animate-pulse flex gap-2">
+        {% for _ in range(7) %}<div class="w-7 h-7 rounded-full bg-surface-alt"></div>{% endfor %}
       </div>
     </div>
   </div>
@@ -70,26 +103,7 @@
 {# ── Training alerts ────────────────────────────────────────── #}
 <div id="alerts-container" class="hidden space-y-2 mb-4" role="alert" aria-live="polite"></div>
 
-{# ── Readiness widget ─────────────────────────────────────── #}
-{# Mobile: readiness with labels + sparkline #}
-<div class="md:hidden bg-surface rounded-2xl border border-edge shadow-sm p-4 overflow-hidden mb-4">
-  <div class="flex items-center justify-between mb-3">
-    <p class="text-xs font-medium uppercase tracking-widest text-muted">Readiness</p>
-    <a href="/progress" class="text-xs text-muted hover:text-primary transition-colors">Details →</a>
-  </div>
-  <div class="flex items-baseline gap-3">
-    <span id="form-status-word-mobile" class="text-2xl font-black tracking-tight leading-none">—</span>
-    <span id="form-tsb-mobile" class="text-sm font-bold tabular-nums text-muted">—</span>
-  </div>
-  <p id="form-interpretation-mobile" class="text-xs text-muted mt-1.5">Loading…</p>
-  <div class="flex items-center gap-4 mt-2 text-xs text-muted">
-    <span>Fitness <strong class="text-secondary tabular-nums" id="form-fitness-mobile">—</strong></span>
-    <span>Fatigue <strong class="text-secondary tabular-nums" id="form-fatigue-mobile">—</strong></span>
-  </div>
-  <div id="form-sparkline-mobile" class="mt-3" style="height:64px"></div>
-</div>
-
-{# Desktop: full readiness widget with bars + sparkline #}
+{# ── Desktop readiness widget with bars + sparkline ────────── #}
 <div class="hidden md:block bg-surface rounded-2xl border border-edge shadow-sm p-6 overflow-hidden mb-6">
   <p class="text-xs font-medium uppercase tracking-widest text-muted mb-4">Readiness</p>
   <div class="flex items-stretch gap-6 lg:gap-10">
@@ -422,16 +436,23 @@ function countUp(el, target, decimals = 0, duration = 700) {
 (function() {
   const now = new Date();
   const h = now.getHours();
-  document.getElementById('greeting').textContent =
-    h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const greetText = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('greeting-date').textContent =
-    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  const dateText = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
   const jan1 = new Date(now.getFullYear(), 0, 1);
   const dayOfYear = Math.floor((now - jan1) / 86400000) + 1;
   const weekNum = Math.ceil((dayOfYear + jan1.getDay()) / 7);
+
+  // Desktop
+  document.getElementById('greeting').textContent = greetText;
+  document.getElementById('greeting-date').textContent = dateText;
   document.getElementById('week-context').textContent = `Week ${weekNum} · Day ${dayOfYear} of ${now.getFullYear()}`;
+  // Mobile
+  const mGreeting = document.getElementById('greeting-mobile');
+  const mDate = document.getElementById('greeting-date-mobile');
+  if (mGreeting) mGreeting.textContent = greetText;
+  if (mDate) mDate.textContent = dateText;
 })();
 
 // ── Week strip ───────────────────────────────────────────────────
@@ -463,8 +484,12 @@ function countUp(el, target, decimals = 0, duration = 700) {
   }
 
   const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  const container = document.getElementById('week-strip');
-  container.innerHTML = DAY_LABELS.map((lbl, i) => {
+
+  function buildWeekStrip(size) {
+    const dotSize = size === 'sm' ? 'w-6 h-6' : 'w-7 h-7';
+    const gap = size === 'sm' ? 'gap-1' : 'gap-1.5';
+    const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
+    return DAY_LABELS.map((lbl, i) => {
     const d = new Date(mon); d.setDate(mon.getDate() + i);
     const ds = localDateStr(d);
     const entries = byDate[ds] || [];
@@ -495,15 +520,22 @@ function countUp(el, target, decimals = 0, duration = 700) {
       ? entries.map(e => e.name || e.workout_type).join(', ')
       : hasPlannedWorkout ? `Planned: ${planned.workout_type} (${planned.intensity})` : '';
 
-    return `<div class="flex flex-col items-center gap-1 sm:gap-1.5" title="${title}">
-      <span class="text-[10px] sm:text-xs ${labelClass}">${lbl}</span>
-      <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center relative"
+    return `<div class="flex flex-col items-center ${gap}" title="${title}">
+      <span class="${textSize} ${labelClass}">${lbl}</span>
+      <div class="${dotSize} rounded-full flex items-center justify-center relative"
            style="background:${dotBg};${borderStyle}">
         ${isToday ? `<div class="absolute inset-0 rounded-full ring-2 ring-offset-1" style="ring-color:${dotBg || 'var(--color-edge)'}"></div>` : ''}
         ${entries.length > 1 ? `<span class="text-xs font-bold leading-none" style="color:var(--color-nav)">${entries.length}</span>` : ''}
       </div>
     </div>`;
   }).join('');
+  }
+
+  // Render into desktop + mobile containers
+  const desktop = document.getElementById('week-strip');
+  if (desktop) desktop.innerHTML = buildWeekStrip('md');
+  const mobile = document.getElementById('week-strip-mobile');
+  if (mobile) mobile.innerHTML = buildWeekStrip('sm');
 })();
 
 // ── Form widget ───────────────────────────────────────────────────
