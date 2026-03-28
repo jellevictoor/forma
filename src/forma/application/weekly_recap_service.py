@@ -12,6 +12,9 @@ from forma.ports.workout_repository import WorkoutRepository
 
 logger = logging.getLogger(__name__)
 
+# In-memory cache: (athlete_id, week_start, session_count) → coach_note
+_coach_note_cache: dict[tuple[str, str, int], str] = {}
+
 _SYSTEM = (
     "You are a calm, experienced sports coach writing a weekly training recap. "
     "STRICT RULES: exactly 2 sentences. First sentence: what went well (reference specific sessions). "
@@ -47,9 +50,17 @@ class WeeklyRecapService:
         adherence = self._compute_adherence(cached_plan, this_week, week_start, today)
         volume = self._compute_volume(this_week, prev_week)
         fitness_trend = await self._compute_fitness_trend(athlete_id, athlete, week_start, today)
-        coach_note = self._generate_coach_note(
-            athlete, adherence, volume, fitness_trend, this_week, week_start,
-        )
+
+        # Cache coach note by (athlete, week, session count) — only call LLM when data changes
+        session_count = volume["current"]["sessions"]
+        cache_key = (athlete_id, week_start.isoformat(), session_count)
+        coach_note = _coach_note_cache.get(cache_key, "")
+        if not coach_note and session_count > 0:
+            coach_note = self._generate_coach_note(
+                athlete, adherence, volume, fitness_trend, this_week, week_start,
+            )
+            if coach_note:
+                _coach_note_cache[cache_key] = coach_note
 
         return {
             "week_start": week_start.isoformat(),
